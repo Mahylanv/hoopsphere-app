@@ -1,7 +1,27 @@
+// screens/InscriptionClub.tsx
 import React from 'react';
-import { ImageBackground, SafeAreaView, View, Text, TextInput, Pressable, StatusBar, ScrollView } from 'react-native';
+import {
+    ImageBackground,
+    SafeAreaView,
+    View,
+    Text,
+    TextInput,
+    Pressable,
+    StatusBar,
+    ScrollView,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types';
+
+type InscriptionClubNavProp = NativeStackNavigationProp<
+    RootStackParamList,
+    'InscriptionClub'
+>;
 
 export default function InscriptionClub() {
+    const navigation = useNavigation<InscriptionClubNavProp>();
+
     return (
         <ImageBackground
             source={require('../assets/background.jpg')}
@@ -11,9 +31,14 @@ export default function InscriptionClub() {
         >
             <SafeAreaView className="flex-1 px-8">
                 <StatusBar barStyle="light-content" translucent />
-                <ScrollView contentContainerStyle={{ paddingVertical: 40 }} className="space-y-6">
+                <ScrollView
+                    contentContainerStyle={{ paddingVertical: 40 }}
+                    className="space-y-6"
+                >
                     <View className="bg-white/90 rounded-2xl p-6 space-y-4">
-                        <Text className="text-2xl font-bold text-center">Inscription Club</Text>
+                        <Text className="text-2xl font-bold text-center">
+                            Inscription Club
+                        </Text>
 
                         <TextInput
                             placeholder="Nom du club"
@@ -29,8 +54,18 @@ export default function InscriptionClub() {
                             className="border border-gray-300 rounded-lg px-4 py-2 bg-white"
                         />
 
-                        <Pressable className="bg-orange-500 py-3 rounded-2xl items-center">
+                        <Pressable
+                            className="bg-orange-500 py-3 rounded-2xl items-center"
+                            onPress={() => navigation.navigate('Home')}
+                        >
                             <Text className="text-white font-bold">Valider</Text>
+                        </Pressable>
+
+                        <Pressable
+                            className="mt-4 items-center"
+                            onPress={() => navigation.goBack()}
+                        >
+                            <Text className="text-blue-600">Retour</Text>
                         </Pressable>
                     </View>
                 </ScrollView>

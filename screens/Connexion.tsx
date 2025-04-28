@@ -1,7 +1,22 @@
 import React from 'react';
-import { ImageBackground, SafeAreaView, View, Text, TextInput, Pressable, StatusBar } from 'react-native';
+import {
+    ImageBackground,
+    SafeAreaView,
+    View,
+    Text,
+    TextInput,
+    Pressable,
+    StatusBar,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types';
+
+type ConnexionNavProp = NativeStackNavigationProp<RootStackParamList, 'Connexion'>;
 
 export default function Connexion() {
+    const navigation = useNavigation<ConnexionNavProp>();
+
     return (
         <ImageBackground
             source={require('../assets/background.jpg')}
@@ -26,8 +41,19 @@ export default function Connexion() {
                         className="border border-gray-300 rounded-lg px-4 py-2 bg-white"
                     />
 
-                    <Pressable className="bg-blue-600 py-3 rounded-2xl items-center">
+                    {/* navigation.navigate n’accepte plus l’erreur “never” */}
+                    <Pressable
+                        className="bg-blue-600 py-3 rounded-2xl items-center"
+                        onPress={() => navigation.navigate('Home')}
+                    >
                         <Text className="text-white font-bold">Se connecter</Text>
+                    </Pressable>
+
+                    <Pressable
+                        className="mt-4 items-center"
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Text className="text-blue-600">Retour</Text>
                     </Pressable>
                 </View>
             </SafeAreaView>
