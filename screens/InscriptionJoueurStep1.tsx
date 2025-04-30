@@ -1,4 +1,3 @@
-// screens/Connexion.tsx
 import React, { useState } from 'react';
 import {
     ImageBackground,
@@ -10,39 +9,32 @@ import {
     StatusBar,
     Alert,
 } from 'react-native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
-import {
-    NativeStackNavigationProp,
-} from '@react-navigation/native-stack';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { RootStackParamList } from '../types';
 
-type ConnexionNavProp = NativeStackNavigationProp<
+type InscriptionStep1NavProp = NativeStackNavigationProp<
     RootStackParamList,
-    'Connexion'
+    'InscriptionJoueurStep1'
 >;
 
-export default function Connexion() {
-    const navigation = useNavigation<ConnexionNavProp>();
+export default function InscriptionJoueurStep1() {
+    const navigation = useNavigation<InscriptionStep1NavProp>();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleLogin = async () => {
+    const handleContinue = async () => {
         if (!email || !password) return;
 
         setLoading(true);
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-
-            // on reset complètement la stack et on met MainJoueur en screen unique
-            navigation.reset({
-                index: 0,
-                routes: [{ name: 'MainJoueur' }],
-            });
+            await createUserWithEmailAndPassword(auth, email, password);
+            navigation.navigate('InscriptionJoueurStep2', { email, password });
         } catch (err: any) {
-            Alert.alert('Erreur de connexion', err.message);
+            Alert.alert('Erreur', err.message);
         } finally {
             setLoading(false);
         }
@@ -57,9 +49,10 @@ export default function Connexion() {
         >
             <SafeAreaView className="flex-1 justify-center px-8">
                 <StatusBar barStyle="light-content" translucent />
+
                 <View className="bg-white/90 rounded-2xl p-6 space-y-4">
                     <Text className="text-2xl font-bold text-center">
-                        Connexion
+                        Étape 1 : Identifiants
                     </Text>
 
                     <TextInput
@@ -80,15 +73,15 @@ export default function Connexion() {
                     />
 
                     <Pressable
-                        onPress={handleLogin}
-                        disabled={!email || !password || loading}
-                        className={`py-3 rounded-2xl items-center ${!email || !password || loading
+                        className={`${!email || !password || loading
                                 ? 'bg-gray-300'
-                                : 'bg-blue-600'
-                            }`}
+                                : 'bg-orange-500'
+                            } py-3 rounded-2xl items-center`}
+                        onPress={handleContinue}
+                        disabled={!email || !password || loading}
                     >
                         <Text className="text-white font-bold">
-                            {loading ? 'Connexion…' : 'Se connecter'}
+                            {loading ? 'Chargement...' : 'Continuer'}
                         </Text>
                     </Pressable>
 
