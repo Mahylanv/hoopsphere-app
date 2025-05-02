@@ -1,4 +1,3 @@
-// screens/Connexion.tsx
 import React, { useState } from 'react';
 import {
     ImageBackground,
@@ -36,10 +35,9 @@ export default function Connexion() {
         try {
             await signInWithEmailAndPassword(auth, email, password);
 
-            // on reset complètement la stack et on met MainJoueur en screen unique
             navigation.reset({
                 index: 0,
-                routes: [{ name: 'MainJoueur' }],
+                routes: [{ name: 'MainTabs' }],
             });
         } catch (err: any) {
             Alert.alert('Erreur de connexion', err.message);

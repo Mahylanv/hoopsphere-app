@@ -1,5 +1,6 @@
 export type RootStackParamList = {
     Home: undefined;
+    Connexion: undefined;
     InscriptionJoueurStep1: undefined;
     InscriptionJoueurStep2: { email: string; password: string };
     InscriptionJoueurStep3: {
@@ -10,6 +11,12 @@ export type RootStackParamList = {
         dob: string;
     };
     InscriptionClub: undefined;
-    Connexion: undefined;
+
+    MainTabs: undefined;
+};
+
+export type MainTabParamList = {
     MainJoueur: undefined;
+    Chat: undefined; 
+    Profil: undefined;
 };
