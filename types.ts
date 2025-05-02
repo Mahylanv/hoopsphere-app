@@ -13,6 +13,11 @@ export type RootStackParamList = {
     InscriptionClub: undefined;
 
     MainTabs: undefined;
+
+    ChatDetail: {
+        conversationId: string;
+        name: string;
+    };
 };
 
 export type MainTabParamList = {
