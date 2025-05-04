@@ -32,7 +32,7 @@ export default function MainTabNavigator() {
             />
             <Tab.Screen
                 name="Search"
-                component={MainJoueur}
+                component={Search}
                 options={{ tabBarLabel: 'Rechercher' }}
             />
             <Tab.Screen

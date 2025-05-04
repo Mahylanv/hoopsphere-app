@@ -19,6 +19,23 @@ export type RootStackParamList = {
         name: string;
         avatar: number; 
     };
+    ClubProfile: { club: Club }; 
+    Search: undefined;  
+
+    OfferDetail: {
+        offer: {
+            id: string;
+            title: string;
+            description: string;
+            position: string;
+            team: string;
+            publishedAt: string;
+            gender: 'Homme' | 'Femme' | 'Mixte';
+            ageRange: string;
+            category: string;
+            location: string;
+        };
+    };
 };
 
 export type MainTabParamList = {
@@ -26,4 +43,13 @@ export type MainTabParamList = {
     Chat: undefined; 
     Profil: undefined;
     Search: undefined;  
+};
+
+export type Club = {
+    id: string;
+    name: string;
+    logo: any;
+    city: string;
+    teams: number;
+    categories: string[];
 };
