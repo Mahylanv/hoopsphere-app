@@ -1,3 +1,4 @@
+// screens/Connexion.tsx
 import React, { useState } from 'react';
 import {
     ImageBackground,
@@ -7,14 +8,9 @@ import {
     TextInput,
     Pressable,
     StatusBar,
-    Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import {
-    NativeStackNavigationProp,
-} from '@react-navigation/native-stack';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 
 type ConnexionNavProp = NativeStackNavigationProp<
@@ -28,22 +24,15 @@ export default function Connexion() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleLogin = async () => {
+    const handleLogin = () => {
         if (!email || !password) return;
-
         setLoading(true);
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
 
-            navigation.reset({
-                index: 0,
-                routes: [{ name: 'MainTabs' }],
-            });
-        } catch (err: any) {
-            Alert.alert('Erreur de connexion', err.message);
-        } finally {
-            setLoading(false);
-        }
+        // on simule une « connexion » et on réinitialise la stack sur MainTabs
+        navigation.reset({
+            index: 0,
+            routes: [{ name: 'MainTabs' }],
+        });
     };
 
     return (
@@ -56,9 +45,7 @@ export default function Connexion() {
             <SafeAreaView className="flex-1 justify-center px-8">
                 <StatusBar barStyle="light-content" translucent />
                 <View className="bg-white/90 rounded-2xl p-6 space-y-4">
-                    <Text className="text-2xl font-bold text-center">
-                        Connexion
-                    </Text>
+                    <Text className="text-2xl font-bold text-center">Connexion</Text>
 
                     <TextInput
                         value={email}
@@ -80,9 +67,7 @@ export default function Connexion() {
                     <Pressable
                         onPress={handleLogin}
                         disabled={!email || !password || loading}
-                        className={`py-3 rounded-2xl items-center ${!email || !password || loading
-                                ? 'bg-gray-300'
-                                : 'bg-blue-600'
+                        className={`py-3 rounded-2xl items-center ${!email || !password || loading ? 'bg-gray-300' : 'bg-blue-600'
                             }`}
                     >
                         <Text className="text-white font-bold">
