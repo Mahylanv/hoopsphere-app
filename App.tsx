@@ -16,6 +16,7 @@ import InscriptionJoueurStep3 from './screens/InscriptionJoueurStep3';
 import InscriptionClub from './screens/InscriptionClub';
 import MainTabNavigator from './navigation/MainTabNavigator';
 import ChatDetail from './screens/ChatDetail';
+import ClubProfile from 'screens/ClubProfile';
 
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -36,6 +37,7 @@ export default function App() {
 
         <Stack.Screen name="MainTabs" component={MainTabNavigator} />
         <Stack.Screen name="ChatDetail" component={ChatDetail} />
+        <Stack.Screen name="ClubProfile" component={ClubProfile} />
       </Stack.Navigator>
     </NavigationContainer>
   );

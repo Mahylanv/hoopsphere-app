@@ -19,6 +19,8 @@ export type RootStackParamList = {
         name: string;
         avatar: number; 
     };
+    ClubProfile: { club: Club }; 
+    Search: undefined;  
 };
 
 export type MainTabParamList = {
@@ -26,4 +28,13 @@ export type MainTabParamList = {
     Chat: undefined; 
     Profil: undefined;
     Search: undefined;  
+};
+
+export type Club = {
+    id: string;
+    name: string;
+    logo: any;
+    city: string;
+    teams: number;
+    categories: string[];
 };
