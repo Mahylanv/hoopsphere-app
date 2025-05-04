@@ -1,4 +1,3 @@
-// App.tsx
 import 'nativewind';
 import './global.css';
 import React from 'react';
@@ -16,6 +15,8 @@ import InscriptionJoueurStep2 from './screens/InscriptionJoueurStep2';
 import InscriptionJoueurStep3 from './screens/InscriptionJoueurStep3';
 import InscriptionClub from './screens/InscriptionClub';
 import MainTabNavigator from './navigation/MainTabNavigator';
+import ChatDetail from './screens/ChatDetail';
+
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -34,6 +35,7 @@ export default function App() {
         <Stack.Screen name="InscriptionClub" component={InscriptionClub} />
 
         <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+        <Stack.Screen name="ChatDetail" component={ChatDetail} />
       </Stack.Navigator>
     </NavigationContainer>
   );

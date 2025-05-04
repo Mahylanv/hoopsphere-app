@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MainJoueur from '../screens/MainJoueur';
 import Chat from '../screens/Chat';
 import Profil from '../screens/Profil';
+import Search from '../screens/Search';
 
 import { MainTabParamList } from '../types';
 
@@ -28,6 +29,11 @@ export default function MainTabNavigator() {
                 name="Chat"
                 component={Chat}
                 options={{ tabBarLabel: 'Chat' }}
+            />
+            <Tab.Screen
+                name="Search"
+                component={MainJoueur}
+                options={{ tabBarLabel: 'Rechercher' }}
             />
             <Tab.Screen
                 name="Profil"
