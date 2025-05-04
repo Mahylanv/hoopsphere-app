@@ -24,4 +24,5 @@ export type MainTabParamList = {
     MainJoueur: undefined;
     Chat: undefined; 
     Profil: undefined;
+    Search: undefined;  
 };
