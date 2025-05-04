@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, Club } from '../types';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList, Club } from '../types';
 
 const ALL_CLUBS: Club[] = [
     {
@@ -51,10 +51,7 @@ export default function Search() {
     const navigation = useNavigation<SearchNavProp>();
 
     const allCategories = useMemo(
-        () =>
-            Array.from(
-                new Set(ALL_CLUBS.flatMap((c) => c.categories))
-            ),
+        () => Array.from(new Set(ALL_CLUBS.flatMap((c) => c.categories))),
         []
     );
     const allCities = useMemo(
@@ -71,101 +68,92 @@ export default function Search() {
             prev.includes(city) ? prev.filter((c) => c !== city) : [...prev, city]
         );
 
-    const filtered = useMemo(() => {
-        return ALL_CLUBS.filter((club) => {
-            const matchesQuery =
-                club.name.toLowerCase().includes(query.toLowerCase()) ||
-                club.city.toLowerCase().includes(query.toLowerCase());
-            const matchesCategory =
-                selectedCategories.length === 0 ||
-                club.categories.some((c) => selectedCategories.includes(c));
-            const matchesCity =
-                selectedCities.length === 0 ||
-                selectedCities.includes(club.city);
-            return matchesQuery && matchesCategory && matchesCity;
-        });
-    }, [query, selectedCategories, selectedCities]);
+    const filtered = useMemo(
+        () =>
+            ALL_CLUBS.filter((club) => {
+                const matchesQuery =
+                    club.name.toLowerCase().includes(query.toLowerCase()) ||
+                    club.city.toLowerCase().includes(query.toLowerCase());
+                const matchesCategory =
+                    selectedCategories.length === 0 ||
+                    club.categories.some((c) => selectedCategories.includes(c));
+                const matchesCity =
+                    selectedCities.length === 0 ||
+                    selectedCities.includes(club.city);
+                return matchesQuery && matchesCategory && matchesCity;
+            }),
+        [query, selectedCategories, selectedCities]
+    );
 
     return (
-        <SafeAreaView className="flex-1 bg-white">
-            <StatusBar barStyle="dark-content" />
-            <View className="p-4">
-                {/* Barre de recherche + filtre */}
-                <View className="flex-row items-center border border-gray-300 rounded-lg overflow-hidden">
+        <SafeAreaView className="flex-1 bg-black">
+            <StatusBar barStyle="light-content" />
+            <View className="p-4 flex-1">
+                <View className="flex-row items-center border border-gray-700 rounded-lg overflow-hidden bg-gray-800">
                     <TextInput
                         value={query}
                         onChangeText={setQuery}
                         placeholder="Rechercher un club..."
-                        className="flex-1 px-4 py-2"
+                        placeholderTextColor="#9CA3AF"
+                        className="flex-1 px-4 py-2 text-white"
                     />
                     <Pressable
                         onPress={() => setShowFilters((v) => !v)}
                         className="px-4"
                     >
-                        <Ionicons name="filter" size={24} color="#4B5563" />
+                        <Ionicons name="filter" size={24} color="#fff" />
                     </Pressable>
                 </View>
 
                 {/* Panneau de filtres */}
                 {showFilters && (
-                    <View className="bg-white p-4 rounded-lg shadow mt-2">
-                        <Text className="font-bold mb-2">Filtres</Text>
+                    <View className="bg-gray-800 p-4 rounded-lg shadow mt-2">
+                        <Text className="text-white font-bold mb-2">Filtres</Text>
 
-                        <Text className="font-medium mb-1">Catégories</Text>
+                        <Text className="text-gray-200 font-medium mb-1">Catégories</Text>
                         <View className="flex-row flex-wrap mb-4">
-                            {allCategories.map((cat) => (
-                                <Pressable
-                                    key={cat}
-                                    onPress={() => toggleCategory(cat)}
-                                    className={`px-3 py-1 mr-2 mb-2 rounded-full border ${selectedCategories.includes(cat)
-                                            ? 'bg-blue-500 border-blue-500'
-                                            : 'border-gray-300'
-                                        }`}
-                                >
-                                    <Text
-                                        className={
-                                            selectedCategories.includes(cat)
-                                                ? 'text-white'
-                                                : 'text-gray-700'
-                                        }
+                            {allCategories.map((cat) => {
+                                const selected = selectedCategories.includes(cat);
+                                return (
+                                    <Pressable
+                                        key={cat}
+                                        onPress={() => toggleCategory(cat)}
+                                        className={`px-3 py-1 mr-2 mb-2 rounded-full border ${selected ? 'bg-blue-600 border-blue-600' : 'border-gray-600'
+                                            }`}
                                     >
-                                        {cat}
-                                    </Text>
-                                </Pressable>
-                            ))}
+                                        <Text className={selected ? 'text-white' : 'text-gray-300'}>
+                                            {cat}
+                                        </Text>
+                                    </Pressable>
+                                );
+                            })}
                         </View>
 
-                        <Text className="font-medium mb-1">Ville</Text>
+                        <Text className="text-gray-200 font-medium mb-1">Ville</Text>
                         <View className="flex-row flex-wrap">
-                            {allCities.map((city) => (
-                                <Pressable
-                                    key={city}
-                                    onPress={() => toggleCity(city)}
-                                    className={`px-3 py-1 mr-2 mb-2 rounded-full border ${selectedCities.includes(city)
-                                            ? 'bg-blue-500 border-blue-500'
-                                            : 'border-gray-300'
-                                        }`}
-                                >
-                                    <Text
-                                        className={
-                                            selectedCities.includes(city)
-                                                ? 'text-white'
-                                                : 'text-gray-700'
-                                        }
+                            {allCities.map((city) => {
+                                const selected = selectedCities.includes(city);
+                                return (
+                                    <Pressable
+                                        key={city}
+                                        onPress={() => toggleCity(city)}
+                                        className={`px-3 py-1 mr-2 mb-2 rounded-full border ${selected ? 'bg-blue-600 border-blue-600' : 'border-gray-600'
+                                            }`}
                                     >
-                                        {city}
-                                    </Text>
-                                </Pressable>
-                            ))}
+                                        <Text className={selected ? 'text-white' : 'text-gray-300'}>
+                                            {city}
+                                        </Text>
+                                    </Pressable>
+                                );
+                            })}
                         </View>
                     </View>
                 )}
 
-                {/* Liste des clubs */}
                 <FlatList
                     data={filtered}
                     keyExtractor={(item) => item.id}
-                    className="mt-4"
+                    contentContainerStyle={{ paddingTop: 16 }}
                     ListEmptyComponent={
                         <Text className="text-gray-500 text-center mt-8">
                             Aucun club trouvé
@@ -176,25 +164,27 @@ export default function Search() {
                             onPress={() =>
                                 navigation.navigate('ClubProfile', { club: item })
                             }
-                            className="flex-row items-center bg-gray-100 rounded-lg p-4 mb-3"
+                            className="flex-row items-center bg-gray-800 rounded-lg p-4 mb-3"
                         >
                             <Image
                                 source={item.logo}
                                 className="w-16 h-16 rounded-lg mr-4"
                             />
                             <View className="flex-1">
-                                <Text className="text-lg font-semibold">{item.name}</Text>
-                                <Text className="text-gray-500">{item.city}</Text>
-                                <Text className="text-gray-500">
+                                <Text className="text-white text-lg font-semibold">
+                                    {item.name}
+                                </Text>
+                                <Text className="text-gray-400">{item.city}</Text>
+                                <Text className="text-gray-400">
                                     {item.teams} équipes
                                 </Text>
                                 <View className="flex-row flex-wrap mt-1">
                                     {item.categories.map((c) => (
                                         <View
                                             key={c}
-                                            className="px-2 py-0.5 mr-2 mb-1 bg-gray-200 rounded-full"
+                                            className="px-2 py-0.5 mr-2 mb-1 bg-gray-700 rounded-full"
                                         >
-                                            <Text className="text-xs text-gray-700">{c}</Text>
+                                            <Text className="text-xs text-gray-300">{c}</Text>
                                         </View>
                                     ))}
                                 </View>
