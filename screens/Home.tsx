@@ -1,13 +1,5 @@
 import React from 'react';
-import {
-    ImageBackground,
-    SafeAreaView,
-    View,
-    Image,
-    Text,
-    Pressable,
-    StatusBar,
-} from 'react-native';
+import { ImageBackground, SafeAreaView, View, Image, Text, Pressable, StatusBar,} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
@@ -35,7 +27,7 @@ export default function Home() {
 
                     <Pressable
                         className="w-full bg-orange-500 border border-white py-5 rounded-2xl shadow-lg"
-                        onPress={() => navigation.navigate('InscriptionJoueur')}
+                        onPress={() => navigation.navigate('InscriptionJoueurStep1')}
                     >
                         <Text className="text-white text-center text-xl font-bold">
                             Je m’inscris comme un joueur
@@ -43,7 +35,7 @@ export default function Home() {
                     </Pressable>
 
                     <Pressable
-                        className="w-full bg-orange-400/90 border border-white py-5 rounded-2xl shadow-lg"
+                        className="w-full my-4 bg-orange-400/90 border border-white py-5 rounded-2xl shadow-lg"
                         onPress={() => navigation.navigate('InscriptionClub')}
                     >
                         <Text className="text-white text-center text-xl font-bold">
