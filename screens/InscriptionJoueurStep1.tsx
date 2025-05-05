@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-    ImageBackground,
     SafeAreaView,
     View,
     Text,
@@ -8,12 +7,15 @@ import {
     Pressable,
     StatusBar,
     Alert,
+    TouchableOpacity,
+    Image,
 } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+// import { auth } from '../lib/firebase';
 import { RootStackParamList } from '../types';
+import { Feather } from '@expo/vector-icons';
 
 type InscriptionStep1NavProp = NativeStackNavigationProp<
     RootStackParamList,
@@ -22,16 +24,29 @@ type InscriptionStep1NavProp = NativeStackNavigationProp<
 
 export default function InscriptionJoueurStep1() {
     const navigation = useNavigation<InscriptionStep1NavProp>();
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+
+    const isValidEmail = (email: string) =>
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    const isValidPassword = (pwd: string) => {
+        const hasMinLength = pwd.length >= 8;
+        const hasUppercase = /[A-Z]/.test(pwd);
+        const hasNumber = /\d/.test(pwd);
+        return hasMinLength && hasUppercase && hasNumber;
+    };
 
     const handleContinue = async () => {
-        if (!email || !password) return;
+        setSubmitted(true);
+        if (!isValidEmail(email) || !isValidPassword(password)) return;
 
         setLoading(true);
         try {
-            await createUserWithEmailAndPassword(auth, email, password);
             navigation.navigate('InscriptionJoueurStep2', { email, password });
         } catch (err: any) {
             Alert.alert('Erreur', err.message);
@@ -41,58 +56,88 @@ export default function InscriptionJoueurStep1() {
     };
 
     return (
-        <ImageBackground
-            source={require('../assets/background.jpg')}
-            className="absolute inset-0 w-full h-full"
-            imageStyle={{ opacity: 0.6 }}
-            resizeMode="cover"
-        >
-            <SafeAreaView className="flex-1 justify-center px-8">
-                <StatusBar barStyle="light-content" translucent />
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#0E0D0D' }}>
+            <StatusBar barStyle="light-content" translucent />
 
-                <View className="bg-white/90 rounded-2xl p-6 space-y-4">
-                    <Text className="text-2xl font-bold text-center">
-                        Étape 1 : Identifiants
-                    </Text>
+            {/* ⬅️ Header haut gauche */}
+            <View className="px-6 mt-6">
+                <Pressable
+                    onPress={() => navigation.goBack()}
+                    className="flex-row items-center space-x-3"
+                >
+                    <Image source={require('../assets/arrow-left.png')} className="w-9 h-9" />
+                    <Text className="text-white text-xl ml-3">Inscription joueur</Text>
+                </Pressable>
+            </View>
 
+            {/* 🧾 Formulaire centré */}
+            <View className="flex-1 justify-center px-6 space-y-4">
+                {/* E-mail */}
+                <View>
                     <TextInput
                         value={email}
                         onChangeText={setEmail}
-                        placeholder="Email"
+                        placeholder="E-mail"
+                        placeholderTextColor="#ccc"
                         keyboardType="email-address"
                         autoCapitalize="none"
-                        className="border border-gray-300 rounded-lg px-4 py-2 bg-white"
+                        autoCorrect={false}
+                        textContentType="emailAddress"
+                        className="border border-gray-400 rounded-md h-14 px-4 py-0 text-white text-lg"
                     />
 
+                    {submitted && !isValidEmail(email) && (
+                        <Text className="text-sm text-red-500 mt-1">
+                            Format d'e-mail invalide
+                        </Text>
+                    )}
+                </View>
+
+                {/* Mot de passe */}
+                <View className="relative mt-4">
                     <TextInput
                         value={password}
                         onChangeText={setPassword}
                         placeholder="Mot de passe"
-                        secureTextEntry
-                        className="border border-gray-300 rounded-lg px-4 py-2 bg-white"
+                        placeholderTextColor="#ccc"
+                        secureTextEntry={!showPassword}
+                        className="border border-gray-400 rounded-md h-14 px-4 py-0 text-white pr-10 text-lg"
                     />
-
-                    <Pressable
-                        className={`${!email || !password || loading
-                                ? 'bg-gray-300'
-                                : 'bg-orange-500'
-                            } py-3 rounded-2xl items-center`}
-                        onPress={handleContinue}
-                        disabled={!email || !password || loading}
+                    <TouchableOpacity
+                        onPress={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-4"
                     >
-                        <Text className="text-white font-bold">
-                            {loading ? 'Chargement...' : 'Continuer'}
-                        </Text>
-                    </Pressable>
-
-                    <Pressable
-                        className="mt-4 items-center"
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Text className="text-blue-600">Retour</Text>
-                    </Pressable>
+                        <Feather
+                            name={showPassword ? 'eye-off' : 'eye'}
+                            size={22}
+                            color="#ccc"
+                        />
+                    </TouchableOpacity>
                 </View>
-            </SafeAreaView>
-        </ImageBackground>
+
+                {/* Règles mot de passe */}
+                {(!isValidPassword(password) && submitted) && (
+                    <View className="space-y-1">
+                        <Text className="text-sm text-red-500">• 8 caractères minimum</Text>
+                        <Text className="text-sm text-red-500">• 1 majuscule</Text>
+                        <Text className="text-sm text-red-500">• 1 chiffre</Text>
+                    </View>
+                )}
+
+                {/* Bouton Continuer */}
+                <Pressable
+                    onPress={handleContinue}
+                    disabled={loading}
+                    className={`py-4 rounded-2xl items-center mt-4 ${!isValidEmail(email) || !isValidPassword(password)
+                            ? 'bg-gray-600 opacity-60'
+                            : 'bg-orange-500'
+                        }`}
+                >
+                    <Text className="text-white font-bold text-lg">
+                        {loading ? 'Chargement...' : 'Continuer'}
+                    </Text>
+                </Pressable>
+            </View>
+        </SafeAreaView>
     );
 }
