@@ -18,6 +18,7 @@ import MainTabNavigator from './navigation/MainTabNavigator';
 import ChatDetail from './screens/ChatDetail';
 import ClubProfile from 'screens/ClubProfile';
 import OfferDetail from 'screens/OfferDetail';
+import Payment from 'screens/Payment';
 
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -40,6 +41,7 @@ export default function App() {
         <Stack.Screen name="ChatDetail" component={ChatDetail} />
         <Stack.Screen name="ClubProfile" component={ClubProfile} />
         <Stack.Screen name="OfferDetail" component={OfferDetail} />
+        <Stack.Screen name="Payment" component={Payment} />
       </Stack.Navigator>
     </NavigationContainer>
   );
