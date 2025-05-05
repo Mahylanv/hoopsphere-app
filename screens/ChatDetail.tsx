@@ -31,7 +31,7 @@ export default function ChatDetail({
 
     return (
         <ImageBackground
-            source={require('../assets/background.jpg')}
+            source={require('../assets/background.png')}
             className="absolute inset-0 w-full h-full"
             resizeMode="cover"
         >
