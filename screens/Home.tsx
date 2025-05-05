@@ -13,7 +13,7 @@ export default function Home() {
         <SafeAreaView className="flex-1 bg-black">
             <StatusBar barStyle="light-content" translucent />
             <ImageBackground
-                source={require('../assets/background.jpg')}
+                source={require('../assets/background.png')}
                 className="absolute inset-0 w-full h-full"
                 imageStyle={{ opacity: 0.6 }}
                 resizeMode="cover"

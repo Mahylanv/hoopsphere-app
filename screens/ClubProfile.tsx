@@ -19,26 +19,28 @@ export default function ClubProfile() {
     const { club } = params;
 
     return (
-        <SafeAreaView className="flex-1 bg-white">
-            <StatusBar barStyle="dark-content" />
+        <SafeAreaView className="flex-1 bg-gray-900">
+            <StatusBar barStyle="light-content" />
 
-            {/* En-tête */}
-            <View className="flex-row items-center px-4 py-2 border-b border-gray-200">
-                <Pressable onPress={() => navigation.goBack()} className="p-2">
-                    <Text className="text-blue-600">← Retour</Text>
+            <View className="items-center px-4 py-6 border-b border-gray-700">
+                <Pressable onPress={() => navigation.goBack()} className="absolute left-4 top-6 p-2">
+                    <Text className="text-white text-lg">←</Text>
                 </Pressable>
                 <Image
                     source={club.logo}
-                    className="w-10 h-10 rounded-full ml-2"
+                    className="w-20 h-20 rounded-full mb-2"
                 />
-                <Text className="ml-3 text-lg font-semibold">{club.name}</Text>
+                <Text className="text-xl font-bold text-white">{club.name}</Text>
+                <Text className="text-sm text-gray-400">{club.city}</Text>
             </View>
 
-            {/* Onglets */}
             <Tab.Navigator
                 screenOptions={{
-                    tabBarIndicatorStyle: { backgroundColor: '#1d4ed8' },
-                    tabBarLabelStyle: { fontWeight: 'bold' },
+                    tabBarStyle: { backgroundColor: '#1f2937' },   
+                    tabBarIndicatorStyle: { backgroundColor: '#3b82f6', height: 3 },
+                    tabBarActiveTintColor: '#fff',
+                    tabBarInactiveTintColor: 'rgba(255,255,255,0.7)',
+                    tabBarLabelStyle: { fontWeight: 'bold', textTransform: 'none' },
                 }}
             >
                 <Tab.Screen

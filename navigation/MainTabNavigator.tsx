@@ -1,10 +1,12 @@
+// navigation/MainTabNavigator.tsx
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 
 import MainJoueur from '../screens/MainJoueur';
 import Chat from '../screens/Chat';
-import Profil from '../screens/Profil';
 import Search from '../screens/Search';
+import Profil from '../screens/Profil';
 
 import { MainTabParamList } from '../types';
 
@@ -13,12 +15,35 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 export default function MainTabNavigator() {
     return (
         <Tab.Navigator
-            screenOptions={{
+            screenOptions={({ route }) => ({
                 headerShown: false,
-                tabBarStyle: { backgroundColor: '#f3f4f6', borderTopColor: '#d1d5db' },
-                tabBarActiveTintColor: '#1d4ed8',
-                tabBarInactiveTintColor: '#6b7280',
-            }}
+                tabBarStyle: {
+                    backgroundColor: '#1f2937',  // gris foncé
+                    borderTopColor: '#111827',
+                },
+                tabBarActiveTintColor: '#ffffff',
+                tabBarInactiveTintColor: '#9ca3af',
+                tabBarIcon: ({ color, size }) => {
+                    let iconName: React.ComponentProps<typeof Ionicons>['name'] = 'home-outline';
+
+                    switch (route.name) {
+                        case 'MainJoueur':
+                            iconName = 'home-outline';
+                            break;
+                        case 'Chat':
+                            iconName = 'chatbubble-outline';
+                            break;
+                        case 'Search':
+                            iconName = 'search-outline';
+                            break;
+                        case 'Profil':
+                            iconName = 'person-outline';
+                            break;
+                    }
+
+                    return <Ionicons name={iconName} size={size} color={color} />;
+                },
+            })}
         >
             <Tab.Screen
                 name="MainJoueur"
@@ -28,7 +53,7 @@ export default function MainTabNavigator() {
             <Tab.Screen
                 name="Chat"
                 component={Chat}
-                options={{ tabBarLabel: 'Chat' }}
+                options={{ tabBarLabel: 'Message' }}
             />
             <Tab.Screen
                 name="Search"
