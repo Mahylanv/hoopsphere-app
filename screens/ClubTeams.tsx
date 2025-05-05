@@ -5,6 +5,7 @@ import {
     FlatList,
     Pressable,
     Image,
+    StatusBar,
 } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { RootStackParamList, Club } from '../types';
@@ -16,11 +17,10 @@ type Team = {
     label: string;
 };
 
-// Trois équipes d’exemple
 const TEAMS: Team[] = [
     { id: 'u18f', label: 'U18 Féminin (Régional 3)' },
-    { id: 'u20m', label: 'U20 Masculin (National 2)' },
-    { id: 'seniors', label: 'Seniors (Élite)' },
+    { id: 'u20m', label: 'U20 Masculin (Régionale 2)' },
+    { id: 'seniors', label: 'Seniors (Départementale 2)' },
 ];
 
 const DETAILS: Record<
@@ -114,92 +114,106 @@ export default function ClubTeams() {
         setExpanded(prev => (prev === id ? null : id));
 
     return (
-        <FlatList
-            contentContainerStyle={{ padding: 16 }}
-            data={TEAMS}
-            keyExtractor={t => t.id}
-            renderItem={({ item }) => {
-                const isOpen = expanded === item.id;
-                const details = DETAILS[item.id];
-                if (!details) return null;
+        <View className="flex-1 bg-gray-900">
+            <StatusBar barStyle="light-content" />
+            <FlatList
+                contentContainerStyle={{ padding: 16 }}
+                data={TEAMS}
+                keyExtractor={t => t.id}
+                renderItem={({ item }) => {
+                    const isOpen = expanded === item.id;
+                    const details = DETAILS[item.id];
+                    if (!details) return null;
 
-                return (
-                    <View className="mb-6 rounded-lg shadow overflow-hidden">
-                        <Pressable
-                            onPress={() => toggle(item.id)}
-                            className="px-4 py-3 flex-row items-center justify-between bg-gray-100"
-                        >
-                            <View className="flex-row items-center">
-                                <Image
-                                    source={club.logo}
-                                    className="w-10 h-10 rounded-full mr-3"
-                                />
-                                <Text className="text-lg font-semibold">
-                                    {item.label}
-                                </Text>
-                            </View>
-                            <Text className="text-2xl font-bold">
-                                {isOpen ? '−' : '+'}
-                            </Text>
-                        </Pressable>
-
-                        {isOpen && (
-                            <View className="px-4 py-3 bg-white">
-                                <Text className="text-md font-semibold mb-2">
-                                    Effectif
-                                </Text>
-                                {details.roster.map(player => (
-                                    <Text key={player.name} className="ml-2 mb-1">
-                                        • {player.name} — <Text className="font-medium">{player.role}</Text>
+                    return (
+                        <View className="mb-6 rounded-lg overflow-hidden border border-gray-700">
+                            <Pressable
+                                onPress={() => toggle(item.id)}
+                                className="px-4 py-3 flex-row items-center justify-between bg-gray-800"
+                            >
+                                <View className="flex-row items-center">
+                                    <Image
+                                        source={club.logo}
+                                        className="w-10 h-10 rounded-full mr-3 border border-gray-600"
+                                    />
+                                    <Text className="text-lg font-semibold text-white">
+                                        {item.label}
                                     </Text>
-                                ))}
-
-                                <Text className="text-md font-semibold mt-4 mb-2">
-                                    Derniers résultats
+                                </View>
+                                <Text className="text-white text-2xl font-bold">
+                                    {isOpen ? '−' : '+'}
                                 </Text>
-                                {details.results.map((r, idx) => (
-                                    <View
-                                        key={idx}
-                                        className="flex-row items-center mb-2"
-                                    >
-                                        <View className="items-center">
-                                            <Image
-                                                source={club.logo}
-                                                className="w-8 h-8 rounded-full"
-                                            />
-                                            <Text className="text-xs">{club.name}</Text>
-                                        </View>
+                            </Pressable>
 
-                                        <Text className="mx-2 font-medium">vs</Text>
-
-                                        {/* Logo + nom de l’adversaire */}
-                                        <View className="items-center">
-                                            <Image
-                                                source={r.opponentLogo}
-                                                className="w-8 h-8 rounded-full"
-                                            />
-                                            <Text className="text-xs">{r.opponent}</Text>
-                                        </View>
-
-                                        {/* Score à droite */}
+                            {/* Contenu dépliable */}
+                            {isOpen && (
+                                <View className="px-4 py-3 bg-gray-800">
+                                    {/* Effectif */}
+                                    <Text className="text-md font-semibold text-white mb-2">
+                                        Effectif
+                                    </Text>
+                                    {details.roster.map(player => (
                                         <Text
-                                            className={`ml-auto ${r.win
-                                                ? 'text-green-600 font-bold'
-                                                : 'text-red-600 font-bold'
-                                                }`}
+                                            key={player.name}
+                                            className="ml-2 mb-1 text-gray-300"
                                         >
-                                            {r.score}
+                                            • {player.name} —{' '}
+                                            <Text className="font-medium text-gray-100">
+                                                {player.role}
+                                            </Text>
                                         </Text>
-                                    </View>
-                                ))}
-                            </View>
-                        )}
-                    </View>
-                );
-            }}
-            ListEmptyComponent={
-                <Text className="text-center mt-10">Aucune équipe.</Text>
-            }
-        />
+                                    ))}
+
+                                    {/* Historique */}
+                                    <Text className="text-md font-semibold text-white mt-4 mb-2">
+                                        Derniers résultats
+                                    </Text>
+                                    {details.results.map((r, idx) => (
+                                        <View
+                                            key={idx}
+                                            className="flex-row items-center mb-2"
+                                        >
+                                            <View className="items-center">
+                                                <Image
+                                                    source={club.logo}
+                                                    className="w-8 h-8 rounded-full border border-gray-600"
+                                                />
+                                                <Text className="text-xs text-gray-400">
+                                                    {club.name}
+                                                </Text>
+                                            </View>
+
+                                            <Text className="mx-2 font-medium text-gray-200">vs</Text>
+
+                                            <View className="items-center">
+                                                <Image
+                                                    source={r.opponentLogo}
+                                                    className="w-8 h-8 rounded-full border border-gray-600"
+                                                />
+                                                <Text className="text-xs text-gray-400">
+                                                    {r.opponent}
+                                                </Text>
+                                            </View>
+
+                                            <Text
+                                                className={`ml-auto font-bold ${r.win ? 'text-green-400' : 'text-red-400'
+                                                    }`}
+                                            >
+                                                {r.score}
+                                            </Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    );
+                }}
+                ListEmptyComponent={
+                    <Text className="text-center mt-10 text-gray-400">
+                        Aucune équipe.
+                    </Text>
+                }
+            />
+        </View>
     );
 }
