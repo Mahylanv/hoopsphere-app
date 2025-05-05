@@ -36,6 +36,8 @@ export type RootStackParamList = {
             location: string;
         };
     };
+    Payment: undefined;
+
 };
 
 export type MainTabParamList = {
