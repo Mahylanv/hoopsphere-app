@@ -4,12 +4,12 @@ import {
   Text,
   TextInput,
   Pressable,
-  SafeAreaView,
   TouchableOpacity,
   Image,
   StatusBar,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../types';

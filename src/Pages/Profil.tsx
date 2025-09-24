@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-    SafeAreaView,
     View,
     Text,
     StatusBar,
@@ -9,6 +8,7 @@ import {
     ScrollView,
     TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
 import * as Animatable from 'react-native-animatable';
