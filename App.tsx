@@ -21,8 +21,6 @@ import ChatDetail from './src/Pages/ChatDetail';
 import ClubProfile from './src/Profil/Clubs/ClubProfile';
 import OfferDetail from './src/Pages/OfferDetail';
 import Payment from './src/Pages/Payment';
-import MainJoueur from './src/Profil/Joueurs/MainJoueur';
-
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -43,7 +41,6 @@ export default function App() {
             <Stack.Screen name="InscriptionClubStep2" component={InscriptionClubStep2} />
             <Stack.Screen name="MainTabs" component={MainTabNavigator} />
             <Stack.Screen name="ChatDetail" component={ChatDetail} />
-            <Stack.Screen name="MainJoueur" component={MainJoueur} />
             <Stack.Screen name="ClubProfile" component={ClubProfile} />
             <Stack.Screen name="OfferDetail" component={OfferDetail} />
             <Stack.Screen name="Payment" component={Payment} />
