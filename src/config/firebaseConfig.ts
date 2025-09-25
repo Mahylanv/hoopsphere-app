@@ -1,26 +1,54 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getAnalytics } from "firebase/analytics";
-import { getFirestore } from "firebase/firestore";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth, initializeAuth } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import {
+  initializeFirestore,
+  memoryLocalCache,
+  setLogLevel,
+} from 'firebase/firestore';
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyClvHa4SAH9QogkFc7sKJxnoA3eCWBpcek",
-  authDomain: "hoopsphere-df315.firebaseapp.com",
-  projectId: "hoopsphere-df315",
-  storageBucket: "hoopsphere-df315.firebasestorage.app",
-  messagingSenderId: "573890431126",
-  appId: "1:573890431126:web:4c64b7534030cb4b191ab7",
-  measurementId: "G-MH63E7L4BS"
+  apiKey: 'AIzaSyClvHa4SAH9QogkFc7sKJxnoA3eCWBpcek',
+  authDomain: 'hoopsphere-df315.firebaseapp.com',
+  projectId: 'hoopsphere-df315',
+  storageBucket: 'hoopsphere-df315.firebasestorage.app',
+  messagingSenderId: '573890431126',
+  appId: '1:573890431126:web:4c64b7534030cb4b191ab7',
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-// Services
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+function initAuthNative() {
+  let getReactNativePersistence: any | undefined;
+  try {
+    ({ getReactNativePersistence } = require('firebase/auth/react-native'));
+  } catch {
+    try {
+      ({ getReactNativePersistence } = require('@firebase/auth/dist/rn/index.js'));
+    } catch {
+      throw new Error(
+        "Impossible de charger 'getReactNativePersistence'. Vérifie 'firebase@^12' et relance avec 'expo start --clear'."
+      );
+    }
+  }
+
+  try {
+    return initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch {
+    return getAuth(app); 
+  }
+}
+
+export const auth = Platform.OS === 'web' ? getAuth(app) : initAuthNative();
+
+setLogLevel('error');
+
+export const db = initializeFirestore(app, {
+  localCache: memoryLocalCache(),
+  experimentalAutoDetectLongPolling: true,
+});
+
+export default app;

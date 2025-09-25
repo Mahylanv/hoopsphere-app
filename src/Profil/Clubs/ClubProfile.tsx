@@ -1,5 +1,6 @@
 import React from 'react';
-import { SafeAreaView, Pressable, Text, View, StatusBar, Image } from 'react-native';
+import { Pressable, Text, View, StatusBar, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';

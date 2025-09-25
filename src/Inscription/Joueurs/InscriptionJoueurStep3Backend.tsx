@@ -1,8 +1,6 @@
-// screens/InscriptionJoueurStep3.tsx
 import React, { useState } from 'react';
 import {
     ImageBackground,
-    SafeAreaView,
     View,
     Text,
     TextInput,
@@ -11,6 +9,7 @@ import {
     ScrollView,
     Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -40,12 +39,11 @@ export default function InscriptionJoueurStep3() {
     const canFinish = taille.trim() !== '' && poids.trim() !== '';
 
     const handleFinish = async (forceSave: boolean) => {
-        // 1) Vérifier l'authentification
+        // Vérifier l'authentification
         const user = auth.currentUser;
         if (!user) {
             return Alert.alert('Erreur', 'Utilisateur non authentifié');
         }
-        // 2) Si pas de forceSave, taille+poids obligatoires
         if (!forceSave && !canFinish) {
             return Alert.alert(
                 'Champs manquants',
@@ -53,7 +51,6 @@ export default function InscriptionJoueurStep3() {
             );
         }
 
-        // 3) Préparation du document
         const payload = {
             uid: user.uid,
             email,
@@ -69,7 +66,7 @@ export default function InscriptionJoueurStep3() {
         };
 
         try {
-            // 4) Enregistrement Firestore (merge pour ne pas écraser d'éventuelles données existantes)
+            //Enregistrement BDD
             await setDoc(doc(db, 'users', user.uid), payload, { merge: true });
             Alert.alert('Succès', 'Profil enregistré !');
             navigation.navigate('Home');
@@ -125,7 +122,6 @@ export default function InscriptionJoueurStep3() {
                             {CLUBS.map(c => <Picker.Item key={c} label={c} value={c} />)}
                         </Picker>
 
-                        {/* Terminer (validé uniquement si canFinish) */}
                         <Pressable
                             onPress={() => handleFinish(false)}
                             disabled={!canFinish}
@@ -134,7 +130,6 @@ export default function InscriptionJoueurStep3() {
                             <Text className="text-white font-bold">Terminer</Text>
                         </Pressable>
 
-                        {/* Plus tard (enregistre malgré tout) */}
                         <Pressable
                             onPress={() => handleFinish(true)}
                             className="bg-gray-400/70 py-3 rounded-2xl items-center"
@@ -142,7 +137,6 @@ export default function InscriptionJoueurStep3() {
                             <Text className="text-white font-bold">Plus tard</Text>
                         </Pressable>
 
-                        {/* Retour */}
                         <Pressable
                             onPress={() => navigation.goBack()}
                             className="mt-4 items-center"

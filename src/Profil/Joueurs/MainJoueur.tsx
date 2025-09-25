@@ -1,7 +1,6 @@
 // screens/MainJoueur.tsx
 import React from 'react';
 import {
-    SafeAreaView,
     View,
     Text,
     StatusBar,
@@ -12,6 +11,7 @@ import {
     Pressable,
     Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useNavigation } from '@react-navigation/native';

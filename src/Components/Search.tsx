@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import {
-    SafeAreaView,
     View,
     TextInput,
     FlatList,
@@ -9,6 +8,7 @@ import {
     Pressable,
     Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';

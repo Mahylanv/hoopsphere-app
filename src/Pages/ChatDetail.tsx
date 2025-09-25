@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-    SafeAreaView,
     View,
     Text,
     StatusBar,
@@ -11,6 +10,7 @@ import {
     ScrollView,
     Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
