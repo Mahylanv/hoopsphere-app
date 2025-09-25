@@ -2,6 +2,7 @@ export type RootStackParamList = {
     Home: undefined;
     Connexion: undefined;
 
+    InscriptionJoueur: undefined;
     InscriptionJoueurStep1: undefined;
     InscriptionJoueurStep2: { email: string; password: string };
     InscriptionJoueurStep3: {
