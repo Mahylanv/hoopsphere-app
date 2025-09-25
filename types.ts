@@ -12,6 +12,7 @@ export type RootStackParamList = {
         dob: string;
         genre: string;
     };
+
     InscriptionClub: undefined;
     InscriptionClubStep2: undefined;
 
@@ -23,10 +24,11 @@ export type RootStackParamList = {
     ChatDetail: {
         conversationId: string;
         name: string;
-        avatar: number; 
+        avatar: number;
     };
-    ClubProfile: { club: Club }; 
-    Search: undefined;  
+
+    ClubProfile: { club: Club };
+    Search: undefined;
 
     OfferDetail: {
         offer: {
@@ -42,15 +44,15 @@ export type RootStackParamList = {
             location: string;
         };
     };
-    Payment: undefined;
 
+    Payment: undefined;
 };
 
 export type MainTabParamList = {
     MainJoueur: undefined;
-    Chat: undefined; 
+    Chat: undefined;
     Profil: undefined;
-    Search: undefined;  
+    Search: undefined;
 };
 
 export type Club = {
