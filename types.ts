@@ -1,7 +1,7 @@
 export type RootStackParamList = {
     Home: undefined;
     Connexion: undefined;
-    InscriptionJoueur: undefined; // ✅ ajoute ça
+
     InscriptionJoueurStep1: undefined;
     InscriptionJoueurStep2: { email: string; password: string };
     InscriptionJoueurStep3: {
@@ -14,13 +14,15 @@ export type RootStackParamList = {
     };
 
     InscriptionClub: undefined;
-    InscriptionClubStep2: undefined;
 
-    
+    InscriptionClubStep2: {
+        uid: string;
+        email: string | null;
+    };
 
     MainTabs: undefined;
-    MainJoueur: undefined;
-    Chat: undefined; 
+
+    Chat: undefined;
     ChatDetail: {
         conversationId: string;
         name: string;
