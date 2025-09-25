@@ -1,6 +1,7 @@
 export type RootStackParamList = {
     Home: undefined;
     Connexion: undefined;
+
     InscriptionJoueurStep1: undefined;
     InscriptionJoueurStep2: { email: string; password: string };
     InscriptionJoueurStep3: {
@@ -9,20 +10,27 @@ export type RootStackParamList = {
         nom: string;
         prenom: string;
         dob: string;
+        genre: string;
     };
+
     InscriptionClub: undefined;
-    InscriptionClubStep2: undefined;
-    
+
+    InscriptionClubStep2: {
+        uid: string;
+        email: string | null;
+    };
 
     MainTabs: undefined;
-    Chat: undefined; 
+
+    Chat: undefined;
     ChatDetail: {
         conversationId: string;
         name: string;
-        avatar: number; 
+        avatar: number;
     };
-    ClubProfile: { club: Club }; 
-    Search: undefined;  
+
+    ClubProfile: { club: Club };
+    Search: undefined;
 
     OfferDetail: {
         offer: {
@@ -38,15 +46,15 @@ export type RootStackParamList = {
             location: string;
         };
     };
-    Payment: undefined;
 
+    Payment: undefined;
 };
 
 export type MainTabParamList = {
     MainJoueur: undefined;
-    Chat: undefined; 
+    Chat: undefined;
     Profil: undefined;
-    Search: undefined;  
+    Search: undefined;
 };
 
 export type Club = {
