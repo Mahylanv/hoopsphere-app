@@ -20,17 +20,38 @@ const firebaseConfig = {
   measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-const app = initializeApp(firebaseConfig);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// ✅ Auth sans persistence (user ne reste pas connecté après fermeture)
-export const auth = getAuth(app);
+function initAuthNative() {
+  let getReactNativePersistence: any | undefined;
+  try {
+    ({ getReactNativePersistence } = require('firebase/auth/react-native'));
+  } catch {
+    try {
+      ({ getReactNativePersistence } = require('@firebase/auth/dist/rn/index.js'));
+    } catch {
+      throw new Error(
+        "Impossible de charger 'getReactNativePersistence'. Vérifie 'firebase@^12' et relance avec 'expo start --clear'."
+      );
+    }
+  }
 
-// ✅ Firestore avec long polling (fix Expo Go)
+  try {
+    return initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch {
+    return getAuth(app); 
+  }
+}
+
+export const auth = Platform.OS === 'web' ? getAuth(app) : initAuthNative();
+
+setLogLevel('error');
+
 export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
+  localCache: memoryLocalCache(),
+  experimentalAutoDetectLongPolling: true,
 });
-<<<<<<< HEAD
-=======
 
 export default app;
->>>>>>> 3f81264 (Inscripition joueur Ok)
