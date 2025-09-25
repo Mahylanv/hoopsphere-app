@@ -1,7 +1,11 @@
 export type RootStackParamList = {
     Home: undefined;
     Connexion: undefined;
+<<<<<<< HEAD
     InscriptionJoueur: undefined; // ✅ ajoute ça
+=======
+    InscriptionJoueur: undefined;
+>>>>>>> 3f81264 (Inscripition joueur Ok)
     InscriptionJoueurStep1: undefined;
     InscriptionJoueurStep2: { email: string; password: string };
     InscriptionJoueurStep3: {

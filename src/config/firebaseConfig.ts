@@ -1,3 +1,5 @@
+
+// src/config/firebaseConfig.ts
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, initializeAuth } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,3 +29,8 @@ export const auth = getAuth(app);
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
 });
+<<<<<<< HEAD
+=======
+
+export default app;
+>>>>>>> 3f81264 (Inscripition joueur Ok)
