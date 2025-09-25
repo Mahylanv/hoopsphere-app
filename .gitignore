@@ -1,12 +1,30 @@
+<<<<<<< HEAD
 node_modules/
 .expo/
 dist/
 npm-debug.*
+=======
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+>>>>>>> origin/feature/club-bdd
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
+<<<<<<< HEAD
 *.orig.*
 web-build/
 
@@ -21,3 +39,27 @@ android
 
 # Temporary files created by Metro to check the health of the file watcher
 .metro-health-check*
+=======
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android
+>>>>>>> origin/feature/club-bdd

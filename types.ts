@@ -1,6 +1,10 @@
 export type RootStackParamList = {
     Home: undefined;
     Connexion: undefined;
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/feature/club-bdd
     InscriptionJoueurStep1: undefined;
     InscriptionJoueurStep2: { email: string; password: string };
     InscriptionJoueurStep3: {
@@ -9,6 +13,7 @@ export type RootStackParamList = {
         nom: string;
         prenom: string;
         dob: string;
+<<<<<<< HEAD
     };
     InscriptionClub: undefined;
 
@@ -21,6 +26,29 @@ export type RootStackParamList = {
     };
     ClubProfile: { club: Club }; 
     Search: undefined;  
+=======
+        genre: string;
+    };
+
+    InscriptionClub: undefined;
+
+    InscriptionClubStep2: {
+        uid: string;
+        email: string | null;
+    };
+
+    MainTabs: undefined;
+
+    Chat: undefined;
+    ChatDetail: {
+        conversationId: string;
+        name: string;
+        avatar: number;
+    };
+
+    ClubProfile: { club: Club };
+    Search: undefined;
+>>>>>>> origin/feature/club-bdd
 
     OfferDetail: {
         offer: {
@@ -36,13 +64,24 @@ export type RootStackParamList = {
             location: string;
         };
     };
+<<<<<<< HEAD
+=======
+
+    Payment: undefined;
+>>>>>>> origin/feature/club-bdd
 };
 
 export type MainTabParamList = {
     MainJoueur: undefined;
+<<<<<<< HEAD
     Chat: undefined; 
     Profil: undefined;
     Search: undefined;  
+=======
+    Chat: undefined;
+    Profil: undefined;
+    Search: undefined;
+>>>>>>> origin/feature/club-bdd
 };
 
 export type Club = {
@@ -52,4 +91,8 @@ export type Club = {
     city: string;
     teams: number;
     categories: string[];
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> origin/feature/club-bdd

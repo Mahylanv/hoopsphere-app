@@ -1,5 +1,6 @@
 {
   "expo": {
+<<<<<<< HEAD
     "name": "hoopsphere-app",
     "slug": "hoopsphere-app",
     "version": "1.0.0",
@@ -15,6 +16,20 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+=======
+    "name": "Hoopsphere",
+    "slug": "Hoopsphere",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+>>>>>>> origin/feature/club-bdd
     "ios": {
       "supportsTablet": true
     },
@@ -22,11 +37,18 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+<<<<<<< HEAD
       }
+=======
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+>>>>>>> origin/feature/club-bdd
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
+<<<<<<< HEAD
     },
     "newArchEnabled": true,
     "extra": {
@@ -36,6 +58,8 @@
       "FIREBASE_STORAGE_BUCKET": "hoopsphere.firebasestorage.app",
       "FIREBASE_MESSAGING_SENDER_ID": "21423187766",
       "FIREBASE_APP_ID": "1:21423187766:web:878a5e29c52f3e8a40f597"
+=======
+>>>>>>> origin/feature/club-bdd
     }
   }
 }
