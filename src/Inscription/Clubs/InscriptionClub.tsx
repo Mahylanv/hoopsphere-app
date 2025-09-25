@@ -124,7 +124,7 @@ export default function InscriptionClub() {
                                         onChangeText={setPassword}
                                         secureTextEntry={!showPassword}
                                         autoCapitalize="none"
-                                        className="flex-1 text-white text-base py-0 text-lg"
+                                        className="flex-1 text-white py-0 text-lg"
                                         onFocus={() => setPasswordFocused(true)}
                                         onBlur={() => setPasswordFocused(false)}
                                     />
