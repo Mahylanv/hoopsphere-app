@@ -19,10 +19,16 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../types";
 import { Feather } from "@expo/vector-icons";
 import clsx from "clsx";
+import { DEPARTEMENTS } from "../../constants/departements";
 
-import { auth, db } from "../../config/firebaseConfig";
+// 👉 Firebase
+import { auth, db, storage } from "../../config/firebaseConfig";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
+// 👉 Expo
+import * as ImagePicker from "expo-image-picker";
 
 // 👉 Données statiques (clubs + options)
 import paris from "../../../assets/paris.png";
@@ -38,17 +44,10 @@ const CLUBS = [
 const tailles = Array.from({ length: 71 }, (_, i) => `${150 + i} cm`);
 const poidsOptions = Array.from({ length: 101 }, (_, i) => `${40 + i} kg`);
 const postes = ["Meneur", "Arrière", "Ailier", "Ailier fort", "Pivot"];
-const DEPARTEMENTS = [
-  "75 - Paris",
-  "92 - Hauts-de-Seine",
-  "93 - Seine-Saint-Denis",
-  "94 - Val-de-Marne",
-  "95 - Val-d'Oise",
-];
 
 type Nav3Prop = NativeStackNavigationProp<
   RootStackParamList,
-  "InscriptionJoueurStep3"
+  "InscriptionJoueurStep3"  
 >;
 
 export default function InscriptionJoueurStep3() {
@@ -72,6 +71,8 @@ export default function InscriptionJoueurStep3() {
   const [poste, setPoste] = useState("");
   const [departement, setDepartement] = useState("");
   const [club, setClub] = useState("");
+  const [avatar, setAvatar] = useState<string | null>(null);
+
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const [showDepartementModal, setShowDepartementModal] = useState(false);
   const [searchDepartement, setSearchDepartement] = useState("");
@@ -81,6 +82,21 @@ export default function InscriptionJoueurStep3() {
 
   const isValid =
     taille && poids && main && poste && departement && club ? true : false;
+
+ // ✅ Upload avatar dans Firebase Storage
+const uploadAvatar = async (uid: string) => {
+  if (!avatar) return null;
+
+  const response = await fetch(avatar);
+  const blob = await response.blob();
+
+  // Ici on garde le dossier avatars/{uid}/ et on met toujours avatar.jpg
+  const storageRef = ref(storage, `avatars/${uid}/avatar.jpg`);
+
+  await uploadBytes(storageRef, blob);
+  return await getDownloadURL(storageRef);
+};
+
 
   // ✅ Création compte + enregistrement Firestore
   const handleRegister = async () => {
@@ -100,6 +116,9 @@ export default function InscriptionJoueurStep3() {
       const user = userCredential.user;
       console.log("✅ User créé:", user.uid);
 
+      // ⚡ Upload avatar
+      const avatarUrl = await uploadAvatar(user.uid);
+
       console.log("👉 Écriture Firestore...");
       await setDoc(doc(db, "joueurs", user.uid), {
         email,
@@ -113,6 +132,7 @@ export default function InscriptionJoueurStep3() {
         poste,
         departement,
         club,
+        avatar: avatarUrl || null,
         createdAt: new Date().toISOString(),
       });
       console.log("✅ Firestore OK");
@@ -125,20 +145,23 @@ export default function InscriptionJoueurStep3() {
       });
     } catch (error: any) {
       console.error("❌ Erreur Step3:", error);
-
-      let message = "Impossible de créer le compte.";
-      if (error.code === "auth/email-already-in-use") {
-        message = "Cet email est déjà utilisé.";
-      } else if (error.code === "auth/invalid-email") {
-        message = "Adresse email invalide.";
-      } else if (error.code === "auth/weak-password") {
-        message = "Mot de passe trop faible.";
-      } else if (error.code === "permission-denied") {
-        message = "Permissions Firestore insuffisantes (vérifie tes règles).";
-      }
-      Alert.alert("Erreur", message);
+      Alert.alert("Erreur", "Impossible de créer le compte.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ Sélection d’image (galerie)
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      setAvatar(result.assets[0].uri);
     }
   };
 
@@ -275,12 +298,21 @@ export default function InscriptionJoueurStep3() {
 
       {/* Avatar */}
       <View className="items-center my-8">
-        <View className="relative w-28 h-28 rounded-full bg-zinc-600 items-center justify-center">
-          <Feather name="user" size={56} color="#aaa" />
-          <View className="absolute bottom-0 right-0 bg-blue-500 p-2 rounded-full">
-            <Feather name="edit-2" size={16} color="white" />
+        <Pressable onPress={pickImage}>
+          <View className="relative w-28 h-28 rounded-full bg-zinc-600 items-center justify-center overflow-hidden">
+            {avatar ? (
+              <Image
+                source={{ uri: avatar }}
+                className="w-28 h-28 rounded-full"
+              />
+            ) : (
+              <Feather name="user" size={56} color="#aaa" />
+            )}
+            <View className="absolute bottom-0 right-0 bg-blue-500 p-2 rounded-full">
+              <Feather name="edit-2" size={16} color="white" />
+            </View>
           </View>
-        </View>
+        </Pressable>
       </View>
 
       {/* Formulaire */}
