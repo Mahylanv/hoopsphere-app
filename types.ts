@@ -23,6 +23,8 @@ export type RootStackParamList = {
 
     MainTabs: undefined;
 
+    Match: undefined; 
+
     Chat: undefined;
     ChatDetail: {
         conversationId: string;
@@ -53,6 +55,7 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
     MainJoueur: undefined;
+    Match: undefined;
     Chat: undefined;
     Profil: undefined;
     Search: undefined;

@@ -258,32 +258,32 @@ export default function InscriptionJoueurStep3() {
       </View>
 
       {/* Avatar */}
-<View className="items-center my-8">
-  <View className="relative w-28 h-28">
-    {/* Image pressable */}
-    <Pressable onPress={pickImage}>
-      <View className="rounded-full bg-zinc-600 items-center justify-center w-28 h-28 overflow-hidden">
-        {avatar ? (
-          <Image
-            source={{ uri: avatar }}
-            className="w-28 h-28 rounded-full"
-          />
-        ) : (
-          <Feather name="user" size={56} color="#aaa" />
-        )}
-      </View>
-    </Pressable>
+      <View className="items-center my-8">
+        <View className="relative w-28 h-28">
+          {/* Image pressable */}
+          <Pressable onPress={pickImage}>
+            <View className="rounded-full bg-zinc-600 items-center justify-center w-28 h-28 overflow-hidden">
+              {avatar ? (
+                <Image
+                  source={{ uri: avatar }}
+                  className="w-28 h-28 rounded-full"
+                />
+              ) : (
+                <Feather name="user" size={56} color="#aaa" />
+              )}
+            </View>
+          </Pressable>
 
-    {/* Crayon au-dessus */}
-    <Pressable
-      onPress={pickImage}
-      className="absolute bottom-0 right-0 bg-blue-500 p-2 rounded-full z-50"
-      style={{ elevation: 10 }}
-    >
-      <Feather name="edit-2" size={16} color="white" />
-    </Pressable>
-  </View>
-</View>
+          {/* Crayon au-dessus */}
+          <Pressable
+            onPress={pickImage}
+            className="absolute bottom-0 right-0 bg-blue-500 p-2 rounded-full z-50"
+            style={{ elevation: 10 }}
+          >
+            <Feather name="edit-2" size={16} color="white" />
+          </Pressable>
+        </View>
+      </View>
 
 
       {/* Formulaire */}
