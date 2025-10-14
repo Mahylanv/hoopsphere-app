@@ -16,6 +16,8 @@ export type RootStackParamList = {
 
     InscriptionClub: undefined;
 
+    ClubList: undefined;
+
     InscriptionClubStep2: {
         uid: string;
         email: string | null;
@@ -59,6 +61,7 @@ export type MainTabParamList = {
     Chat: undefined;
     Profil: undefined;
     Search: undefined;
+    ClubList: undefined;
 };
 
 export type Club = {
