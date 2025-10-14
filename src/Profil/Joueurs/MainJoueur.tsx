@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../types';
+import { RootStackParamList } from '../../types';
 
 type MainNavProp = NativeStackNavigationProp<RootStackParamList, 'Payment'>;
 

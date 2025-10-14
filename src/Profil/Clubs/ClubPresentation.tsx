@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StatusBar } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
-import { RootStackParamList } from '../../../types';
+import { RootStackParamList } from '../../types';
 
 type ClubProfileRouteProp = RouteProp<RootStackParamList, 'ClubProfile'>;
 

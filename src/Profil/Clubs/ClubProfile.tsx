@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../types';
+import { RootStackParamList } from '../../types';
 import ClubPresentation from './ClubPresentation';
 import ClubTeams from './ClubTeams';
 import ClubOffers from './ClubOffers';

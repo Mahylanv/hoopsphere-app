@@ -21,7 +21,7 @@ import {
 } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { RootStackParamList } from "../../../types";
+import { RootStackParamList } from "../../types";
 
 type Route2Prop = RouteProp<RootStackParamList, "InscriptionJoueurStep2">;
 type Nav2Prop = NativeStackNavigationProp<
