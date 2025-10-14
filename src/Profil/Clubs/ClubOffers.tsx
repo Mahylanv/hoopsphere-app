@@ -3,7 +3,7 @@ import React from 'react';
 import { View, Text, FlatList, Pressable, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../types';
+import { RootStackParamList } from '../../types';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'ClubProfile'>;
 

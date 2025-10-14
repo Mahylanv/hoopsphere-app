@@ -8,7 +8,7 @@ import {
     StatusBar,
 } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
-import { RootStackParamList, Club } from '../../../types';
+import { RootStackParamList, Club } from '../../types';
 
 type ClubProfileRouteProp = RouteProp<RootStackParamList, 'ClubProfile'>;
 
