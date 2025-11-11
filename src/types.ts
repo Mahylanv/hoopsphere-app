@@ -24,14 +24,12 @@ export type Joueur = {
 };
 
 export type Club = {
-  id: string;
-  nom: string;
-  logo?: string;
-  ville: string;
-  departement: string;
-  categories: string[];
-  teams?: number;
-  createdAt?: string;
+    id: string;
+    name: string;
+    logo: any;
+    city: string;
+    teams: number;
+    categories: string[];
 };
 
 export type Match = {
@@ -93,22 +91,12 @@ export type RootStackParamList = {
     avatar: string;
   };
 
-  ClubProfile: { club: Club };
+  ProfilClub: { club: Club };
+
   Search: undefined;
 
   OfferDetail: {
-    offer: {
-      id: string;
-      title: string;
-      description: string;
-      position: string;
-      team: string;
-      publishedAt: string;
-      gender: "Homme" | "Femme" | "Mixte";
-      ageRange: string;
-      category: string;
-      location: string;
-    };
+    offer: Offer; // <-- on réutilise le type directement
   };
 
   Payment: undefined;
@@ -143,7 +131,7 @@ export type MainTabParamListClub = {
 // ==========================
 
 export type Offer = {
-  id: string;
+  id?: string; // <-- ici optionnel
   title: string;
   description: string;
   position: string;

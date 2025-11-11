@@ -24,7 +24,6 @@ import MainTabNavigatorClub from './src/navigation/MainTabNavigatorClub';
 
 // --- Autres pages ---
 import ChatDetail from './src/Pages/ChatDetail';
-import ClubProfile from './src/Profil/Clubs/ClubProfile';
 import OfferDetail from './src/Pages/OfferDetail';
 import Payment from './src/Pages/Payment';
 
@@ -77,7 +76,6 @@ export default function App() {
 
           {/* 🔁 Autres pages accessibles */}
           <Stack.Screen name="ChatDetail" component={ChatDetail} />
-          <Stack.Screen name="ClubProfile" component={ClubProfile} />
           <Stack.Screen name="OfferDetail" component={OfferDetail} />
           <Stack.Screen name="Payment" component={Payment} />
         </Stack.Navigator>
