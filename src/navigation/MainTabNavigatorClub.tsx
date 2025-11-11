@@ -10,7 +10,7 @@ import Home from "../Pages/Home";
 import Annonces from "../Pages/Annonces"; // 🆕 page à créer
 import Chat from "../Pages/Chat"; // même composant, mais on filtrera les conversations du club
 import SearchJoueur from "../Components/SearchJoueur"; // 🆕 recherche spécifique joueurs
-import ProfilClub from "../Profil/Clubs/ClubProfile"; // version club du profil
+import ProfilClub from "../Profil/Clubs/ProfilClub"; // version club du profil
 
 import { MainTabParamListClub } from "../types";
 
