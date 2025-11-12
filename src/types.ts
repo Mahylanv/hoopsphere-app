@@ -100,6 +100,8 @@ export type RootStackParamList = {
   };
 
   Payment: undefined;
+  EditOffer: { offer: Offer }; // ✅ nouvelle page de modification
+
 };
 
 // ==========================
