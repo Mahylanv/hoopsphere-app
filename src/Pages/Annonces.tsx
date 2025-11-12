@@ -20,7 +20,7 @@ export default function Annonces() {
   ];
 
   return (
-    <View className="flex-1 bg-black px-4 py-6">
+    <View className="flex-1 bg-black px-4 pb-6 pt-10">
       <Text className="text-white text-2xl font-bold mb-4">📢 Annonces du club</Text>
 
       <FlatList
