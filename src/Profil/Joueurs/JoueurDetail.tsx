@@ -5,7 +5,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import JoueurCard from "../../Components/JoueurCard"; // 🧩 notre nouvelle carte
+import JoueurCard from "../../Components/JoueurCard";
 
 type JoueurDetailRouteProp = RouteProp<RootStackParamList, "JoueurDetail">;
 type NavProp = NativeStackNavigationProp<RootStackParamList, "JoueurDetail">;
@@ -27,10 +27,13 @@ export default function JoueurDetail() {
         >
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
+
         <Text className="text-white text-lg font-semibold">
           Détails du joueur
         </Text>
-        <View style={{ width: 40 }} /> {/* équilibre visuel */}
+
+        {/* Petit espace visuel */}
+        <View style={{ width: 40 }} />
       </View>
 
       {/* 🔹 Carte du joueur */}
