@@ -1,17 +1,34 @@
 // src/components/SearchJoueur.tsx
 import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, FlatList, Image, ActivityIndicator, Dimensions } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  FlatList,
+  Image,
+  ActivityIndicator,
+  Dimensions,
+  TouchableOpacity,
+} from "react-native";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "../config/firebaseConfig";
 import { Joueur } from "../types";
+import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../types";
+
+type NavProp = NativeStackNavigationProp<RootStackParamList, "SearchJoueur">;
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
+
 
 export default function SearchJoueur() {
   const [search, setSearch] = useState("");
   const [joueurs, setJoueurs] = useState<Joueur[]>([]);
   const [filtered, setFiltered] = useState<Joueur[]>([]);
-  const [visibleCount, setVisibleCount] = useState(5); // 👈 Limite stricte
+  const [visibleCount, setVisibleCount] = useState(6);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,7 +36,10 @@ export default function SearchJoueur() {
       try {
         const q = query(collection(db, "joueurs"), orderBy("nom"));
         const snap = await getDocs(q);
-        const data = snap.docs.map((doc) => ({ uid: doc.id, ...doc.data() })) as Joueur[];
+        const data = snap.docs.map((doc) => ({
+          uid: doc.id,
+          ...doc.data(),
+        })) as Joueur[];
         setJoueurs(data);
         setFiltered(data);
       } catch (error) {
@@ -28,7 +48,6 @@ export default function SearchJoueur() {
         setLoading(false);
       }
     };
-
     fetchJoueurs();
   }, []);
 
@@ -42,73 +61,129 @@ export default function SearchJoueur() {
         j.departement?.toLowerCase().includes(lower)
     );
     setFiltered(results);
-    setVisibleCount(5);
+    setVisibleCount(6);
   }, [search, joueurs]);
 
   const handleLoadMore = () => {
     if (visibleCount < filtered.length) {
-      setVisibleCount((prev) => prev + 5);
+      setVisibleCount((prev) => prev + 6);
     }
   };
 
   const visibleData = filtered.slice(0, visibleCount);
 
+  const navigation = useNavigation<NavProp>();
   return (
-    <View className="flex-1 bg-black px-4 py-6">
-      <Text className="text-white text-2xl font-bold mb-4">
-        🔍 Rechercher un joueur
-      </Text>
+    <SafeAreaView className="flex-1 bg-[#0e0e10] px-4 pt-2">
+      {/* 🔹 En-tête */}
+      <View className="flex-row items-center mb-5">
+        <Ionicons name="search-outline" size={22} color="#F97316" />
+        <Text className="text-white text-2xl font-bold ml-2">
+          Rechercher un joueur
+        </Text>
+      </View>
 
-      <TextInput
-        className="bg-gray-800 text-white rounded-xl px-4 py-3 mb-6"
-        placeholder="Nom, club ou département..."
-        placeholderTextColor="#9ca3af"
-        value={search}
-        onChangeText={setSearch}
-      />
+      {/* 🔸 Barre de recherche */}
+      <View className="relative mb-6">
+        <Ionicons
+          name="person-outline"
+          size={20}
+          color="#9ca3af"
+          style={{ position: "absolute", left: 14, top: 15 }}
+        />
+        <TextInput
+          className="bg-gray-900 text-white rounded-2xl pl-10 pr-4 py-3 border border-gray-800 focus:border-orange-500"
+          placeholder="Nom, club ou département..."
+          placeholderTextColor="#9ca3af"
+          value={search}
+          onChangeText={setSearch}
+        />
+      </View>
 
+      {/* 🔸 Liste des joueurs */}
       {loading ? (
         <ActivityIndicator size="large" color="#F97316" className="mt-10" />
       ) : (
         <FlatList
           data={visibleData}
           keyExtractor={(item) => item.uid}
+          showsVerticalScrollIndicator={false}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.3}
+          contentContainerStyle={{ paddingBottom: 40 }}
+          ListEmptyComponent={
+            <Text className="text-gray-500 text-center mt-10">
+              Aucun joueur trouvé
+            </Text>
+          }
           renderItem={({ item }) => (
-            <View
-              className="flex-row items-center bg-gray-800 rounded-2xl p-4 mb-5"
-              style={{
-                minHeight: SCREEN_HEIGHT / 7.5, // 👈 rend les cartes plus grandes, ≈ 5 visibles max
-              }}
-            >
+            <TouchableOpacity
+            onPress={() => navigation.navigate("JoueurDetail", { joueur: item })}
+            activeOpacity={0.8}
+            className="flex-row items-center bg-[#1a1b1f] rounded-2xl p-4 mb-4 border border-gray-800 shadow-md"
+          >
+          
+              {/* Avatar */}
               <Image
                 source={{
-                  uri: item.avatar || "https://via.placeholder.com/100x100.png?text=Joueur",
+                  uri:
+                    item.avatar ||
+                    "https://via.placeholder.com/100x100.png?text=Joueur",
                 }}
-                className="w-20 h-20 rounded-full mr-4"
+                className="w-20 h-20 rounded-full mr-4 border border-gray-700"
               />
+
+              {/* Infos */}
               <View className="flex-1">
-                <Text className="text-white font-bold text-lg">
+                <Text className="text-white font-bold text-lg mb-1">
                   {item.prenom} {item.nom}
                 </Text>
-                <Text className="text-gray-400">{item?.club ?? "Sans club"}</Text>
-                <Text className="text-gray-500 text-sm">
-                  {item?.poste ?? "Poste inconnu"} • {item?.departement ?? "Département inconnu"}
-                </Text>
+
+                <View className="flex-row items-center mb-1">
+                  <Ionicons name="home-outline" size={14} color="#9ca3af" />
+                  <Text className="text-gray-400 ml-1 text-sm">
+                    {item?.club ?? "Sans club"}
+                  </Text>
+                </View>
+
+                <View className="flex-row items-center">
+                  <Ionicons
+                    name="basketball-outline"
+                    size={14}
+                    color="#9ca3af"
+                  />
+                  <Text className="text-gray-400 ml-1 text-sm">
+                    {item?.poste ?? "Poste inconnu"}
+                  </Text>
+
+                  <Ionicons
+                    name="location-outline"
+                    size={14}
+                    color="#9ca3af"
+                    style={{ marginLeft: 10 }}
+                  />
+                  <Text className="text-gray-400 ml-1 text-sm">
+                    {item?.departement ?? "Département inconnu"}
+                  </Text>
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
           )}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.4}
           ListFooterComponent={
             visibleCount < filtered.length ? (
-              <Text className="text-center text-gray-400 mt-3">⬇️ Charger plus...</Text>
+              <TouchableOpacity onPress={handleLoadMore} className="mt-3">
+                <Text className="text-center text-orange-500 font-semibold">
+                  Charger plus
+                </Text>
+              </TouchableOpacity>
             ) : (
-              <Text className="text-center text-gray-600 mt-3">Fin de la liste</Text>
+              <Text className="text-center text-gray-600 mt-3">
+                Fin de la liste
+              </Text>
             )
           }
-          showsVerticalScrollIndicator={false}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }

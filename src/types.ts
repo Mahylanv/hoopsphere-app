@@ -24,12 +24,12 @@ export type Joueur = {
 };
 
 export type Club = {
-    id: string;
-    name: string;
-    logo: any;
-    city: string;
-    teams: number;
-    categories: string[];
+  id: string;
+  name: string;
+  logo: any;
+  city: string;
+  teams: number;
+  categories: string[];
 };
 
 export type Match = {
@@ -101,7 +101,8 @@ export type RootStackParamList = {
 
   Payment: undefined;
   EditOffer: { offer: Offer }; // ✅ nouvelle page de modification
-
+  SearchJoueur: undefined;
+  JoueurDetail: { joueur: Joueur };
 };
 
 // ==========================
