@@ -1,18 +1,22 @@
+// src/navigation/MainTabNavigatorClub.tsx
+// 🏢 Navigation principale — réservée aux CLUBS
+
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
-import MainJoueur from "../Profil/Joueurs/MainJoueur";
-import Chat from "../Pages/Chat";
-import Search from "../Components/Search";
-import Profil from "../Pages/Profil";
-import Match from "../Pages/Match"; // ✅ corrigé : avant c'était Home
+// --- Import des pages du club ---
+import Home from "../Pages/Home";
+import Annonces from "../Pages/Annonces"; // 🆕 page à créer
+import Chat from "../Pages/Chat"; // même composant, mais on filtrera les conversations du club
+import SearchJoueur from "../Components/SearchJoueur"; // 🆕 recherche spécifique joueurs
+import ProfilClub from "../Profil/Clubs/ProfilClub"; // version club du profil
 
-import { MainTabParamList } from "../../types";
+import { MainTabParamListClub } from "../types";
 
-const Tab = createBottomTabNavigator<MainTabParamList>();
+const Tab = createBottomTabNavigator<MainTabParamListClub>();
 
-export default function MainTabNavigator() {
+export default function MainTabNavigatorClub() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -33,20 +37,20 @@ export default function MainTabNavigator() {
           let iconName: React.ComponentProps<typeof Ionicons>["name"];
 
           switch (route.name) {
-            case "MainJoueur":
+            case "Home":
               iconName = "home-outline";
               break;
-            case "Match":
-              iconName = "basketball-outline"; // ✅ icône corrigée
+            case "Annonces":
+              iconName = "megaphone-outline"; // 🔔 icône pour les offres/annonces
               break;
             case "Chat":
               iconName = "chatbubble-outline";
               break;
-            case "Search":
+            case "SearchJoueur":
               iconName = "search-outline";
               break;
-            case "Profil":
-              iconName = "person-outline";
+            case "ProfilClub":
+              iconName = "business-outline";
               break;
             default:
               iconName = "ellipse-outline";
@@ -57,29 +61,38 @@ export default function MainTabNavigator() {
         },
       })}
     >
+      {/* 🏠 Accueil club */}
       <Tab.Screen
-        name="MainJoueur"
-        component={MainJoueur}
+        name="Home"
+        component={Home}
         options={{ tabBarLabel: "Accueil" }}
       />
+
+      {/* 📢 Annonces / Offres */}
       <Tab.Screen
-        name="Match"
-        component={Match}
-        options={{ tabBarLabel: "Match" }}
+        name="Annonces"
+        component={Annonces}
+        options={{ tabBarLabel: "Annonces" }}
       />
+
+      {/* 💬 Messagerie club */}
       <Tab.Screen
         name="Chat"
         component={Chat}
         options={{ tabBarLabel: "Messages" }}
       />
+
+      {/* 🔍 Recherche de joueurs */}
       <Tab.Screen
-        name="Search"
-        component={Search}
-        options={{ tabBarLabel: "Recherche" }}
+        name="SearchJoueur"
+        component={SearchJoueur}
+        options={{ tabBarLabel: "Joueurs" }}
       />
+
+      {/* 🏢 Profil du club */}
       <Tab.Screen
-        name="Profil"
-        component={Profil}
+        name="ProfilClub"
+        component={ProfilClub}
         options={{ tabBarLabel: "Profil" }}
       />
     </Tab.Navigator>

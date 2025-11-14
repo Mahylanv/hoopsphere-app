@@ -1,3 +1,5 @@
+// src/Inscription/Joueurs/InscriptionJoueurStep3.tsx
+
 import React, { useState } from "react";
 import {
   View,
@@ -14,7 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../../types";
+import { RootStackParamList } from "../../types";
 import { Feather } from "@expo/vector-icons";
 import clsx from "clsx";
 import * as ImagePicker from "expo-image-picker";

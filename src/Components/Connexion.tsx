@@ -1,3 +1,4 @@
+// src/components/Connexion.tsx
 import React, { useState } from "react";
 import {
   View,
@@ -5,16 +6,18 @@ import {
   TextInput,
   Pressable,
   StatusBar,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../types";
+import { RootStackParamList } from "../types";
 import clsx from "clsx";
 
-// 👉 Firebase
-import { auth } from "../config/firebaseConfig";
+import { auth, db } from "../config/firebaseConfig";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type ConnexionNavProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -35,17 +38,36 @@ export default function Connexion() {
     setError(null);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
 
-      // ✅ Navigation si succès
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "MainTabs" }],
-      });
+      // 🔎 Vérifie dans "joueurs"
+      const joueurDoc = await getDoc(doc(db, "joueurs", uid));
+      if (joueurDoc.exists()) {
+        await AsyncStorage.setItem("userType", "joueur");
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "MainTabs" }],
+        });
+        return;
+      }
+
+      // 🔎 Vérifie dans "clubs"
+      const clubDoc = await getDoc(doc(db, "clubs", uid));
+      if (clubDoc.exists()) {
+        await AsyncStorage.setItem("userType", "club");
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "MainTabsClub" }],
+        });
+        return;
+      }
+
+      // ⚠️ Si ni joueur ni club trouvé
+      setError("Compte introuvable dans la base de données.");
     } catch (err: any) {
       console.error("Erreur connexion:", err.code, err.message);
 
-      // ⚡ Gestion des erreurs Firebase
       if (err.code === "auth/invalid-email") {
         setError("Adresse email invalide.");
       } else if (err.code === "auth/user-not-found") {
@@ -98,9 +120,7 @@ export default function Connexion() {
         />
 
         {/* ⚡ Message d'erreur */}
-        {error && (
-          <Text className="text-red-500 text-center mb-2">{error}</Text>
-        )}
+        {error && <Text className="text-red-500 text-center mb-2">{error}</Text>}
 
         <Pressable
           onPress={handleLogin}
@@ -112,15 +132,14 @@ export default function Connexion() {
               : "bg-orange-500"
           )}
         >
-          <Text className="text-white font-bold text-lg">
-            {loading ? "Connexion…" : "Se connecter"}
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-white font-bold text-lg">Se connecter</Text>
+          )}
         </Pressable>
 
-        <Pressable
-          className="items-center mt-2"
-          onPress={() => navigation.goBack()}
-        >
+        <Pressable className="items-center mt-2" onPress={() => navigation.goBack()}>
           <Text className="text-white underline">Retour</Text>
         </Pressable>
       </View>
