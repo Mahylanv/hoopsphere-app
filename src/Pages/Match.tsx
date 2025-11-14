@@ -1,41 +1,174 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StatusBar } from "react-native";
+// src/Pages/Match.tsx
+import React, { useState } from "react";
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../types";
-import * as Animatable from "react-native-animatable";
+import * as DocumentPicker from "expo-document-picker";
+
+type PlayerStats = {
+  jersey?: number | null;
+  name: string;
+  points?: number | null;
+  threes?: number | null;      // 3 Pts Réussis
+  two_int?: number | null;     // 2 Int Réussis
+  two_ext?: number | null;     // 2 Ext Réussis
+  ft_made?: number | null;     // LF Réussis
+  fouls_committed?: number | null; // Ftes Com
+};
+
+// ⚠️ Mets l'URL de ton API ici (voir étape 2)
+// const API_URL = "http://127.0.0.1:8000/parse-emarque"; // iOS Simu
+// ⚠️ remplace la ligne actuelle par celle-ci :
+const API_URL = "https://5001bb6af434.ngrok-free.app/parse-emarque";
+// Android émulateur : "http://10.0.2.2:8000/parse-emarque"
+// Appareil physique : "http://ADRESSE_IP_LAN:8000/parse-emarque"
+
+function normalize(s: string) {
+  return s
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function isSamePlayer(pdfName: string, userFullname: string) {
+  const a = normalize(pdfName);
+  const b = normalize(userFullname);
+  const A = new Set(a.split(" ").filter(Boolean));
+  const B = new Set(b.split(" ").filter(Boolean));
+  const small = A.size <= B.size ? A : B;
+  const big = A.size <= B.size ? B : A;
+  for (const t of small) if (!big.has(t)) return false;
+  return true;
+}
+
+function Row({ label, value }: { label: string; value: any }) {
+  return (
+    <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
+      <Text style={{ color: "#bbb" }}>{label}</Text>
+      <Text style={{ color: "#fff", fontWeight: "700" }}>{String(value ?? "-")}</Text>
+    </View>
+  );
+}
 
 export default function Match() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [fullName, setFullName] = useState("");
+  const [pdfName, setPdfName] = useState<string | null>(null);
+  const [pdfUri, setPdfUri] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState<PlayerStats | null>(null);
 
-  const handleCreateMatch = () => {
-    // 👉 Ici, on ajoutera la logique ou la redirection vers la page de création
-    console.log("Créer un match");
+  const pickPdf = async () => {
+    const res = await DocumentPicker.getDocumentAsync({
+      type: "application/pdf",
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+    if (res?.assets && res.assets.length > 0) {
+      const f = res.assets[0];
+      setPdfName(f.name || "feuille.pdf");
+      setPdfUri(f.uri);
+    }
+  };
+
+  const handleParse = async () => {
+    if (!fullName.trim()) {
+      Alert.alert("Nom requis", "Entre ton Nom Prénom tel qu’inscrit sur la feuille.");
+      return;
+    }
+    if (!pdfUri) {
+      Alert.alert("PDF requis", "Sélectionne le PDF e-Marque V2.");
+      return;
+    }
+    try {
+      setLoading(true);
+      setStats(null);
+
+      const form = new FormData();
+      form.append("fullname", fullName);
+      form.append("file", {
+        name: pdfName || "feuille.pdf",
+        type: "application/pdf",
+        uri: pdfUri,
+      } as any);
+
+      const resp = await fetch(API_URL, { method: "POST", body: form });
+      if (!resp.ok) {
+        const t = await resp.text();
+        throw new Error(`Parser HTTP ${resp.status}: ${t}`);
+      }
+      const json = await resp.json() as {
+        match?: any;
+        teams?: Array<{ name: string; players: PlayerStats[] }>;
+      };
+
+      let found: PlayerStats | null = null;
+      for (const team of (json.teams || [])) {
+        for (const p of team.players) {
+          if (p?.name && isSamePlayer(p.name, fullName)) { found = p; break; }
+        }
+        if (found) break;
+      }
+      if (!found) {
+        Alert.alert("Introuvable", "Ton nom n’a pas été trouvé. Essaie sans accents ou inverse Nom/Prénom.");
+        return;
+      }
+      setStats(found);
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert("Erreur parsing", e?.message || "Impossible de lire le PDF.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0E0D0D" }}>
       <StatusBar barStyle="light-content" />
+      <View style={{ flex: 1, padding: 16 }}>
+        <Text style={{ color: "#fff", fontSize: 22, fontWeight: "700", marginBottom: 12 }}>
+          Créer un match (import e-Marque)
+        </Text>
 
-      <View className="flex-1 justify-center items-center px-6">
-        {/* Titre */}
-        <Text className="text-white text-2xl font-bold mb-8">Gestion des matchs</Text>
+        <Text style={{ color: "#aaa", marginBottom: 6 }}>Nom Prénom (comme sur la feuille)</Text>
+        <TextInput
+          value={fullName}
+          onChangeText={setFullName}
+          placeholder="Ex: Louis Dubruel"
+          placeholderTextColor="#888"
+          style={{ color: "#fff", borderColor: "#555", borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 14 }}
+          autoCapitalize="words"
+        />
 
-        {/* Bouton Créer un match */}
-        <Animatable.View
-          animation="pulse"
-          iterationCount="infinite"
-          easing="ease-in-out"
-          duration={2000}
+        <TouchableOpacity
+          onPress={pickPdf}
+          style={{ backgroundColor: "#2563eb", padding: 14, borderRadius: 12, alignItems: "center", marginBottom: 10 }}
         >
-          <TouchableOpacity
-            onPress={handleCreateMatch}
-            className="py-4 px-10 rounded-2xl bg-blue-600 shadow-md shadow-black"
-          >
-            <Text className="text-white text-lg font-bold">Créer un match</Text>
-          </TouchableOpacity>
-        </Animatable.View>
+          <Text style={{ color: "#fff", fontWeight: "700" }}>{pdfName ? "Changer de PDF" : "Sélectionner le PDF"}</Text>
+        </TouchableOpacity>
+        {pdfName ? <Text style={{ color: "#bbb", marginBottom: 12 }}>{pdfName}</Text> : null}
+
+        <TouchableOpacity
+          onPress={handleParse}
+          disabled={loading || !pdfUri || !fullName.trim()}
+          style={{ backgroundColor: (!pdfUri || !fullName.trim()) ? "#444" : "#16a34a", padding: 14, borderRadius: 12, alignItems: "center" }}
+        >
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700" }}>Analyser le PDF</Text>}
+        </TouchableOpacity>
+
+        {stats && (
+          <View style={{ marginTop: 20, padding: 12, borderWidth: 1, borderColor: "#444", borderRadius: 12 }}>
+            <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700", marginBottom: 10 }}>Tes stats détectées</Text>
+            <Row label="Nom" value={stats.name} />
+            <Row label="N°" value={stats.jersey} />
+            <Row label="Points" value={stats.points} />
+            <Row label="3 pts réussis" value={stats.threes} />
+            <Row label="2 int réussis" value={stats.two_int} />
+            <Row label="2 ext réussis" value={stats.two_ext} />
+            <Row label="LF réussis" value={stats.ft_made} />
+            <Row label="Fautes commises" value={stats.fouls_committed} />
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
