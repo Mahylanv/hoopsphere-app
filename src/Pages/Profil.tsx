@@ -1,4 +1,4 @@
-// screens/Profil.tsx
+// src/screens/Profil.tsx
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -9,25 +9,27 @@ import {
   ScrollView,
   TextInput,
   Modal,
-  Pressable,
-  ImageBackground,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import * as Animatable from "react-native-animatable";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import clsx from "clsx";
 
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
 
-import { auth, db, storage } from "../config/firebaseConfig";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-
-// === Constantes ===
+import {
+  getUserProfile,
+  updateUserProfile,
+  updateAvatar,
+  deleteUserAccount,
+} from "../services/userService";
 import { DEPARTEMENTS } from "../constants/departements";
+
+// === Images statiques ===
 import paris from "../../assets/paris.png";
 import monaco from "../../assets/monaco.png";
 import csp from "../../assets/csp.png";
@@ -43,11 +45,13 @@ const poidsOptions = Array.from({ length: 101 }, (_, i) => `${40 + i} kg`);
 const postes = ["Meneur", "Arrière", "Ailier", "Ailier fort", "Pivot"];
 
 export default function Profil() {
-  const [images, setImages] = useState<string[]>([]);
-  const [editMode, setEditMode] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  // Bio states
+  const [userData, setUserData] = useState<any>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
+
+  // Champs utilisateur
   const [birthYear, setBirthYear] = useState("");
   const [height, setHeight] = useState("");
   const [weight, setWeight] = useState("");
@@ -56,98 +60,64 @@ export default function Profil() {
   const [departement, setDepartement] = useState("");
   const [club, setClub] = useState("");
 
-  // Sélections
+  // Modales & UI
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const [showDepartementModal, setShowDepartementModal] = useState(false);
   const [searchDepartement, setSearchDepartement] = useState("");
   const [showClubModal, setShowClubModal] = useState(false);
   const [searchClub, setSearchClub] = useState("");
 
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-
-  // === Fetch Firestore ===
+  // === Charger les données utilisateur ===
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const uid = auth.currentUser?.uid;
-        if (!uid) return;
-
-        const ref = doc(db, "joueurs", uid);
-        const snap = await getDoc(ref);
-
-        if (snap.exists()) {
-          const data = snap.data();
-          setUserData(data);
-
-          setBirthYear(data.dob || "");
-          setHeight(data.taille || "");
-          setWeight(data.poids || "");
-          setPosition(data.poste || "");
-          setStrongHand(data.main || "");
-          setDepartement(data.departement || "");
-          setClub(data.club || "");
-        }
-      } catch (e) {
-        console.error("Erreur Firestore:", e);
+    const fetchData = async () => {
+      const data = await getUserProfile();
+      if (data) {
+        setUserData(data);
+        setBirthYear(data.dob || "");
+        setHeight(data.taille || "");
+        setWeight(data.poids || "");
+        setPosition(data.poste || "");
+        setStrongHand(data.main || "");
+        setDepartement(data.departement || "");
+        setClub(data.club || "");
       }
     };
-
-    fetchUserData();
+    fetchData();
   }, []);
 
-  // === Upload avatar ===
-const handleAvatarChange = async () => {
+  // === Modifier l'avatar ===
+  const handleAvatarChange = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         alert("Permission refusée !");
         return;
       }
-  
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
-  
-      if (!result.canceled && result.assets.length > 0 && auth.currentUser) {
-        const uid = auth.currentUser.uid;
+
+      if (!result.canceled && result.assets.length > 0) {
         const imageUri = result.assets[0].uri;
-  
-        // conversion → blob
-        const response = await fetch(imageUri);
-        const blob = await response.blob();
-  
-        // upload dans Storage
-        const storageRef = ref(storage, `avatars/${uid}/avatar.jpg`);
-        await uploadBytes(storageRef, blob);
-  
-        // récupération de l'URL
-        const url = await getDownloadURL(storageRef);
-  
-        // update Firestore
-        await updateDoc(doc(db, "joueurs", uid), { avatar: url });
-  
-        // mise à jour locale
-        setUserData((prev: any) => ({ ...prev, avatar: url }));
-  
-        alert("Photo de profil mise à jour ✅");
+        const newUrl = await updateAvatar(imageUri);
+        if (newUrl) {
+          setUserData((prev: any) => ({ ...prev, avatar: newUrl }));
+          alert("Photo de profil mise à jour ✅");
+        }
       }
-    } catch (e) {
-      console.error("Erreur avatar:", e);
+    } catch (error) {
+      console.error("Erreur avatar :", error);
     }
   };
-  
 
-  // === Save Firestore ===
+  // === Sauvegarder les infos ===
   const saveProfile = async () => {
     try {
-      if (!auth.currentUser) return;
-      const uid = auth.currentUser.uid;
-
-      const ref = doc(db, "joueurs", uid);
-      await updateDoc(ref, {
+      const updatedData = {
         dob: birthYear,
         taille: height,
         poids: weight,
@@ -155,31 +125,21 @@ const handleAvatarChange = async () => {
         main: strongHand,
         departement,
         club,
-      });
-
-      setUserData((prev: any) => ({
-        ...prev,
-        dob: birthYear,
-        taille: height,
-        poids: weight,
-        poste: position,
-        main: strongHand,
-        departement,
-        club,
-      }));
-
+      };
+      await updateUserProfile(updatedData);
+      setUserData((prev: any) => ({ ...prev, ...updatedData }));
       setEditMode(false);
       alert("Profil mis à jour ✅");
     } catch (e) {
-      console.error("Erreur update Firestore:", e);
+      console.error("Erreur mise à jour :", e);
     }
   };
 
-  // === Pick image (galerie) ===
+  // === Galerie locale ===
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      alert("L'autorisation d'accéder à la galerie est requise !");
+      alert("Autorisation refusée !");
       return;
     }
 
@@ -194,7 +154,32 @@ const handleAvatarChange = async () => {
     }
   };
 
-  // === Modales génériques ===
+  // === Suppression du compte ===
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Supprimer mon compte",
+      "Cette action est irréversible. Es-tu sûr de vouloir supprimer ton compte ?",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteUserAccount();
+              alert("Compte supprimé avec succès 👋");
+              navigation.navigate("Home");
+            } catch (e) {
+              alert("Erreur lors de la suppression du compte.");
+              console.error(e);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // === Modales ===
   const renderModal = (
     title: string,
     options: string[],
@@ -207,6 +192,7 @@ const handleAvatarChange = async () => {
       <View className="flex-1 justify-center bg-black/70">
         <View className="bg-zinc-900 mx-5 rounded-xl p-4">
           <Text className="text-white text-lg font-bold mb-3">{title}</Text>
+
           {showSearch && setSearchValue && (
             <TextInput
               placeholder="Rechercher..."
@@ -216,6 +202,7 @@ const handleAvatarChange = async () => {
               className="bg-zinc-800 text-white px-4 py-2 rounded-lg mb-3"
             />
           )}
+
           <ScrollView className="max-h-80">
             {options
               .filter((val) =>
@@ -229,9 +216,9 @@ const handleAvatarChange = async () => {
                   onPress={() => {
                     onSelect(val);
                     if (setSearchValue) setSearchValue("");
-                    setFocusedInput(null);
                     setShowDepartementModal(false);
                     setShowClubModal(false);
+                    setFocusedInput(null);
                   }}
                   className="py-3"
                 >
@@ -239,12 +226,12 @@ const handleAvatarChange = async () => {
                 </TouchableOpacity>
               ))}
           </ScrollView>
+
           <TouchableOpacity
             onPress={() => {
-              if (setSearchValue) setSearchValue("");
-              setFocusedInput(null);
               setShowDepartementModal(false);
               setShowClubModal(false);
+              setFocusedInput(null);
             }}
             className="mt-4 bg-gray-700 rounded-lg py-3 items-center"
           >
@@ -286,10 +273,7 @@ const handleAvatarChange = async () => {
             ))}
           </ScrollView>
           <TouchableOpacity
-            onPress={() => {
-              setSearchClub("");
-              setShowClubModal(false);
-            }}
+            onPress={() => setShowClubModal(false)}
             className="mt-4 bg-gray-700 rounded-lg py-3 items-center"
           >
             <Text className="text-white">Annuler</Text>
@@ -310,29 +294,15 @@ const handleAvatarChange = async () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0E0D0D" }}>
       <StatusBar barStyle="light-content" />
-  
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* Header */}
-        <View className="flex-row justify-end items-center px-6 mt-6 space-x-6 absolute right-0">
-          <TouchableOpacity>
-            <Image source={require("../../assets/setting.png")} className="w-6 h-6 mr-3" />
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Image source={require("../../assets/share.png")} className="w-6 h-6" />
-          </TouchableOpacity>
-        </View>
-  
+      <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
         {/* Avatar */}
         <View className="items-center mt-12">
           <View className="relative">
-            <Image
-              source={{ uri: userData.avatar }}
-              className="w-32 h-32 rounded-full"
-            />
+            <Image source={{ uri: userData.avatar }} className="w-32 h-32 rounded-full" />
             <TouchableOpacity
               onPress={handleAvatarChange}
-              className="absolute bottom-0 right-0 rounded-full p-2 border border-gray-300"
-              style={{ backgroundColor: "#83A8FF" }}
+              className="absolute bottom-0 right-0 bg-blue-500 p-2 rounded-full z-50"
+              style={{ elevation: 10 }}
             >
               <Feather name="edit-2" size={16} color="white" />
             </TouchableOpacity>
@@ -341,12 +311,12 @@ const handleAvatarChange = async () => {
             {userData.prenom} {userData.nom}
           </Text>
         </View>
-  
-        {/* Bio */}
+
+        {/* BIO */}
         <View className="mt-8 px-6">
           <Text className="text-xl font-bold mb-4 text-white">Biographie</Text>
-  
-          {/* Ligne 1 : Année + Taille */}
+
+          {/* Ligne 1 */}
           <View className="flex-row justify-between mb-4 gap-x-4">
             <View className="w-1/2">
               <Text className="text-base text-gray-400">Année de naissance</Text>
@@ -377,8 +347,8 @@ const handleAvatarChange = async () => {
               )}
             </View>
           </View>
-  
-          {/* Ligne 2 : Poids + Poste */}
+
+          {/* Ligne 2 */}
           <View className="flex-row justify-between mb-4 gap-x-4">
             <View className="w-1/2">
               <Text className="text-base text-gray-400">Poids</Text>
@@ -411,8 +381,8 @@ const handleAvatarChange = async () => {
               )}
             </View>
           </View>
-  
-          {/* Ligne 3 : Main forte + Département */}
+
+          {/* Ligne 3 */}
           <View className="flex-row justify-between mb-4 gap-x-4">
             <View className="w-1/2">
               <Text className="text-base text-gray-400">Main forte</Text>
@@ -436,6 +406,7 @@ const handleAvatarChange = async () => {
                 <Text className="text-lg text-white">{strongHand}</Text>
               )}
             </View>
+
             <View className="w-1/2">
               <Text className="text-base text-gray-400">Département</Text>
               {editMode ? (
@@ -452,8 +423,8 @@ const handleAvatarChange = async () => {
               )}
             </View>
           </View>
-  
-          {/* Ligne 4 : Club */}
+
+          {/* Ligne 4 */}
           <View className="mb-6">
             <Text className="text-base text-gray-400">Club</Text>
             {editMode ? (
@@ -469,8 +440,8 @@ const handleAvatarChange = async () => {
               <Text className="text-lg text-white">{club}</Text>
             )}
           </View>
-  
-          {/* Bouton */}
+
+          {/* Bouton enregistrer */}
           <View className="items-start">
             <TouchableOpacity
               onPress={() => (editMode ? saveProfile() : setEditMode(true))}
@@ -483,8 +454,8 @@ const handleAvatarChange = async () => {
             </TouchableOpacity>
           </View>
         </View>
-  
-        {/* Galerie */}
+
+        {/* GALERIE */}
         <View className="mt-4 px-6">
           <Text className="text-xl font-bold text-white mb-2">Galerie</Text>
           <Image
@@ -500,7 +471,6 @@ const handleAvatarChange = async () => {
               >
                 <Text className="text-4xl text-white">+</Text>
               </TouchableOpacity>
-  
               <Image
                 source={require("../../assets/galerie3.png")}
                 className="w-32 h-32 rounded-xl"
@@ -511,7 +481,6 @@ const handleAvatarChange = async () => {
                 className="w-32 h-32 rounded-xl"
                 resizeMode="cover"
               />
-  
               {images.map((uri, index) => (
                 <Image
                   key={index}
@@ -523,15 +492,10 @@ const handleAvatarChange = async () => {
             </View>
           </ScrollView>
         </View>
-  
+
         {/* Déconnexion */}
-        <View className="items-center mt-10 mb-6">
-          <Animatable.View
-            animation="pulse"
-            iterationCount="infinite"
-            easing="ease-in-out"
-            duration={2000}
-          >
+        <View className="items-center mt-10">
+          <Animatable.View animation="pulse" iterationCount="infinite" duration={2000}>
             <TouchableOpacity
               onPress={() => navigation.navigate("Home")}
               className="py-4 px-8 rounded-2xl bg-orange-500 shadow-md shadow-black"
@@ -540,8 +504,18 @@ const handleAvatarChange = async () => {
             </TouchableOpacity>
           </Animatable.View>
         </View>
+
+        {/* SUPPRESSION DU COMPTE */}
+        <View className="items-center mt-6 mb-10">
+          <TouchableOpacity
+            onPress={handleDeleteAccount}
+            className="py-3 px-6 rounded-lg bg-red-600"
+          >
+            <Text className="text-white text-base font-semibold">Supprimer mon compte</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
-  
+
       {/* Modales */}
       {focusedInput === "taille" && renderModal("Sélectionne ta taille", tailles, setHeight)}
       {focusedInput === "poids" && renderModal("Sélectionne ton poids", poidsOptions, setWeight)}
@@ -558,5 +532,4 @@ const handleAvatarChange = async () => {
       {showClubModal && renderClubModal()}
     </SafeAreaView>
   );
-  
 }

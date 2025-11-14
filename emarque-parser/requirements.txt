@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+pypdfium2
+opencv-python-headless
+numpy
+pillow
+pytesseract
+python-multipart
+# Option si PDF vectoriels :
+# camelot-py[cv]

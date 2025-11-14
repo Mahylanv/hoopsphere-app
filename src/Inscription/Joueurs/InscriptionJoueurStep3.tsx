@@ -1,5 +1,3 @@
-// src/screens/auth/InscriptionJoueurStep3.tsx
-
 import React, { useState } from "react";
 import {
   View,
@@ -19,16 +17,9 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../types";
 import { Feather } from "@expo/vector-icons";
 import clsx from "clsx";
-import { DEPARTEMENTS } from "../../constants/departements";
-
-// 👉 Firebase
-import { auth, db, storage } from "../../config/firebaseConfig";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-
-// 👉 Expo
 import * as ImagePicker from "expo-image-picker";
+import { DEPARTEMENTS } from "../../constants/departements";
+import { registerPlayer } from "../../services/authService";
 
 // 👉 Données statiques (clubs + options)
 import paris from "../../../assets/paris.png";
@@ -47,7 +38,7 @@ const postes = ["Meneur", "Arrière", "Ailier", "Ailier fort", "Pivot"];
 
 type Nav3Prop = NativeStackNavigationProp<
   RootStackParamList,
-  "InscriptionJoueurStep3"  
+  "InscriptionJoueurStep3"
 >;
 
 export default function InscriptionJoueurStep3() {
@@ -58,7 +49,6 @@ export default function InscriptionJoueurStep3() {
   const { email, password, nom, prenom, dob, genre } = route.params || {};
 
   if (!email || !password) {
-    console.error("❌ Données Step1/Step2 manquantes dans Step3");
     Alert.alert("Erreur", "Informations d'inscription manquantes.");
     navigation.goBack();
     return null;
@@ -83,74 +73,6 @@ export default function InscriptionJoueurStep3() {
   const isValid =
     taille && poids && main && poste && departement && club ? true : false;
 
- // ✅ Upload avatar dans Firebase Storage
-const uploadAvatar = async (uid: string) => {
-  if (!avatar) return null;
-
-  const response = await fetch(avatar);
-  const blob = await response.blob();
-
-  // Ici on garde le dossier avatars/{uid}/ et on met toujours avatar.jpg
-  const storageRef = ref(storage, `avatars/${uid}/avatar.jpg`);
-
-  await uploadBytes(storageRef, blob);
-  return await getDownloadURL(storageRef);
-};
-
-
-  // ✅ Création compte + enregistrement Firestore
-  const handleRegister = async () => {
-    if (!isValid) {
-      Alert.alert("Champs requis", "Merci de remplir tous les champs.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      console.log("👉 Création user Firebase...");
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const user = userCredential.user;
-      console.log("✅ User créé:", user.uid);
-
-      // ⚡ Upload avatar
-      const avatarUrl = await uploadAvatar(user.uid);
-
-      console.log("👉 Écriture Firestore...");
-      await setDoc(doc(db, "joueurs", user.uid), {
-        email,
-        nom,
-        prenom,
-        dob,
-        genre,
-        taille,
-        poids,
-        main,
-        poste,
-        departement,
-        club,
-        avatar: avatarUrl || null,
-        createdAt: new Date().toISOString(),
-      });
-      console.log("✅ Firestore OK");
-
-      Alert.alert("Succès", "Compte joueur créé avec succès ✅");
-
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "MainTabs" }],
-      });
-    } catch (error: any) {
-      console.error("❌ Erreur Step3:", error);
-      Alert.alert("Erreur", "Impossible de créer le compte.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // ✅ Sélection d’image (galerie)
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -162,6 +84,44 @@ const uploadAvatar = async (uid: string) => {
 
     if (!result.canceled) {
       setAvatar(result.assets[0].uri);
+    }
+  };
+
+  // ✅ Création compte via authService
+  const handleRegister = async () => {
+    if (!isValid) {
+      Alert.alert("Champs requis", "Merci de remplir tous les champs.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await registerPlayer({
+        email,
+        password,
+        nom,
+        prenom,
+        dob,
+        genre,
+        taille,
+        poids,
+        main,
+        poste,
+        departement,
+        club,
+        avatar,
+      });
+
+      Alert.alert("Succès", "Compte joueur créé avec succès ✅");
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "MainTabs" }],
+      });
+    } catch (error: any) {
+      console.error("❌ Erreur création compte :", error);
+      Alert.alert("Erreur", error.message || "Impossible de créer le compte.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -226,6 +186,7 @@ const uploadAvatar = async (uid: string) => {
     </Modal>
   );
 
+  // ✅ Modal clubs
   const renderClubModal = () => (
     <Modal visible transparent animationType="slide">
       <View className="flex-1 justify-center bg-black/70">
@@ -298,53 +259,57 @@ const uploadAvatar = async (uid: string) => {
 
       {/* Avatar */}
       <View className="items-center my-8">
-        <Pressable onPress={pickImage}>
-          <View className="relative w-28 h-28 rounded-full bg-zinc-600 items-center justify-center overflow-hidden">
-            {avatar ? (
-              <Image
-                source={{ uri: avatar }}
-                className="w-28 h-28 rounded-full"
-              />
-            ) : (
-              <Feather name="user" size={56} color="#aaa" />
-            )}
-            <View className="absolute bottom-0 right-0 bg-blue-500 p-2 rounded-full">
-              <Feather name="edit-2" size={16} color="white" />
+        <View className="relative w-28 h-28">
+          {/* Image pressable */}
+          <Pressable onPress={pickImage}>
+            <View className="rounded-full bg-zinc-600 items-center justify-center w-28 h-28 overflow-hidden">
+              {avatar ? (
+                <Image
+                  source={{ uri: avatar }}
+                  className="w-28 h-28 rounded-full"
+                />
+              ) : (
+                <Feather name="user" size={56} color="#aaa" />
+              )}
             </View>
-          </View>
-        </Pressable>
+          </Pressable>
+
+          {/* Crayon au-dessus */}
+          <Pressable
+            onPress={pickImage}
+            className="absolute bottom-0 right-0 bg-blue-500 p-2 rounded-full z-50"
+            style={{ elevation: 10 }}
+          >
+            <Feather name="edit-2" size={16} color="white" />
+          </Pressable>
+        </View>
       </View>
+
 
       {/* Formulaire */}
       <ScrollView
         contentContainerStyle={{ paddingBottom: 60 }}
         className="px-6 pt-10"
       >
-        {/* Taille */}
+        {/* Sélecteurs */}
         <TouchableOpacity
           onPress={() => setFocusedInput("taille")}
           className="border-2 rounded-lg h-14 px-4 justify-center mb-5 border-white"
         >
-          <Text
-            className={clsx("text-base", taille ? "text-white" : "text-gray-400")}
-          >
+          <Text className={clsx("text-base", taille ? "text-white" : "text-gray-400")}>
             {taille || "Sélectionne ta taille"}
           </Text>
         </TouchableOpacity>
 
-        {/* Poids */}
         <TouchableOpacity
           onPress={() => setFocusedInput("poids")}
           className="border-2 rounded-lg h-14 px-4 justify-center mb-5 border-white"
         >
-          <Text
-            className={clsx("text-base", poids ? "text-white" : "text-gray-400")}
-          >
+          <Text className={clsx("text-base", poids ? "text-white" : "text-gray-400")}>
             {poids || "Sélectionne ton poids"}
           </Text>
         </TouchableOpacity>
 
-        {/* Main forte */}
         <Text className="text-white text-base mb-2">Main forte</Text>
         <View className="flex-row justify-between mb-5">
           {["Gauche", "Droite"].map((opt) => (
@@ -364,19 +329,15 @@ const uploadAvatar = async (uid: string) => {
           ))}
         </View>
 
-        {/* Poste */}
         <TouchableOpacity
           onPress={() => setFocusedInput("poste")}
           className="border-2 rounded-lg h-14 px-4 justify-center mb-5 border-white"
         >
-          <Text
-            className={clsx("text-base", poste ? "text-white" : "text-gray-400")}
-          >
+          <Text className={clsx("text-base", poste ? "text-white" : "text-gray-400")}>
             {poste || "Sélectionne ton poste"}
           </Text>
         </TouchableOpacity>
 
-        {/* Département */}
         <TouchableOpacity
           onPress={() => setShowDepartementModal(true)}
           className="border-2 rounded-lg h-14 px-4 justify-center mb-5 border-white"
@@ -391,14 +352,11 @@ const uploadAvatar = async (uid: string) => {
           </Text>
         </TouchableOpacity>
 
-        {/* Club */}
         <TouchableOpacity
           onPress={() => setShowClubModal(true)}
           className="border-2 rounded-lg h-14 px-4 justify-center mb-5 border-white"
         >
-          <Text
-            className={clsx("text-base", club ? "text-white" : "text-gray-400")}
-          >
+          <Text className={clsx("text-base", club ? "text-white" : "text-gray-400")}>
             {club || "Sélectionne ton club"}
           </Text>
         </TouchableOpacity>

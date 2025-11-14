@@ -1,0 +1,124 @@
+{
+    "template": {
+        "width": 1653,
+        "height": 2339
+    },
+    "locals": {
+        "team_name_roi": [
+            280,
+            107,
+            987,
+            160
+        ],
+        "table": {
+            "top_left": [
+                47,
+                200
+            ],
+            "header_height": 60,
+            "row_count": 12,
+            "row_height": 48
+        },
+        "columns": {
+            "jersey": {
+                "x": 13,
+                "w": 53
+            },
+            "name": {
+                "x": 80,
+                "w": 347
+            },
+            "play_time": {
+                "x": 470,
+                "w": 95
+            }, 
+            "points": {
+                "x": 585,
+                "w": 60
+            },
+            "shots_made": {
+                "x": 650,
+                "w": 60
+            }, 
+            "threes": {
+                "x": 715,
+                "w": 55
+            },
+            "two_int": {
+                "x": 780,
+                "w": 55
+            },
+            "two_ext": {
+                "x": 845,
+                "w": 55
+            },
+            "ft_made": {
+                "x": 910,
+                "w": 55
+            },
+            "fouls_committed": {
+                "x": 975,
+                "w": 55
+            }
+        }
+    },
+    "visitors": {
+        "team_name_roi": [
+            280,
+            1167,
+            987,
+            1222
+        ],
+        "table": {
+            "top_left": [
+                47,
+                1261
+            ],
+            "header_height": 60,
+            "row_count": 12,
+            "row_height": 48
+        },
+        "columns": {
+            "jersey": {
+                "x": 13,
+                "w": 53
+            },
+            "name": {
+                "x": 80,
+                "w": 347
+            },
+            "play_time": {
+                "x": 470,
+                "w": 95
+            },
+            "points": {
+                "x": 585,
+                "w": 60
+            },
+            "shots_made": {
+                "x": 650,
+                "w": 60
+            },
+            "threes": {
+                "x": 715,
+                "w": 55
+            },
+            "two_int": {
+                "x": 780,
+                "w": 55
+            },
+            "two_ext": {
+                "x": 845,
+                "w": 55
+            },
+            "ft_made": {
+                "x": 910,
+                "w": 55
+            },
+            "fouls_committed": {
+                "x": 975,
+                "w": 55
+            }
+        }
+    }
+}
