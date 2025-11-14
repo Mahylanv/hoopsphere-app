@@ -100,6 +100,8 @@ export type RootStackParamList = {
     offer: Offer; // <-- on réutilise le type directement
   };
 
+  EditClubProfile: undefined;
+
   Payment: undefined;
   EditOffer: { offer: Offer }; // ✅ nouvelle page de modification
   SearchJoueur: undefined;

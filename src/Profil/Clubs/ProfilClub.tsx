@@ -1,3 +1,5 @@
+// src/Profil/Clubs/ProfilClub.tsx
+
 import React, { useEffect, useState } from "react";
 import {
   Pressable,
@@ -56,7 +58,8 @@ export default function ProfilClub() {
   // 🔹 Gestion du changement de logo
   const handleChangeLogo = async () => {
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         Alert.alert("Permission refusée", "L'accès à la galerie est requis.");
         return;
@@ -97,6 +100,11 @@ export default function ProfilClub() {
     }
   };
 
+  const formatDepartment = (dep: string) => {
+    if (!dep) return "";
+    return dep.split(" - ")[1] || dep;
+  };
+
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-black">
@@ -122,7 +130,7 @@ export default function ProfilClub() {
     city: club.ville || club.city || "Ville inconnue",
     teams: club.teams ?? club.equipes ?? 0,
     categories: club.categories ?? [],
-    department : club.department ?? [],
+    department: club.department ?? [],
   };
 
   return (
@@ -135,7 +143,14 @@ export default function ProfilClub() {
           onPress={() => navigation.goBack()}
           className="absolute left-4 top-6 p-2"
         >
-          <Text className="text-white text-lg">←</Text>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </Pressable>
+
+        <Pressable
+          onPress={() => navigation.navigate("EditClubProfile")}
+          className="absolute right-4 top-6 p-2"
+        >
+          <Ionicons name="create-outline" size={22} color="#fff" />
         </Pressable>
 
         <View className="relative">
@@ -152,14 +167,16 @@ export default function ProfilClub() {
             {uploading ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Ionicons name="pencil" size={16} color="#fff" />
+              <Ionicons name="camera" size={16} color="#fff" />
             )}
           </Pressable>
         </View>
 
-        <Text className="text-xl font-bold text-white mt-2">{safeClub.name}</Text>
+        <Text className="text-xl font-bold text-white mt-2">
+          {safeClub.name}
+        </Text>
         <Text className="text-sm text-gray-400">
-          {safeClub.city} • {safeClub.department}
+          {safeClub.city} • {formatDepartment(safeClub.department)}
         </Text>
       </View>
 

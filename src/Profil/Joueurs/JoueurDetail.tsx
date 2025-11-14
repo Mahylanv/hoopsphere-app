@@ -149,7 +149,7 @@ export default function JoueurDetail() {
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         contentContainerStyle={{
-          paddingTop: CARD_HEIGHT * 1.95,
+          paddingTop: CARD_HEIGHT * 2.15,
           paddingBottom: 120,
         }}
         onScroll={Animated.event(

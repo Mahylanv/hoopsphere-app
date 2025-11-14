@@ -33,6 +33,7 @@ import OfferDetail from "./src/Pages/OfferDetail";
 import Payment from "./src/Pages/Payment";
 import EditOffer from "./src/Profil/Clubs/EditOffer";
 import JoueurDetail from "./src/Profil/Joueurs/JoueurDetail";
+import EditClubProfile from './src/Profil/Clubs/EditClubProfile'
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -92,15 +93,30 @@ function RootNavigator() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#111827" }} edges={["left", "right"]}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: "#111827" }}
+      edges={["left", "right"]}
+    >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Home" component={Home} />
         <Stack.Screen name="Connexion" component={Connexion} />
-        <Stack.Screen name="InscriptionJoueurStep1" component={InscriptionJoueurStep1} />
-        <Stack.Screen name="InscriptionJoueurStep2" component={InscriptionJoueurStep2} />
-        <Stack.Screen name="InscriptionJoueurStep3" component={InscriptionJoueurStep3} />
+        <Stack.Screen
+          name="InscriptionJoueurStep1"
+          component={InscriptionJoueurStep1}
+        />
+        <Stack.Screen
+          name="InscriptionJoueurStep2"
+          component={InscriptionJoueurStep2}
+        />
+        <Stack.Screen
+          name="InscriptionJoueurStep3"
+          component={InscriptionJoueurStep3}
+        />
         <Stack.Screen name="InscriptionClub" component={InscriptionClub} />
-        <Stack.Screen name="InscriptionClubStep2" component={InscriptionClubStep2} />
+        <Stack.Screen
+          name="InscriptionClubStep2"
+          component={InscriptionClubStep2}
+        />
 
         {/* Navigation principale */}
         <Stack.Screen name="MainTabs" component={MainTabNavigatorJoueur} />
@@ -112,6 +128,11 @@ function RootNavigator() {
         <Stack.Screen name="Payment" component={Payment} />
         <Stack.Screen name="EditOffer" component={EditOffer} />
         <Stack.Screen name="JoueurDetail" component={JoueurDetail} />
+        <Stack.Screen
+          name="EditClubProfile"
+          component={EditClubProfile}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </SafeAreaView>
   );
@@ -124,13 +145,16 @@ export default function App() {
   return (
     <AuthProvider>
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle="light-content"
+        />
 
         {/* 🔒 Le conteneur qui empêche les resets */}
         <PersistedNavContainer>
           <RootNavigator />
         </PersistedNavContainer>
-
       </SafeAreaProvider>
     </AuthProvider>
   );
