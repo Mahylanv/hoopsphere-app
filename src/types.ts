@@ -18,6 +18,7 @@ export type Joueur = {
   poste?: string;
   main?: string;
   club?: string;
+  genre?: string;
   departement?: string;
   avatar?: string;
   createdAt?: string;
