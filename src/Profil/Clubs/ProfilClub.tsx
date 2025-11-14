@@ -22,7 +22,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Ionicons } from "@expo/vector-icons";
 
 import ClubPresentation from "./ClubPresentation";
-import ClubTeams from "./ClubTeams";
+import ClubTeamsList from "./ClubTeamsList";  // ✅ on remplace ici
 import ClubOffers from "./ClubOffers";
 
 type ClubProfileNavProp = NativeStackNavigationProp<
@@ -197,7 +197,7 @@ export default function ProfilClub() {
         />
         <Tab.Screen
           name="Équipes"
-          component={ClubTeams}
+          component={ClubTeamsList}  
           initialParams={{ club: safeClub }}
         />
         <Tab.Screen

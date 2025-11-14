@@ -106,6 +106,8 @@ export type RootStackParamList = {
   EditOffer: { offer: Offer }; // ✅ nouvelle page de modification
   SearchJoueur: undefined;
   JoueurDetail: { joueur: Joueur };
+
+  ClubTeamsList: undefined;
 };
 
 // ==========================
@@ -147,4 +149,21 @@ export type Offer = {
   ageRange: string;
   category: string;
   location: string;
+};
+
+
+// ==========================
+// 🔹 TYPES FIRESTORE — ÉQUIPES & JOUEURS
+// ==========================
+
+export type Team = {
+  id?: string;
+  label: string;
+  createdAt?: string;
+};
+
+export type TeamPlayer = {
+  id?: string;
+  prenom: string;
+  nom: string;
 };

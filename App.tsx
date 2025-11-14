@@ -33,7 +33,8 @@ import OfferDetail from "./src/Pages/OfferDetail";
 import Payment from "./src/Pages/Payment";
 import EditOffer from "./src/Profil/Clubs/EditOffer";
 import JoueurDetail from "./src/Profil/Joueurs/JoueurDetail";
-import EditClubProfile from './src/Profil/Clubs/EditClubProfile'
+import EditClubProfile from "./src/Profil/Clubs/EditClubProfile";
+import ClubTeamsList from "./src/Profil/Clubs/ClubTeamsList";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -133,6 +134,8 @@ function RootNavigator() {
           component={EditClubProfile}
           options={{ headerShown: false }}
         />
+
+        <Stack.Screen name="ClubTeamsList" component={ClubTeamsList} />
       </Stack.Navigator>
     </SafeAreaView>
   );
