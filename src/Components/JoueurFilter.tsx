@@ -14,7 +14,6 @@ export type JoueurFiltre = {
   departement?: string[];
   genre?: string[];
   main?: string[];
-  club?: string[];
   tailleMin?: number | null;
   tailleMax?: number | null;
   poidsMin?: number | null;
@@ -40,36 +39,18 @@ export default function JoueurFilter({
   const [tailleMax, setTailleMax] = useState<number | null>(null);
   const [poidsMin, setPoidsMin] = useState<number | null>(null);
   const [poidsMax, setPoidsMax] = useState<number | null>(null);
-  const [clubsList, setClubsList] = useState<string[]>([]);
 
   const resetFilters = () => {
     setPoste([]);
     setDepartement([]);
     setGenre([]);
     setMain([]);
-    setClub([]);
     setTailleMin(null);
     setTailleMax(null);
     setPoidsMin(null);
     setPoidsMax(null);
   };
 
-  useEffect(() => {
-    const fetchClubs = async () => {
-      try {
-        const snap = await getDocs(collection(db, "clubs"));
-        const data = snap.docs
-          .map((doc) => doc.data().name)
-          .filter(Boolean) as string[];
-
-        setClubsList(["Sans club", ...data]);
-      } catch (e) {
-        console.error("Erreur récupération clubs:", e);
-      }
-    };
-
-    fetchClubs();
-  }, []);
 
   const applyFilters = () => {
     onApply({
@@ -77,7 +58,6 @@ export default function JoueurFilter({
       departement,
       genre,
       main,
-      club,
       tailleMin,
       tailleMax,
       poidsMin,
@@ -160,9 +140,6 @@ export default function JoueurFilter({
                 placeholder="Sélectionner un ou plusieurs départements"
               />
             </View>
-
-            {clubsList.length > 0 &&
-              renderChips("Clubs", clubsList, club, setClub)}
 
             {/* Placeholders for sliders (can be replaced by actual RN sliders) */}
             <View className="mb-6">

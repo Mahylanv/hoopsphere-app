@@ -14,7 +14,6 @@ import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "../config/firebaseConfig";
 import { Joueur } from "../types";
 import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
@@ -110,13 +109,6 @@ export default function SearchJoueur() {
     if (filters.main && filters.main.length > 0) {
       results = results.filter(
         (j) => j.main && filters.main!.includes(j.main.trim())
-      );
-    }
-
-    // Clubs (mot clé)
-    if (filters.club && filters.club.length > 0) {
-      results = results.filter(
-        (j) => j.club && filters.club!.some((c) => j.club!.includes(c))
       );
     }
 
