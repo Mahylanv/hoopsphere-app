@@ -1,5 +1,12 @@
 import React from 'react';
-import { ImageBackground, View, Image, Text, Pressable, StatusBar,} from 'react-native';
+import {
+  ImageBackground,
+  View,
+  Image,
+  Text,
+  Pressable,
+  StatusBar,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -13,17 +20,34 @@ export default function Home() {
   return (
     <SafeAreaView className="flex-1 bg-black" edges={["top", "left", "right"]}>
       <StatusBar barStyle="light-content" translucent />
+
+      {/* 🔥 Correction ImageBackground web-friendly */}
       <ImageBackground
         source={require("../../assets/background2.jpg")}
-        className="absolute inset-0 w-full h-full"
-        imageStyle={{ opacity: 0.6 }}
         resizeMode="cover"
+        className="absolute inset-0 w-full h-full"
+        imageStyle={{
+          opacity: 0.6,
+          objectFit: "cover",    // ← essentiel pour web
+        }}
       >
-        <View className="flex-1 justify-center items-center px-8 space-y-8">
+
+        <View className="flex-1 justify-center items-center px-6 space-y-8">
+
+          {/* 🔥 Correction taille du logo → responsive web + mobile */}
           <Image
             source={require("../../assets/hoopsphere-logo.png")}
-            className="w-60 h-60 mb-16"
             resizeMode="contain"
+            className="
+              w-40 h-40       /* mobile */
+              md:w-52 md:h-52 /* tablettes */
+              lg:w-64 lg:h-64 /* grand écran */
+              mb-12
+            "
+            style={{
+              maxWidth: 250,  // ← bloc Web pour éviter explosion
+              maxHeight: 250, // ← bloc Web pour éviter explosion
+            }}
           />
 
           <Pressable
@@ -52,6 +76,7 @@ export default function Home() {
               Connexion
             </Text>
           </Pressable>
+
         </View>
       </ImageBackground>
     </SafeAreaView>
