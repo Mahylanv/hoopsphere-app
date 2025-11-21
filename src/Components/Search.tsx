@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     View,
     TextInput,
@@ -7,83 +7,126 @@ import {
     StatusBar,
     Pressable,
     Image,
+    ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList, Club } from '../types';
-
-const ALL_CLUBS: Club[] = [
-    {
-        id: '1',
-        name: 'CSP Limoges',
-        logo: require('../../assets/csp.png'),
-        city: 'Limoges',
-        teams: 5,
-        categories: ['U20', 'U18', 'U16'],
-    },
-    {
-        id: '2',
-        name: 'Paris Basket',
-        logo: require('../../assets/paris.png'),
-        city: 'Paris',
-        teams: 8,
-        categories: ['U16', 'U14', 'U20', 'Seniors'],
-    },
-    {
-        id: '3',
-        name: 'CSKA Moscou',
-        logo: require('../../assets/cska.png'),
-        city: 'Moscou',
-        teams: 3,
-        categories: ['Seniors', 'U20', 'U18'],
-    },
-];
+import type { RootStackParamList } from '../types';
+import { db } from '../config/firebaseConfig';
+import {
+    collection,
+    onSnapshot,
+    query as fsQuery,
+    orderBy,
+} from 'firebase/firestore';
 
 type SearchNavProp = NativeStackNavigationProp<RootStackParamList, 'Search'>;
 
+type FirestoreClub = {
+    id: string;
+    uid?: string;
+    name: string;
+    logo?: string;        
+    city?: string;
+    department?: string;
+    teams?: string;        
+    categories?: string[];  
+    email?: string;
+    description?: string;
+    createdAt?: any;
+    updatedAt?: any;
+};
+
 export default function Search() {
+    const navigation = useNavigation<SearchNavProp>();
+
     const [query, setQuery] = useState('');
     const [showFilters, setShowFilters] = useState(false);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [selectedCities, setSelectedCities] = useState<string[]>([]);
-    const navigation = useNavigation<SearchNavProp>();
+
+    const [clubs, setClubs] = useState<FirestoreClub[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [err, setErr] = useState<string | null>(null);
+
+    useEffect(() => {
+        setLoading(true);
+        setErr(null);
+
+        const q = fsQuery(collection(db, 'clubs'), orderBy('name'));
+        const unsub = onSnapshot(
+            q,
+            (snap) => {
+                const list: FirestoreClub[] = [];
+                snap.forEach((doc) => {
+                    const d = doc.data() as any;
+                    list.push({
+                        id: doc.id,
+                        uid: d?.uid,
+                        name: (d?.name || '').toString(),
+                        logo: d?.logo || '',
+                        city: d?.city || '',
+                        department: d?.department || '',
+                        teams: d?.teams || '',
+                        categories: Array.isArray(d?.categories) ? d.categories as string[] : [],
+                        email: d?.email || '',
+                        description: d?.description || '',
+                        createdAt: d?.createdAt,
+                        updatedAt: d?.updatedAt,
+                    });
+                });
+                setClubs(list);
+                setLoading(false);
+            },
+            (e) => {
+                console.error(e);
+                setErr("Impossible de charger les clubs.");
+                setLoading(false);
+            }
+        );
+
+        return () => unsub();
+    }, []);
 
     const allCategories = useMemo(
-        () => Array.from(new Set(ALL_CLUBS.flatMap((c) => c.categories))),
-        []
+        () => Array.from(new Set(clubs.flatMap((c) => c.categories || []))).sort(),
+        [clubs]
     );
     const allCities = useMemo(
-        () => Array.from(new Set(ALL_CLUBS.map((c) => c.city))),
-        []
+        () => Array.from(new Set(clubs.map((c) => c.city || '').filter(Boolean))).sort(),
+        [clubs]
     );
 
     const toggleCategory = (cat: string) =>
         setSelectedCategories((prev) =>
             prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
         );
+
     const toggleCity = (city: string) =>
         setSelectedCities((prev) =>
             prev.includes(city) ? prev.filter((c) => c !== city) : [...prev, city]
         );
 
-    const filtered = useMemo(
-        () =>
-            ALL_CLUBS.filter((club) => {
-                const matchesQuery =
-                    club.name.toLowerCase().includes(query.toLowerCase()) ||
-                    club.city.toLowerCase().includes(query.toLowerCase());
-                const matchesCategory =
-                    selectedCategories.length === 0 ||
-                    club.categories.some((c) => selectedCategories.includes(c));
-                const matchesCity =
-                    selectedCities.length === 0 ||
-                    selectedCities.includes(club.city);
-                return matchesQuery && matchesCategory && matchesCity;
-            }),
-        [query, selectedCategories, selectedCities]
-    );
+    const filtered = useMemo(() => {
+        const qLower = query.trim().toLowerCase();
+        return clubs.filter((club) => {
+            const name = (club.name || '').toLowerCase();
+            const city = (club.city || '').toLowerCase();
+            const matchesQuery = !qLower || name.includes(qLower) || city.includes(qLower);
+
+            const matchesCategory =
+                selectedCategories.length === 0 ||
+                (club.categories || []).some((c) => selectedCategories.includes(c));
+
+            const matchesCity =
+                selectedCities.length === 0 ||
+                (club.city ? selectedCities.includes(club.city) : false);
+
+            return matchesQuery && matchesCategory && matchesCity;
+        });
+    }, [clubs, query, selectedCategories, selectedCities]);
 
     return (
         <SafeAreaView className="flex-1 bg-black">
@@ -97,15 +140,11 @@ export default function Search() {
                         placeholderTextColor="#9CA3AF"
                         className="flex-1 px-4 py-2 text-white"
                     />
-                    <Pressable
-                        onPress={() => setShowFilters((v) => !v)}
-                        className="px-4"
-                    >
+                    <Pressable onPress={() => setShowFilters((v) => !v)} className="px-4">
                         <Ionicons name="filter" size={24} color="#fff" />
                     </Pressable>
                 </View>
 
-                {/* Panneau de filtres */}
                 {showFilters && (
                     <View className="bg-gray-800 p-4 rounded-lg shadow mt-2">
                         <Text className="text-white font-bold mb-2">Filtres</Text>
@@ -150,48 +189,65 @@ export default function Search() {
                     </View>
                 )}
 
-                <FlatList
-                    data={filtered}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={{ paddingTop: 16 }}
-                    ListEmptyComponent={
-                        <Text className="text-gray-500 text-center mt-8">
-                            Aucun club trouvé
-                        </Text>
-                    }
-                    renderItem={({ item }) => (
-                        <Pressable
-                            onPress={() =>
-                                navigation.navigate('ClubProfile', { club: item })
-                            }
-                            className="flex-row items-center bg-gray-800 rounded-lg p-4 mb-3"
-                        >
-                            <Image
-                                source={item.logo}
-                                className="w-16 h-16 rounded-lg mr-4"
-                            />
-                            <View className="flex-1">
-                                <Text className="text-white text-lg font-semibold">
-                                    {item.name}
-                                </Text>
-                                <Text className="text-gray-400">{item.city}</Text>
-                                <Text className="text-gray-400">
-                                    {item.teams} équipes
-                                </Text>
-                                <View className="flex-row flex-wrap mt-1">
-                                    {item.categories.map((c) => (
-                                        <View
-                                            key={c}
-                                            className="px-2 py-0.5 mr-2 mb-1 bg-gray-700 rounded-full"
-                                        >
-                                            <Text className="text-xs text-gray-300">{c}</Text>
-                                        </View>
-                                    ))}
+                {loading ? (
+                    <View className="flex-1 items-center justify-center">
+                        <ActivityIndicator />
+                        <Text className="text-gray-400 mt-3">Chargement des clubs…</Text>
+                    </View>
+                ) : err ? (
+                    <View className="flex-1 items-center justify-center">
+                        <Text className="text-red-400">{err}</Text>
+                    </View>
+                ) : (
+                    <FlatList
+                        data={filtered}
+                        keyExtractor={(item) => item.id}
+                        contentContainerStyle={{ paddingTop: 16, paddingBottom: 24 }}
+                        ListEmptyComponent={
+                            <Text className="text-gray-500 text-center mt-8">
+                                Aucun club trouvé
+                            </Text>
+                        }
+                        renderItem={({ item }) => (
+                            <Pressable
+                                onPress={() => navigation.navigate('ProfilClub', { club: item as any })}
+                                className="flex-row items-center bg-gray-800 rounded-lg p-4 mb-3"
+                            >
+                                {item.logo ? (
+                                    <Image
+                                        source={{ uri: item.logo }}
+                                        className="w-16 h-16 rounded-lg mr-4"
+                                    />
+                                ) : (
+                                    <View className="w-16 h-16 rounded-lg mr-4 bg-gray-700 items-center justify-center">
+                                        <Ionicons name="image" size={20} color="#bbb" />
+                                    </View>
+                                )}
+
+                                <View className="flex-1">
+                                    <Text className="text-white text-lg font-semibold">
+                                        {item.name || 'Club sans nom'}
+                                    </Text>
+                                    <Text className="text-gray-400">{item.city || '—'}</Text>
+                                    <Text className="text-gray-400">
+                                        {item.teams ? `Équipes : ${item.teams}` : (item.categories?.length ? `${item.categories.length} catégories` : '—')}
+                                    </Text>
+
+                                    <View className="flex-row flex-wrap mt-1">
+                                        {(item.categories || []).map((c) => (
+                                            <View
+                                                key={c}
+                                                className="px-2 py-0.5 mr-2 mb-1 bg-gray-700 rounded-full"
+                                            >
+                                                <Text className="text-xs text-gray-300">{c}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
                                 </View>
-                            </View>
-                        </Pressable>
-                    )}
-                />
+                            </Pressable>
+                        )}
+                    />
+                )}
             </View>
         </SafeAreaView>
     );

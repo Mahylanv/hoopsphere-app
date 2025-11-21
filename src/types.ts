@@ -1,11 +1,4 @@
-// src/types.ts
-// 🧩 Typages globaux Hoopsphere (navigation + entités Firestore)
-
 import { NavigatorScreenParams } from "@react-navigation/native";
-
-// ==========================
-// 🔹 TYPES FIRESTORE (données)
-// ==========================
 
 export type Joueur = {
   uid: string;
@@ -51,9 +44,7 @@ export type Message = {
   timestamp: string;
 };
 
-// ==========================
-// 🔹 NAVIGATION STACK PRINCIPALE
-// ==========================
+// NAVIGATION STACK PRINCIPALE
 
 export type RootStackParamList = {
   Home: undefined;
@@ -103,16 +94,14 @@ export type RootStackParamList = {
   EditClubProfile: undefined;
 
   Payment: undefined;
-  EditOffer: { offer: Offer }; // ✅ nouvelle page de modification
+  EditOffer: { offer: Offer }; // nouvelle page de modification
   SearchJoueur: undefined;
   JoueurDetail: { joueur: Joueur };
 
   ClubTeamsList: undefined;
 };
 
-// ==========================
-// 🔹 NAVIGATION — JOUEUR
-// ==========================
+// NAVIGATION — JOUEUR
 
 export type MainTabParamListJoueur = {
   MainJoueur: undefined;
@@ -122,9 +111,7 @@ export type MainTabParamListJoueur = {
   Profil: undefined;
 };
 
-// ==========================
-// 🔹 NAVIGATION — CLUB
-// ==========================
+// NAVIGATION — CLUB
 
 export type MainTabParamListClub = {
   Home: undefined;
@@ -134,9 +121,7 @@ export type MainTabParamListClub = {
   ProfilClub: undefined;
 };
 
-// ==========================
-// 🔹 AUTRES TYPES (optionnels)
-// ==========================
+// AUTRES TYPES (optionnels)
 
 export type Offer = {
   id?: string; // <-- ici optionnel
@@ -149,12 +134,11 @@ export type Offer = {
   ageRange: string;
   category: string;
   location: string;
+  clubUid?: string;
 };
 
 
-// ==========================
-// 🔹 TYPES FIRESTORE — ÉQUIPES & JOUEURS
-// ==========================
+// TYPES FIRESTORE — ÉQUIPES & JOUEURS
 
 export type Team = {
   id?: string;

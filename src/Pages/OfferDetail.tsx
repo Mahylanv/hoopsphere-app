@@ -1,108 +1,282 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import {
-    View,
-    Text,
-    StatusBar,
-    ScrollView,
-    Pressable,
-    Animated,
-    Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { RouteProp, useRoute } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import { RootStackParamList } from '../types';
+    View, Text, StatusBar, Pressable, Alert, ScrollView,
+    ActivityIndicator, TextInput, Image
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 
-type OfferDetailRouteProp = RouteProp<RootStackParamList, 'OfferDetail'>;
+import { RootStackParamList, Offer as OfferType } from "../types";
+import { auth, db } from "../config/firebaseConfig";
+import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/firestore";
+
+type RouteProps = RouteProp<RootStackParamList, "OfferDetail">;
+type NavProps = NativeStackNavigationProp<RootStackParamList, "OfferDetail">;
+
+// On étend localement l'offre pour inclure id/clubUid si absent du type global
+type LocalOffer = OfferType & { id?: string; clubUid?: string };
 
 export default function OfferDetail() {
-    const { offer } = useRoute<OfferDetailRouteProp>().params;
+    const navigation = useNavigation<NavProps>();
+    const { params } = useRoute<RouteProps>();
+    const offer = params.offer as LocalOffer;
 
-    const [applied, setApplied] = useState(false);
-    const scaleAnim = useRef(new Animated.Value(1)).current;
-    const iconScale = useRef(new Animated.Value(0)).current;
+    const [sending, setSending] = useState(false);
+    const [motivation, setMotivation] = useState("");
 
-    const handleApply = () => {
-        if (applied) return;
+    // --- Infos club (logo, nom, ville)
+    const [clubLoading, setClubLoading] = useState(true);
+    const [club, setClub] = useState<null | {
+        uid: string;
+        name?: string;
+        nom?: string;   
+        logo?: string;
+        city?: string;
+        ville?: string;   
+        department?: string;
+    }>(null);
 
-        // petit rebond du bouton
-        Animated.sequence([
-            Animated.spring(scaleAnim, {
-                toValue: 0.9,
-                useNativeDriver: true,
-            }),
-            Animated.spring(scaleAnim, {
-                toValue: 1,
-                useNativeDriver: true,
-            }),
-        ]).start(() => {
-            // anime l’icône check
-            Animated.spring(iconScale, {
-                toValue: 1,
-                friction: 5,
-                useNativeDriver: true,
-            }).start();
-            setApplied(true);
-            // Alert.alert('Candidature envoyée', 'Votre candidature a bien été prise en compte !');
+    const isLogged = !!auth.currentUser;
+    const isClubOwner =
+        !!auth.currentUser?.uid && !!offer.clubUid && auth.currentUser!.uid === offer.clubUid;
+
+    // Nom + ville formatés proprement
+    const clubName = useMemo(
+        () => club?.nom || club?.name || "Club",
+        [club]
+    );
+    const clubCity = useMemo(
+        () => club?.ville || club?.city || "",
+        [club]
+    );
+    const clubDept = useMemo(() => {
+        if (!club?.department) return "";
+        return club.department.split(" - ")[1] || club.department;
+    }, [club]);
+
+    // Chargement du club
+    useEffect(() => {
+        let mounted = true;
+        const run = async () => {
+            if (!offer.clubUid) {
+                setClubLoading(false);
+                return;
+            }
+            try {
+                const snap = await getDoc(doc(db, "clubs", offer.clubUid));
+                if (mounted) {
+                    if (snap.exists()) {
+                        setClub({ uid: snap.id, ...(snap.data() as any) });
+                    }
+                    setClubLoading(false);
+                }
+            } catch (e) {
+                console.error("OfferDetail: load club failed", e);
+                if (mounted) setClubLoading(false);
+            }
+        };
+        run();
+        return () => { mounted = false; };
+    }, [offer.clubUid]);
+
+    const handleApply = async () => {
+        if (!isLogged) {
+            Alert.alert("Connexion requise", "Connecte-toi pour postuler.", [
+                { text: "OK", onPress: () => navigation.navigate("Connexion") },
+            ]);
+            return;
+        }
+        if (!offer.id || !offer.clubUid) {
+            Alert.alert("Erreur", "Informations d’offre incomplètes.");
+            return;
+        }
+        try {
+            setSending(true);
+            await addDoc(
+                collection(db, "clubs", offer.clubUid, "offres", offer.id, "candidatures"),
+                {
+                    applicantUid: auth.currentUser?.uid,
+                    applicantEmail: auth.currentUser?.email || null,
+                    message: motivation || "",
+                    createdAt: serverTimestamp(),
+                    status: "pending",
+                }
+            );
+            Alert.alert("Candidature envoyée ✅", "Le club a bien reçu ta candidature.");
+            navigation.goBack();
+        } catch (e) {
+            console.error(e);
+            Alert.alert("Erreur", "Impossible d’envoyer la candidature.");
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const goToClub = () => {
+        if (!club) return;
+        navigation.navigate("ProfilClub", {
+            club: {
+                id: club.uid as any,
+                name: clubName,
+                logo: club.logo || "",
+                city: clubCity,
+                teams: 0,
+                categories: [],
+                uid: club.uid as any,
+                department: club.department as any,
+            } as any,
         });
     };
+
+    // petit composant badge
+    const Badge = ({ label }: { label?: string }) =>
+        label ? (
+            <View className="bg-gray-700 px-3 py-1 rounded-full mr-2 mb-2">
+                <Text className="text-gray-200 text-xs">{label}</Text>
+            </View>
+        ) : null;
 
     return (
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar barStyle="light-content" />
-            <ScrollView contentContainerStyle={{ padding: 16 }}>
-                <View className="mb-6">
-                    <Text className="text-2xl font-bold text-white mb-1">{offer.title}</Text>
-                    <Text className="text-gray-400">Publié le {offer.publishedAt}</Text>
-                </View>
 
-                {[
-                    { label: 'Poste recherché', value: offer.position },
-                    { label: 'Équipe', value: offer.team },
-                    { label: 'Description', value: offer.description },
-                ].map(({ label, value }) => (
-                    <View
-                        key={label}
-                        className="bg-gray-800 rounded-lg p-4 mb-4 shadow"
-                    >
-                        <Text className="font-semibold text-gray-200 mb-1">{label}</Text>
-                        <Text className="text-gray-100">{value}</Text>
-                    </View>
-                ))}
+            {/* Header */}
+            <View className="flex-row items-center px-4 py-3 border-b border-gray-800">
+                <Pressable onPress={() => navigation.goBack()} className="p-2 mr-2">
+                    <Ionicons name="arrow-back" size={24} color="#fff" />
+                </Pressable>
+                <Text className="text-white text-lg font-bold flex-1" numberOfLines={1}>
+                    {offer.title || "Détail de l’offre"}
+                </Text>
+            </View>
 
-                {/* Grille 2 colonnes */}
-                <View className="flex-row flex-wrap -mx-2 mb-6">
-                    {[
-                        { label: 'Catégorie', value: offer.category },
-                        { label: 'Âge', value: offer.ageRange },
-                        { label: 'Sexe', value: offer.gender },
-                        { label: 'Lieu', value: offer.location },
-                    ].map(({ label, value }) => (
-                        <View key={label} className="w-1/2 px-2 mb-4">
-                            <View className="bg-gray-800 rounded-lg p-4 shadow">
-                                <Text className="font-semibold text-gray-200 mb-1">{label}</Text>
-                                <Text className="text-gray-100">{value}</Text>
-                            </View>
+            <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+                {/* Bandeau club */}
+                <View className="bg-[#151a28] rounded-2xl p-4 border border-gray-800 mb-4">
+                    <Text className="text-gray-400 text-xs mb-3">Offre publiée par</Text>
+
+                    {clubLoading ? (
+                        <View className="flex-row items-center">
+                            <ActivityIndicator color="#F97316" />
+                            <Text className="text-gray-400 ml-2">Chargement du club…</Text>
                         </View>
-                    ))}
+                    ) : (
+                        <View className="flex-row items-center">
+                            <Image
+                                source={{ uri: club?.logo || "https://via.placeholder.com/80x80.png?text=Club" }}
+                                className="w-12 h-12 rounded-full mr-3 border border-gray-700"
+                            />
+                            <View className="flex-1">
+                                <Text className="text-white font-semibold">{clubName}</Text>
+                                <Text className="text-gray-400 text-xs">
+                                    {(clubCity || clubDept) ? `${clubCity}${clubDept ? " • " + clubDept : ""}` : "—"}
+                                </Text>
+                            </View>
+
+                            {club && (
+                                <Pressable
+                                    onPress={goToClub}
+                                    className="px-3 py-2 bg-orange-600 rounded-xl"
+                                >
+                                    <Text className="text-white text-sm font-semibold">Voir le club</Text>
+                                </Pressable>
+                            )}
+                        </View>
+                    )}
                 </View>
 
-                <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-                    <Pressable
-                        onPress={handleApply}
-                        disabled={applied}
-                        className="bg-blue-600 rounded-full py-4 items-center shadow-lg"
-                    >
-                        {applied ? (
-                            <Animated.View style={{ transform: [{ scale: iconScale }] }}>
-                                <Ionicons name="checkmark" size={28} color="white" />
-                            </Animated.View>
-                        ) : (
-                            <Text className="text-white text-lg font-bold">Postuler</Text>
-                        )}
-                    </Pressable>
-                </Animated.View>
+                {/* Carte détails offre */}
+                <View className="bg-[#1b1f2a] rounded-2xl p-5 border border-gray-800">
+                    {/* Titre + métadonnées */}
+                    <Text className="text-white text-xl font-bold mb-2">
+                        {offer.title || "Offre sans titre"}
+                    </Text>
+
+                    {/* Métadonnées */}
+                    <View className="mb-3">
+                        {offer.location ? (
+                            <Text className="text-gray-300">📍 {offer.location}</Text>
+                        ) : null}
+                        {offer.publishedAt ? (
+                            <Text className="text-gray-400 text-xs mt-1">
+                                Publiée le {offer.publishedAt}
+                            </Text>
+                        ) : null}
+                    </View>
+
+                    {/* Badges d’infos structurées */}
+                    {/* <View className="flex-row flex-wrap mb-4">
+                        <Badge label={offer.position} />
+                        <Badge label={offer.gender} />
+                        <Badge label={offer.team} />
+                        <Badge label={offer.category} />
+                        <Badge label={offer.ageRange} />
+                    </View> */}
+
+                    {/* Description */}
+                    {!!offer.description && (
+                        <>
+                            <Text className="text-white font-semibold mb-1">Description</Text>
+                            <Text className="text-gray-200 leading-6 mb-6">{offer.description}</Text>
+                        </>
+                    )}
+
+                    {/* (Optionnel) récap total compact */}
+                    <View className="bg-[#0e1320] border border-gray-700 rounded-xl p-3 mb-6">
+                        <Row label="Poste recherché" value={offer.position || "—"} />
+                        <Row label="Équipe / Niveau" value={offer.team || offer.category || "—"} />
+                        <Row label="Genre" value={offer.gender || "—"} />
+                        <Row label="Tranche d’âge" value={offer.ageRange || "—"} />
+                        <Row label="Championnat" value={offer.category || "—"} />
+                        <Row label="Localisation" value={offer.location || "—"} />
+                    </View>
+
+                    {/* Formulaire candidature — visible uniquement si pas le club */}
+                    {!isClubOwner && (
+                        <View className="mt-2">
+                            <Text className="text-white font-semibold mb-2">Message (optionnel)</Text>
+                            <TextInput
+                                placeholder="Quelques mots de motivation, ton profil, tes dispos…"
+                                placeholderTextColor="#6b7280"
+                                value={motivation}
+                                onChangeText={setMotivation}
+                                className="bg-[#0e1320] text-white rounded-2xl px-4 py-3 text-[15px] border border-gray-700 min-h-[110px] mb-4"
+                                multiline
+                            />
+
+                            <Pressable
+                                onPress={handleApply}
+                                disabled={sending}
+                                className={`py-4 rounded-xl items-center ${sending ? "bg-gray-600" : "bg-orange-600"}`}
+                            >
+                                {sending ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text className="text-white font-semibold">Postuler</Text>
+                                )}
+                            </Pressable>
+                        </View>
+                    )}
+
+                    {/* Info club propriétaire */}
+                    {isClubOwner && (
+                        <Text className="text-gray-400 italic mt-2">
+                            Vous êtes le club propriétaire de cette offre.
+                        </Text>
+                    )}
+                </View>
             </ScrollView>
         </SafeAreaView>
+    );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+    return (
+        <View className="flex-row justify-between items-center py-1">
+            <Text className="text-gray-400">{label}</Text>
+            <Text className="text-gray-200 font-medium ml-4">{value}</Text>
+        </View>
     );
 }

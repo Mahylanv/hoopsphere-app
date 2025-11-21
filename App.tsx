@@ -18,7 +18,6 @@ import { StatusBar, ActivityIndicator, View } from "react-native";
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { RootStackParamList } from "./src/types";
 
-// --- Pages ---
 import Home from "./src/Pages/Home";
 import Connexion from "./src/Components/Connexion";
 import InscriptionJoueurStep1 from "./src/Inscription/Joueurs/InscriptionJoueurStep1";
@@ -35,14 +34,13 @@ import EditOffer from "./src/Profil/Clubs/EditOffer";
 import JoueurDetail from "./src/Profil/Joueurs/JoueurDetail";
 import EditClubProfile from "./src/Profil/Clubs/EditClubProfile";
 import ClubTeamsList from "./src/Profil/Clubs/ClubTeamsList";
+import ProfilClub from "./src/Profil/Clubs/ProfilClub";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const NAV_STATE_KEY = "NAVIGATION_STATE_V1";
 
-/* ----------------------------------------------
-   🔒 CONTENEUR DE NAVIGATION PERSISTANTE
----------------------------------------------- */
+
 function PersistedNavContainer({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = React.useState(false);
   const [initialState, setInitialState] = React.useState<InitialState>();
@@ -79,9 +77,7 @@ function PersistedNavContainer({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* ----------------------------------------------
-   🚀 NAVIGATEUR PRINCIPAL
----------------------------------------------- */
+
 function RootNavigator() {
   const { loading } = useAuth();
 
@@ -129,21 +125,14 @@ function RootNavigator() {
         <Stack.Screen name="Payment" component={Payment} />
         <Stack.Screen name="EditOffer" component={EditOffer} />
         <Stack.Screen name="JoueurDetail" component={JoueurDetail} />
-        <Stack.Screen
-          name="EditClubProfile"
-          component={EditClubProfile}
-          options={{ headerShown: false }}
-        />
-
+        <Stack.Screen name="EditClubProfile" component={EditClubProfile} options={{ headerShown: false }}/>
+        <Stack.Screen name="ProfilClub" component={ProfilClub} />
         <Stack.Screen name="ClubTeamsList" component={ClubTeamsList} />
       </Stack.Navigator>
     </SafeAreaView>
   );
 }
 
-/* ----------------------------------------------
-   🔥 APP PRINCIPALE
----------------------------------------------- */
 export default function App() {
   return (
     <AuthProvider>
@@ -154,7 +143,6 @@ export default function App() {
           barStyle="light-content"
         />
 
-        {/* 🔒 Le conteneur qui empêche les resets */}
         <PersistedNavContainer>
           <RootNavigator />
         </PersistedNavContainer>
