@@ -9,7 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import MainJoueur from "../Profil/Joueurs/MainJoueur";
 import Chat from "../Pages/Chat";
 import Search from "../Components/Search";
-import Profil from "../Pages/Profil";
+import ProfilJoueur from "../Profil/Joueurs/ProfilJoueur";
 import Match from "../Pages/Match";
 
 import { MainTabParamListJoueur } from "../types";
@@ -92,7 +92,7 @@ export default function MainTabNavigatorJoueur() {
       {/* 👤 Profil joueur */}
       <Tab.Screen
         name="Profil"
-        component={Profil}
+        component={ProfilJoueur}
         options={{ tabBarLabel: "Profil" }}
       />
     </Tab.Navigator>
