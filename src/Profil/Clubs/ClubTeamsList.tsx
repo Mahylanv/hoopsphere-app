@@ -1,23 +1,12 @@
-// src/Profil/Clubs/ClubTeamsList.tsx
-
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  Pressable,
-  StatusBar,
-  ActivityIndicator,
-} from "react-native";
+import { View, Text, FlatList, Pressable, StatusBar, ActivityIndicator } from "react-native";
 import { useRoute, RouteProp } from "@react-navigation/native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { RootStackParamList, Club as ClubType } from "../../types";
 
-import { RootStackParamList, Club } from "../../types";
 import { auth, db } from "../../config/firebaseConfig";
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 
-// 🆕 Imports modals qu’on créera juste après
 import CreateTeamModal from "./Teams/CreateTeamModal";
 import AddPlayersModal from "./Teams/AddPlayersModal";
 
@@ -27,54 +16,35 @@ type Player = { id?: string; prenom: string; nom: string };
 type Team = { id?: string; label: string; createdAt?: string };
 
 export default function ClubTeamsList() {
-  const { club } = useRoute<ClubProfileRouteProp>().params as { club: Club };
+  const { params } = useRoute<ClubProfileRouteProp>();
+  const clubParam = params?.club as unknown as Partial<ClubType> & { uid?: string };
+  const clubUid = clubParam?.uid || clubParam?.id || auth.currentUser?.uid;
 
   const [teams, setTeams] = useState<Team[]>([]);
-  const [playersByTeam, setPlayersByTeam] = useState<Record<string, Player[]>>(
-    {}
-  );
+  const [playersByTeam, setPlayersByTeam] = useState<Record<string, Player[]>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // === Modal states ===
   const [modalCreateTeam, setModalCreateTeam] = useState(false);
   const [modalAddPlayers, setModalAddPlayers] = useState(false);
   const [currentTeamId, setCurrentTeamId] = useState<string | null>(null);
 
-  const toggle = (id: string) =>
-    setExpanded((prev) => (prev === id ? null : id));
+  const toggle = (id: string) => setExpanded((prev) => (prev === id ? null : id));
 
-  // === Charger équipes + joueurs ===
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const uid = auth.currentUser?.uid;
-        if (!uid) return;
+        if (!clubUid) { setLoading(false); return; }
 
-        const teamsSnap = await getDocs(
-          collection(db, "clubs", uid, "equipes")
-        );
-
-        const data = teamsSnap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        })) as Team[];
-
+        const teamsSnap = await getDocs(collection(db, "clubs", clubUid, "equipes"));
+        const data = teamsSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as Team[];
         setTeams(data);
 
         const map: Record<string, Player[]> = {};
-
-        for (const team of data) {
-          const joueursSnap = await getDocs(
-            collection(db, "clubs", uid, "equipes", team.id!, "joueurs")
-          );
-
-          map[team.id!] = joueursSnap.docs.map((j) => ({
-            id: j.id,
-            ...j.data(),
-          })) as Player[];
+        for (const t of data) {
+          const joueursSnap = await getDocs(collection(db, "clubs", clubUid, "equipes", t.id!, "joueurs"));
+          map[t.id!] = joueursSnap.docs.map((j) => ({ id: j.id, ...(j.data() as any) })) as Player[];
         }
-
         setPlayersByTeam(map);
       } catch (err) {
         console.error("Erreur chargement équipes :", err);
@@ -82,60 +52,33 @@ export default function ClubTeamsList() {
         setLoading(false);
       }
     };
-
     fetchTeams();
-  }, []);
+  }, [clubUid]);
 
-  // === Supprimer joueur ===
   const deletePlayer = async (teamId: string, playerId?: string) => {
+    if (!clubUid || !playerId) return;
     try {
-      const uid = auth.currentUser?.uid;
-      if (!uid) return;
-
-      if (playerId) {
-        await deleteDoc(
-          doc(db, "clubs", uid, "equipes", teamId, "joueurs", playerId)
-        );
-      }
-
-      setPlayersByTeam((prev) => {
-        const updated = (prev[teamId] || []).filter((p) => p.id !== playerId);
-        return { ...prev, [teamId]: updated };
-      });
-    } catch (err) {
-      console.error("Erreur suppression joueur :", err);
+      await deleteDoc(doc(db, "clubs", clubUid, "equipes", teamId, "joueurs", playerId));
+      setPlayersByTeam((prev) => ({ ...prev, [teamId]: (prev[teamId] || []).filter((p) => p.id !== playerId) }));
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  // === Supprimer équipe ===
   const deleteTeam = async (id?: string) => {
-    if (!id) return;
+    if (!clubUid || !id) return;
     try {
-      const uid = auth.currentUser?.uid;
-      if (!uid) return;
-
-      await deleteDoc(doc(db, "clubs", uid, "equipes", id));
-
+      await deleteDoc(doc(db, "clubs", clubUid, "equipes", id));
       setTeams((prev) => prev.filter((t) => t.id !== id));
-    } catch (err) {
-      console.error("Erreur suppression équipe :", err);
+      const { [id]: _, ...rest } = playersByTeam;
+      setPlayersByTeam(rest);
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  // === Icons équipes ===
-  const icons = [
-    "basketball",
-    "trophy",
-    "shield-star-outline",
-    "account-group",
-    "lightning-bolt",
-    "medal",
-  ];
-
-  const getIcon = (label: string) => {
-    const index = label.charCodeAt(0) % icons.length;
-    return icons[index];
-  };
+  const icons = ["basketball", "trophy", "shield-star-outline", "account-group", "lightning-bolt", "medal"];
+  const getIcon = (label: string) => icons[label.charCodeAt(0) % icons.length];
 
   if (loading) {
     return (
@@ -150,92 +93,60 @@ export default function ClubTeamsList() {
     <View className="flex-1 bg-gray-900">
       <StatusBar barStyle="light-content" />
 
-      {/* BOUTON CRÉATION EQUIPE */}
-      <Pressable
-        onPress={() => setModalCreateTeam(true)}
-        className="m-5 px-4 py-3 bg-orange-600 rounded-xl items-center"
-      >
-        <Text className="text-white font-semibold">+ Créer une équipe</Text>
-      </Pressable>
-      {/* === LISTE DES ÉQUIPES === */}
+      {/* Création d’équipe seulement si c’est **son** club */}
+      {auth.currentUser?.uid === clubUid && (
+        <Pressable onPress={() => setModalCreateTeam(true)} className="m-5 px-4 py-3 bg-orange-600 rounded-xl items-center">
+          <Text className="text-white font-semibold">+ Créer une équipe</Text>
+        </Pressable>
+      )}
+
       <FlatList
         contentContainerStyle={{ padding: 16 }}
         data={teams}
         keyExtractor={(t) => t.id!}
         renderItem={({ item }) => {
           const open = expanded === item.id;
-
           return (
             <View className="mb-4 border border-gray-700 rounded-xl overflow-hidden">
-              {/* HEADER EQUIPE */}
-              <Pressable
-                onPress={() => toggle(item.id!)}
-                className="bg-gray-800 px-4 py-3 flex-row justify-between items-center"
-              >
+              <Pressable onPress={() => toggle(item.id!)} className="bg-gray-800 px-4 py-3 flex-row justify-between items-center">
                 <View className="flex-row items-center">
-                  <MaterialCommunityIcons
-                    name={getIcon(item.label) as any}
-                    size={28}
-                    color="#F97316"
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text className="text-white text-lg font-semibold">
-                    {item.label}
-                  </Text>
+                  <MaterialCommunityIcons name={getIcon(item.label) as any} size={28} color="#F97316" style={{ marginRight: 8 }} />
+                  <Text className="text-white text-lg font-semibold">{item.label}</Text>
                 </View>
-
                 <Text className="text-white text-2xl">{open ? "−" : "+"}</Text>
               </Pressable>
 
-              {/* CONTENU OUVERT */}
               {open && (
                 <View className="bg-gray-800 px-4 py-3">
-                  {/* Joueurs */}
                   {playersByTeam[item.id!]?.length ? (
                     playersByTeam[item.id!].map((p) => (
-                      <View
-                        key={p.id}
-                        className="flex-row justify-between items-center border-b border-gray-700 py-1"
-                      >
-                        <Text className="text-gray-300">
-                          {p.prenom} {p.nom}
-                        </Text>
-                        <Pressable
-                          onPress={() => deletePlayer(item.id!, p.id!)}
-                        >
-                          <Ionicons name="trash" size={18} color="#f87171" />
-                        </Pressable>
+                      <View key={p.id} className="flex-row justify-between items-center border-b border-gray-700 py-1">
+                        <Text className="text-gray-300">{p.prenom} {p.nom}</Text>
+                        {auth.currentUser?.uid === clubUid && (
+                          <Pressable onPress={() => deletePlayer(item.id!, p.id)}>
+                            <Ionicons name="trash" size={18} color="#f87171" />
+                          </Pressable>
+                        )}
                       </View>
                     ))
                   ) : (
-                    <Text className="text-gray-400 mb-2">
-                      Aucun joueur enregistré.
-                    </Text>
+                    <Text className="text-gray-400 mb-2">Aucun joueur enregistré.</Text>
                   )}
 
-                  {/* Boutons bas */}
-                  <View className="flex-row justify-end space-x-2 mt-3">
-                    <Pressable
-                      onPress={() => {
-                        setCurrentTeamId(item.id!);
-                        setModalAddPlayers(true);
-                      }}
-                      className="bg-orange-600 px-3 py-2 rounded-lg"
-                    >
-                      <Text className="text-white font-semibold">
-                        + Ajouter joueurs
-                      </Text>
-                    </Pressable>
+                  {auth.currentUser?.uid === clubUid && (
+                    <View className="flex-row justify-end space-x-2 mt-3">
+                      <Pressable
+                        onPress={() => { setCurrentTeamId(item.id!); setModalAddPlayers(true); }}
+                        className="bg-orange-600 px-3 py-2 rounded-lg"
+                      >
+                        <Text className="text-white font-semibold">+ Ajouter joueurs</Text>
+                      </Pressable>
 
-                    <Pressable
-                      onPress={() => deleteTeam(item.id)}
-                      className="bg-red-600 px-3 py-2 rounded-lg"
-                    >
-                      <Text className="text-white font-semibold">
-                        Supprimer
-                      </Text>
-                    </Pressable>
-                  </View>
+                      <Pressable onPress={() => deleteTeam(item.id)} className="bg-red-600 px-3 py-2 rounded-lg">
+                        <Text className="text-white font-semibold">Supprimer</Text>
+                      </Pressable>
+                    </View>
+                  )}
                 </View>
               )}
             </View>
@@ -243,28 +154,30 @@ export default function ClubTeamsList() {
         }}
       />
 
-      {/* === MODALS === */}
-
-      <CreateTeamModal
-        visible={modalCreateTeam}
-        onClose={() => setModalCreateTeam(false)}
-        onCreated={(team, players) => {
-          setTeams((prev) => [...prev, team]);
-          setPlayersByTeam((prev) => ({ ...prev, [team.id!]: players }));
-        }}
-      />
-
-      <AddPlayersModal
-        visible={modalAddPlayers}
-        onClose={() => setModalAddPlayers(false)}
-        teamId={currentTeamId}
-        onPlayersAdded={(teamId, newPlayers) => {
-          setPlayersByTeam((prev) => ({
-            ...prev,
-            [teamId]: [...(prev[teamId] || []), ...newPlayers],
-          }));
-        }}
-      />
+      {/* Modals — réservés au proprio du club */}
+      {auth.currentUser?.uid === clubUid && (
+        <>
+          <CreateTeamModal
+            visible={modalCreateTeam}
+            onClose={() => setModalCreateTeam(false)}
+            onCreated={(team, players) => {
+              setTeams((prev) => [...prev, team]);
+              setPlayersByTeam((prev) => ({ ...prev, [team.id!]: players }));
+            }}
+          />
+          <AddPlayersModal
+            visible={modalAddPlayers}
+            onClose={() => setModalAddPlayers(false)}
+            teamId={currentTeamId}
+            onPlayersAdded={(teamId, newPlayers) => {
+              setPlayersByTeam((prev) => ({
+                ...prev,
+                [teamId]: [...(prev[teamId] || []), ...newPlayers],
+              }));
+            }}
+          />
+        </>
+      )}
     </View>
   );
 }
