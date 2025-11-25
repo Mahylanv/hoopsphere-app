@@ -1,0 +1,100 @@
+// src/navigation/MainTabNavigatorClub.tsx
+// 🏢 Navigation principale — réservée aux CLUBS
+
+import React from "react";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
+
+// --- Import des pages du club ---
+import Home from "../Pages/Home";
+import Annonces from "../Pages/Annonces"; // 🆕 page à créer
+import Chat from "../Pages/Chat"; // même composant, mais on filtrera les conversations du club
+import SearchJoueur from "../Components/SearchJoueur"; // 🆕 recherche spécifique joueurs
+import ProfilClub from "../Profil/Clubs/ProfilClub"; // version club du profil
+
+import { MainTabParamListClub } from "../types";
+
+const Tab = createBottomTabNavigator<MainTabParamListClub>();
+
+export default function MainTabNavigatorClub() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: "#1f2937", // gris foncé
+          borderTopColor: "#111827",
+          height: 70,
+          paddingBottom: 8,
+        },
+        tabBarActiveTintColor: "#ffffff",
+        tabBarInactiveTintColor: "#9ca3af",
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: "600",
+        },
+        tabBarIcon: ({ color, size }) => {
+          let iconName: React.ComponentProps<typeof Ionicons>["name"];
+
+          switch (route.name) {
+            case "Home":
+              iconName = "home-outline";
+              break;
+            case "Annonces":
+              iconName = "megaphone-outline"; // 🔔 icône pour les offres/annonces
+              break;
+            case "Chat":
+              iconName = "chatbubble-outline";
+              break;
+            case "SearchJoueur":
+              iconName = "search-outline";
+              break;
+            case "ProfilClub":
+              iconName = "business-outline";
+              break;
+            default:
+              iconName = "ellipse-outline";
+              break;
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+      })}
+    >
+      {/* 🏠 Accueil club */}
+      <Tab.Screen
+        name="Home"
+        component={Home}
+        options={{ tabBarLabel: "Accueil" }}
+      />
+
+      {/* 📢 Annonces / Offres */}
+      <Tab.Screen
+        name="Annonces"
+        component={Annonces}
+        options={{ tabBarLabel: "Annonces" }}
+      />
+
+      {/* 💬 Messagerie club */}
+      <Tab.Screen
+        name="Chat"
+        component={Chat}
+        options={{ tabBarLabel: "Messages" }}
+      />
+
+      {/* 🔍 Recherche de joueurs */}
+      <Tab.Screen
+        name="SearchJoueur"
+        component={SearchJoueur}
+        options={{ tabBarLabel: "Joueurs" }}
+      />
+
+      {/* 🏢 Profil du club */}
+      <Tab.Screen
+        name="ProfilClub"
+        component={ProfilClub}
+        options={{ tabBarLabel: "Profil" }}
+      />
+    </Tab.Navigator>
+  );
+}

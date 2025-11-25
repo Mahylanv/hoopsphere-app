@@ -8,6 +8,8 @@ import {
   setLogLevel,
 } from 'firebase/firestore';
 
+import { getStorage } from "firebase/storage";
+
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -44,6 +46,7 @@ function initAuthNative() {
 }
 
 export const auth = Platform.OS === 'web' ? getAuth(app) : initAuthNative();
+export const storage = getStorage(app);
 
 setLogLevel('error');
 
