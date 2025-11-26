@@ -51,6 +51,7 @@
     "@types/react-native-tab-view": "^1.0.6",
     "autoprefixer": "^10.4.21",
     "babel-preset-expo": "^54.0.2",
+    "baseline-browser-mapping": "^2.8.31",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.6",

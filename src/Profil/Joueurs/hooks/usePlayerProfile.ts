@@ -19,6 +19,7 @@ import {
   uploadBytes,
   getDownloadURL,
   deleteObject,
+  listAll, 
 } from "firebase/storage";
 
 import { db, storage } from "../../../config/firebaseConfig";
@@ -90,23 +91,35 @@ export default function usePlayerProfile() {
 
     fetchData();
   }, []);
-
   /* ---------------------------------------
-      📸 CHARGEMENT GALERIE
-  --------------------------------------- */
+    📸 CHARGEMENT GALERIE VIA STORAGE
+--------------------------------------- */
   const loadGallery = async () => {
     if (!currentUser) return;
 
+    console.log("🟦 Chargement gallery Storage UID =", currentUser.uid);
+
     setGalleryLoading(true);
 
-    const galleryRef = collection(db, "joueurs", currentUser.uid, "gallery");
-
     try {
-      const snaps = await getDocs(galleryRef);
-      const urls = snaps.docs.map((d) => d.data().url).filter(Boolean);
+      // 📁 Chemin storage
+      const folderRef = ref(storage, `gallery/${currentUser.uid}`);
+
+      // 📄 Liste les fichiers dans le dossier
+      const list = await listAll(folderRef);
+
+      console.log("📄 Fichiers trouvés =", list.items.length);
+
+      // 🖼️ Récupérer les URL publiques
+      const urls = await Promise.all(
+        list.items.map((file) => getDownloadURL(file))
+      );
+
+      console.log("📸 URL Générées =", urls);
+
       setGallery(urls);
     } catch (e) {
-      console.log("❌ ERREUR loadGallery =", e);
+      console.log("❌ ERREUR loadGallery STORAGE =", e);
     }
 
     setGalleryLoading(false);
@@ -255,4 +268,3 @@ export default function usePlayerProfile() {
     deleteGalleryImage,
   };
 }
-  
