@@ -36,6 +36,7 @@ import EditClubProfile from "./src/Profil/Clubs/EditClubProfile";
 import ClubTeamsList from "./src/Profil/Clubs/ClubTeamsList";
 import ProfilClub from "./src/Profil/Clubs/ProfilClub";
 import FullGalleryScreen from "./src/Profil/Joueurs/screens/FullGalleryScreen";
+import FullVideoScreen from "./src/Profil/Joueurs/screens/FullVideoScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -117,6 +118,12 @@ function RootNavigator() {
         <Stack.Screen
           name="FullGallery"
           component={FullGalleryScreen}
+          options={{ headerShown: false }}
+        />
+
+        <Stack.Screen
+          name="FullVideo"
+          component={FullVideoScreen}
           options={{ headerShown: false }}
         />
 

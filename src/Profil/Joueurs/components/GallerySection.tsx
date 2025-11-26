@@ -17,6 +17,7 @@ import ImageViewer from "react-native-image-zoom-viewer";
 import { useNavigation } from "@react-navigation/native";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
 
 import ActionSheetMenu from "./ActionSheetMenu";
 
@@ -26,8 +27,8 @@ type MediaItem = {
 };
 
 type Props = {
-  media: MediaItem[]; // ⬅ toutes photos + vidéos
-  onAddMedia: () => void; // ⬅ ajout photo ou vidéo
+  media: MediaItem[];
+  onAddMedia: (uri: string, isVideo: boolean) => void;
   onDeleteMedia?: (url: string) => void;
   onSetAvatar?: (url: string) => void;
 };
@@ -46,25 +47,63 @@ export default function GallerySection({
   const [menuVisible, setMenuVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
 
+  // 🔥 Media propre (supprime les fantômes + URL invalides)
+  const cleanMedia = media.filter(
+    (m) => m.url && m.url !== "" && m.url.startsWith("http")
+  );
+
+  /* ---------------------------------------
+      ⭐ AJOUT IMAGE / VIDÉO
+  --------------------------------------- */
+  const onAddMediaPress = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      alert("Permission refusée");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All, // photos + vidéos
+      allowsEditing: false,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      const isVideo = asset.type === "video";
+      onAddMedia(asset.uri, isVideo);
+    }
+  };
+
+  /* ---------------------------------------
+      ⭐ FULLSCREEN IMAGE
+  --------------------------------------- */
   const openFullscreen = (index: number) => {
-    if (media[index].type === "video") return; // pas encore fullscreen vidéo
+    if (cleanMedia[index].type === "video") return;
     setStartIndex(index);
     setFullscreenVisible(true);
   };
 
+  /* ---------------------------------------
+      ⭐ MENU
+  --------------------------------------- */
   const openMenu = (item: MediaItem) => {
     setSelectedItem(item);
     setMenuVisible(true);
   };
 
-  /** SHARE */
+  /* ---------------------------------------
+      ⭐ SHARE
+  --------------------------------------- */
   const handleShare = async () => {
-    if (!selectedItem) return;
-    if (selectedItem.type !== "image") return; // expo-sharing ne partage pas les vidéos
+    if (!selectedItem || selectedItem.type !== "image") return;
     await Sharing.shareAsync(selectedItem.url);
   };
 
-  /** DOWNLOAD (mobile only) */
+  /* ---------------------------------------
+      ⭐ DOWNLOAD
+  --------------------------------------- */
   const handleDownload = async () => {
     if (!selectedItem) return;
 
@@ -98,11 +137,11 @@ export default function GallerySection({
           <Text className="text-xl font-bold text-white ml-2">Galerie</Text>
         </View>
 
-        {media.length > 0 && (
+        {cleanMedia.length > 0 && (
           <TouchableOpacity
             onPress={() =>
               navigation.navigate("FullGallery", {
-                media,
+                media: cleanMedia,
                 onDeleteMedia,
               })
             }
@@ -112,8 +151,8 @@ export default function GallerySection({
         )}
       </View>
 
-      {/* EMPTY */}
-      {media.length === 0 ? (
+      {/* EMPTY STATE */}
+      {cleanMedia.length === 0 ? (
         <View className="items-center justify-center py-14 bg-[#1a1f25] rounded-2xl border border-gray-800">
           <Ionicons name="images-outline" size={40} color="#6b7280" />
           <Text className="text-gray-400 text-base mt-3">
@@ -123,10 +162,14 @@ export default function GallerySection({
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View className="flex-row gap-4 py-2">
-            {media.slice(0, 6).map((item, index) => (
+            {cleanMedia.slice(0, 6).map((item, index) => (
               <Pressable
                 key={index}
-                onPress={() => openFullscreen(index)}
+                onPress={() =>
+                  item.type === "video"
+                    ? navigation.navigate("FullVideo", { url: item.url }) // ⭐ FULL VIDEO SCREEN
+                    : openFullscreen(index)
+                }
                 onLongPress={() => openMenu(item)}
               >
                 {/* IMAGE */}
@@ -155,7 +198,7 @@ export default function GallerySection({
                   </View>
                 )}
 
-                {/* menu bouton */}
+                {/* MENU BUTTON */}
                 <TouchableOpacity
                   onPress={() => openMenu(item)}
                   style={{
@@ -177,7 +220,7 @@ export default function GallerySection({
 
       {/* ADD BUTTON */}
       <TouchableOpacity
-        onPress={onAddMedia}
+        onPress={onAddMediaPress}
         className="mt-5 bg-orange-500 py-3 rounded-2xl flex-row items-center justify-center"
       >
         <Ionicons name="add-circle-outline" size={22} color="white" />
@@ -186,10 +229,10 @@ export default function GallerySection({
         </Text>
       </TouchableOpacity>
 
-      {/* FULLSCREEN IMAGES ONLY */}
+      {/* FULLSCREEN IMAGE VIEWER */}
       <Modal visible={fullscreenVisible} transparent>
         <ImageViewer
-          imageUrls={media
+          imageUrls={cleanMedia
             .filter((m) => m.type === "image")
             .map((m) => ({ url: m.url }))}
           index={startIndex}

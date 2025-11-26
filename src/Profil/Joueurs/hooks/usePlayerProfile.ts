@@ -22,6 +22,8 @@ import {
   listAll,
 } from "firebase/storage";
 
+import * as ImagePicker from "expo-image-picker";
+
 import { db, storage } from "../../../config/firebaseConfig";
 
 export type MediaItem = {
@@ -111,11 +113,22 @@ export default function usePlayerProfile() {
 
     try {
       const snaps = await getDocs(fsRef);
+      if (snaps.empty) {
+        setGallery([]); // galerie vide = ok
+        setGalleryLoading(false);
+        return;
+      }
 
-      const items: MediaItem[] = snaps.docs.map((d) => ({
-        url: d.data().url,
-        type: d.data().type || "image",
-      }));
+      // 🔥 Reset avant de recharger (mais UNE seule fois)
+      setGallery([]);
+
+      const items: MediaItem[] = snaps.docs
+        .map((d) => d.data())
+        .filter((item) => item.url && item.type)
+        .map((item) => ({
+          url: item.url,
+          type: item.type,
+        }));
 
       setGallery(items);
     } catch (e) {
@@ -174,7 +187,9 @@ export default function usePlayerProfile() {
 
     try {
       // Supprimer dans STORAGE
-      const fileRef = ref(storage, url);
+      const storagePath = url.split("/o/")[1].split("?")[0];
+      const fileRef = ref(storage, decodeURIComponent(storagePath));
+
       await deleteObject(fileRef);
 
       // Supprimer dans FIRESTORE

@@ -88,6 +88,10 @@ export type RootStackParamList = {
     onDeleteImage?: (url: string) => void;
   };
 
+  FullVideo: {
+    videos: string[];
+  };
+
   ProfilClub: { club: Club };
 
   Search: undefined;
