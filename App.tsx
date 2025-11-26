@@ -35,11 +35,11 @@ import JoueurDetail from "./src/Profil/Joueurs/JoueurDetail";
 import EditClubProfile from "./src/Profil/Clubs/EditClubProfile";
 import ClubTeamsList from "./src/Profil/Clubs/ClubTeamsList";
 import ProfilClub from "./src/Profil/Clubs/ProfilClub";
+import FullGalleryScreen from "./src/Profil/Joueurs/screens/FullGalleryScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const NAV_STATE_KEY = "NAVIGATION_STATE_V1";
-
 
 function PersistedNavContainer({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = React.useState(false);
@@ -76,7 +76,6 @@ function PersistedNavContainer({ children }: { children: React.ReactNode }) {
     </NavigationContainer>
   );
 }
-
 
 function RootNavigator() {
   const { loading } = useAuth();
@@ -115,6 +114,12 @@ function RootNavigator() {
           component={InscriptionClubStep2}
         />
 
+        <Stack.Screen
+          name="FullGallery"
+          component={FullGalleryScreen}
+          options={{ headerShown: false }}
+        />
+
         {/* Navigation principale */}
         <Stack.Screen name="MainTabs" component={MainTabNavigatorJoueur} />
         <Stack.Screen name="MainTabsClub" component={MainTabNavigatorClub} />
@@ -125,7 +130,11 @@ function RootNavigator() {
         <Stack.Screen name="Payment" component={Payment} />
         <Stack.Screen name="EditOffer" component={EditOffer} />
         <Stack.Screen name="JoueurDetail" component={JoueurDetail} />
-        <Stack.Screen name="EditClubProfile" component={EditClubProfile} options={{ headerShown: false }}/>
+        <Stack.Screen
+          name="EditClubProfile"
+          component={EditClubProfile}
+          options={{ headerShown: false }}
+        />
         <Stack.Screen name="ProfilClub" component={ProfilClub} />
         <Stack.Screen name="ClubTeamsList" component={ClubTeamsList} />
       </Stack.Navigator>

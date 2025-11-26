@@ -19,10 +19,15 @@ import {
   uploadBytes,
   getDownloadURL,
   deleteObject,
-  listAll, 
+  listAll,
 } from "firebase/storage";
 
 import { db, storage } from "../../../config/firebaseConfig";
+
+export type MediaItem = {
+  url: string;
+  type: "image" | "video";
+};
 
 export default function usePlayerProfile() {
   const auth = getAuth();
@@ -34,7 +39,9 @@ export default function usePlayerProfile() {
 
   const [editMode, setEditMode] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [gallery, setGallery] = useState<string[]>([]);
+
+  // 👉 La galerie contient maintenant une liste d’objets
+  const [gallery, setGallery] = useState<MediaItem[]>([]);
 
   const [fields, setFields] = useState({
     dob: "",
@@ -91,49 +98,43 @@ export default function usePlayerProfile() {
 
     fetchData();
   }, []);
+
   /* ---------------------------------------
-    📸 CHARGEMENT GALERIE VIA STORAGE
---------------------------------------- */
+      📸📹 CHARGEMENT GALERIE (images + vidéos)
+  --------------------------------------- */
   const loadGallery = async () => {
     if (!currentUser) return;
 
-    console.log("🟦 Chargement gallery Storage UID =", currentUser.uid);
-
     setGalleryLoading(true);
 
+    const fsRef = collection(db, "joueurs", currentUser.uid, "gallery");
+
     try {
-      // 📁 Chemin storage
-      const folderRef = ref(storage, `gallery/${currentUser.uid}`);
+      const snaps = await getDocs(fsRef);
 
-      // 📄 Liste les fichiers dans le dossier
-      const list = await listAll(folderRef);
+      const items: MediaItem[] = snaps.docs.map((d) => ({
+        url: d.data().url,
+        type: d.data().type || "image",
+      }));
 
-      console.log("📄 Fichiers trouvés =", list.items.length);
-
-      // 🖼️ Récupérer les URL publiques
-      const urls = await Promise.all(
-        list.items.map((file) => getDownloadURL(file))
-      );
-
-      console.log("📸 URL Générées =", urls);
-
-      setGallery(urls);
+      setGallery(items);
     } catch (e) {
-      console.log("❌ ERREUR loadGallery STORAGE =", e);
+      console.log("❌ ERREUR loadGallery =", e);
     }
 
     setGalleryLoading(false);
   };
 
   /* ---------------------------------------
-      📤 AJOUT PHOTO GALERIE
+      📤 AJOUT PHOTO OU VIDÉO
   --------------------------------------- */
-  const addGalleryImage = async (uri: string) => {
+  const addGalleryMedia = async (uri: string, isVideo: boolean) => {
     if (!currentUser) return;
 
     setGalleryLoading(true);
 
-    const fileName = `${Date.now()}.jpg`;
+    const extension = isVideo ? "mp4" : "jpg";
+    const fileName = `${Date.now()}.${extension}`;
     const storagePath = `gallery/${currentUser.uid}/${fileName}`;
 
     try {
@@ -149,27 +150,34 @@ export default function usePlayerProfile() {
 
       await addDoc(fsRef, {
         url,
+        type: isVideo ? "video" : "image",
         createdAt: serverTimestamp(),
       });
 
-      setGallery((prev) => [...prev, url]);
+      // 🔥 Mise à jour instantanée
+      setGallery((prev) => [
+        ...prev,
+        { url, type: isVideo ? "video" : "image" },
+      ]);
     } catch (error: any) {
-      console.log("🔥 ERREUR addGalleryImage =", error.code, error.message);
+      console.log("🔥 ERREUR addGalleryMedia =", error.message);
     }
 
     setGalleryLoading(false);
   };
 
   /* ---------------------------------------
-      ❌ SUPPRESSION D’UNE PHOTO
+      ❌ SUPPRESSION D’UNE PHOTO / VIDÉO
   --------------------------------------- */
-  const deleteGalleryImage = async (url: string) => {
+  const deleteGalleryMedia = async (url: string) => {
     if (!currentUser) return;
 
     try {
+      // Supprimer dans STORAGE
       const fileRef = ref(storage, url);
       await deleteObject(fileRef);
 
+      // Supprimer dans FIRESTORE
       const fsRef = collection(db, "joueurs", currentUser.uid, "gallery");
       const snaps = await getDocs(fsRef);
 
@@ -179,9 +187,10 @@ export default function usePlayerProfile() {
         }
       });
 
-      setGallery((prev) => prev.filter((img) => img !== url));
+      // Mise à jour instantanée
+      setGallery((prev) => prev.filter((item) => item.url !== url));
     } catch (e) {
-      console.log("🔥 ERREUR deleteGalleryImage =", e);
+      console.log("🔥 ERREUR deleteGalleryMedia =", e);
     }
   };
 
@@ -252,7 +261,8 @@ export default function usePlayerProfile() {
     loading,
     avatarLoading,
     galleryLoading,
-    gallery,
+
+    gallery, // <--- contient { url, type }
 
     editMode,
     setEditMode,
@@ -264,7 +274,8 @@ export default function usePlayerProfile() {
     saveProfile,
     deleteAccount,
 
-    addGalleryImage,
-    deleteGalleryImage,
+    // Upload & delete
+    addGalleryMedia,
+    deleteGalleryMedia,
   };
 }
