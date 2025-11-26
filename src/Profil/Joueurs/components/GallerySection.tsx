@@ -1,28 +1,44 @@
 // src/Profil/Joueur/components/GallerySection.tsx
 
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Image, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 type Props = {
-  onAddImage?: () => void; // laissé pour plus tard
-  images?: string[]; // futur usage
+  images: string[];
+  onAddImage: () => void;
 };
 
-export default function GallerySection({ onAddImage, images }: Props) {
+export default function GallerySection({ images, onAddImage }: Props) {
   return (
     <View className="mt-6 px-6">
       {/* Titre */}
       <Text className="text-xl font-bold text-white mb-4">Galerie</Text>
 
-      {/* Pour le moment, simple bloc vide */}
-      <View className="flex-row items-center justify-center border border-gray-700 rounded-xl py-10 bg-[#1a1f25]">
-        <Text className="text-gray-400 text-base">
-          Aucune photo pour le moment
-        </Text>
-      </View>
+      {/* Galerie */}
+      {images.length === 0 ? (
+        <View className="flex-row items-center justify-center border border-gray-700 rounded-xl py-10 bg-[#1a1f25]">
+          <Text className="text-gray-400 text-base">Aucune photo pour le moment</Text>
+        </View>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingVertical: 10 }}
+        >
+          <View className="flex-row gap-4">
+            {images.map((uri, index) => (
+              <Image
+                key={index}
+                source={{ uri }}
+                className="w-32 h-32 rounded-xl border border-gray-800"
+              />
+            ))}
+          </View>
+        </ScrollView>
+      )}
 
-      {/* Bouton ajouter (futur fonctionnement) */}
+      {/* Bouton ajouter */}
       <TouchableOpacity
         onPress={onAddImage}
         className="mt-4 bg-orange-500 py-3 rounded-xl flex-row items-center justify-center"

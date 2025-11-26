@@ -3,6 +3,7 @@
 import React from "react";
 import { ScrollView, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as ImagePicker from "expo-image-picker";
 
 import AvatarSection from "./components/AvatarSection";
 import BioSection from "./components/BioSection";
@@ -21,9 +22,13 @@ export default function ProfilJoueur() {
     avatarLoading,
     handleAvatarChange,
     saveProfile,
+    deleteAccount,
     fields,
     setField,
+    gallery,
+    addGalleryImage,
   } = usePlayerProfile();
+
 
   if (loading || !user) {
     return (
@@ -76,7 +81,15 @@ export default function ProfilJoueur() {
         />
 
         {/* --- GALERIE (version simple pour le moment) --- */}
-        <GallerySection />
+        <GallerySection
+          images={gallery}
+          onAddImage={async () => {
+            const result = await ImagePicker.launchImageLibraryAsync();
+            if (!result.canceled) {
+              addGalleryImage(result.assets[0].uri);
+            }
+          }}
+        />
 
         {/* --- Déconnexion --- */}
         <LogoutButton />

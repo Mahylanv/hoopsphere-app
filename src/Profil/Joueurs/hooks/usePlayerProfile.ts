@@ -1,9 +1,25 @@
-// src/Profil/Joueur/hooks/usePlayerProfile.ts
+// src/Profil/Joueurs/hooks/usePlayerProfile.ts
 
 import { useState, useEffect } from "react";
 import { getAuth, updateProfile, deleteUser } from "firebase/auth";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  collection,
+  addDoc,
+  deleteDoc,
+  getDocs,
+  serverTimestamp,
+} from "firebase/firestore";
+
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
 
 import { db, storage } from "../../../config/firebaseConfig";
 
@@ -13,11 +29,12 @@ export default function usePlayerProfile() {
 
   const [loading, setLoading] = useState(true);
   const [avatarLoading, setAvatarLoading] = useState(false);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+
   const [editMode, setEditMode] = useState(false);
-
   const [user, setUser] = useState<any>(null);
+  const [gallery, setGallery] = useState<string[]>([]);
 
-  // Champs du profil
   const [fields, setFields] = useState({
     dob: "",
     taille: "",
@@ -34,40 +51,130 @@ export default function usePlayerProfile() {
     setFields((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Charger les données Firestore
+  /* ---------------------------------------
+      🔥 CHARGER PROFIL + GALERIE
+  --------------------------------------- */
   useEffect(() => {
     const fetchData = async () => {
       if (!currentUser) return;
 
-      // ❗ Correction : collection = joueurs (et pas users)
       const docRef = doc(db, "joueurs", currentUser.uid);
-      const snap = await getDoc(docRef);
 
-      if (snap.exists()) {
-        const data = snap.data();
+      try {
+        const snap = await getDoc(docRef);
 
-        setUser({ uid: currentUser.uid, ...data });
+        if (snap.exists()) {
+          const data = snap.data();
 
-        setFields({
-          dob: data.dob || "",
-          taille: data.taille || "",
-          poids: data.poids || "",
-          poste: data.poste || "",
-          main: data.main || "",
-          departement: data.departement || "",
-          club: data.club || "",
-          email: currentUser.email || "",
-          description: data.description || "",
-        });
+          setUser({ uid: currentUser.uid, ...data });
+
+          setFields({
+            dob: data.dob || "",
+            taille: data.taille || "",
+            poids: data.poids || "",
+            poste: data.poste || "",
+            main: data.main || "",
+            departement: data.departement || "",
+            club: data.club || "",
+            email: currentUser.email || "",
+            description: data.description || "",
+          });
+        }
+      } catch (error) {
+        console.log("🔥 ERREUR LECTURE FIRESTORE =", error);
       }
 
+      await loadGallery();
       setLoading(false);
     };
 
     fetchData();
   }, []);
 
-  // Mise à jour Avatar
+  /* ---------------------------------------
+      📸 CHARGEMENT GALERIE
+  --------------------------------------- */
+  const loadGallery = async () => {
+    if (!currentUser) return;
+
+    setGalleryLoading(true);
+
+    const galleryRef = collection(db, "joueurs", currentUser.uid, "gallery");
+
+    try {
+      const snaps = await getDocs(galleryRef);
+      const urls = snaps.docs.map((d) => d.data().url).filter(Boolean);
+      setGallery(urls);
+    } catch (e) {
+      console.log("❌ ERREUR loadGallery =", e);
+    }
+
+    setGalleryLoading(false);
+  };
+
+  /* ---------------------------------------
+      📤 AJOUT PHOTO GALERIE
+  --------------------------------------- */
+  const addGalleryImage = async (uri: string) => {
+    if (!currentUser) return;
+
+    setGalleryLoading(true);
+
+    const fileName = `${Date.now()}.jpg`;
+    const storagePath = `gallery/${currentUser.uid}/${fileName}`;
+
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const storageRef = ref(storage, storagePath);
+
+      await uploadBytes(storageRef, blob);
+      const url = await getDownloadURL(storageRef);
+
+      const fsRef = collection(db, "joueurs", currentUser.uid, "gallery");
+
+      await addDoc(fsRef, {
+        url,
+        createdAt: serverTimestamp(),
+      });
+
+      setGallery((prev) => [...prev, url]);
+    } catch (error: any) {
+      console.log("🔥 ERREUR addGalleryImage =", error.code, error.message);
+    }
+
+    setGalleryLoading(false);
+  };
+
+  /* ---------------------------------------
+      ❌ SUPPRESSION D’UNE PHOTO
+  --------------------------------------- */
+  const deleteGalleryImage = async (url: string) => {
+    if (!currentUser) return;
+
+    try {
+      const fileRef = ref(storage, url);
+      await deleteObject(fileRef);
+
+      const fsRef = collection(db, "joueurs", currentUser.uid, "gallery");
+      const snaps = await getDocs(fsRef);
+
+      snaps.forEach(async (d) => {
+        if (d.data().url === url) {
+          await deleteDoc(d.ref);
+        }
+      });
+
+      setGallery((prev) => prev.filter((img) => img !== url));
+    } catch (e) {
+      console.log("🔥 ERREUR deleteGalleryImage =", e);
+    }
+  };
+
+  /* ---------------------------------------
+      🖼️ AVATAR
+  --------------------------------------- */
   const handleAvatarChange = async (imageUri: string) => {
     try {
       if (!currentUser) return;
@@ -77,57 +184,45 @@ export default function usePlayerProfile() {
       const response = await fetch(imageUri);
       const blob = await response.blob();
 
-      const storageRef = ref(storage, `avatars/${currentUser.uid}.jpg`);
-      await uploadBytes(storageRef, blob);
+      const storageRef = ref(storage, `avatars/${currentUser.uid}/avatar.jpg`);
 
+      await uploadBytes(storageRef, blob);
       const downloadUrl = await getDownloadURL(storageRef);
 
-      // Mise à jour Auth
       await updateProfile(currentUser, { photoURL: downloadUrl });
 
-      // ❗ Correction Firestore: joueurs
       await updateDoc(doc(db, "joueurs", currentUser.uid), {
         avatar: downloadUrl,
       });
 
       setUser((prev: any) => ({ ...prev, avatar: downloadUrl }));
     } catch (e) {
-      console.error("Erreur avatar :", e);
+      console.error("🔥 ERREUR handleAvatarChange =", e);
     } finally {
       setAvatarLoading(false);
     }
   };
 
-  // Sauvegarder Bio
+  /* ---------------------------------------
+      💾 SAUVEGARDE PROFIL
+  --------------------------------------- */
   const saveProfile = async () => {
     if (!currentUser) return;
 
     try {
-      const refUser = doc(db, "joueurs", currentUser.uid); // ❗ Correction
+      const refUser = doc(db, "joueurs", currentUser.uid);
+      await updateDoc(refUser, { ...fields });
 
-      await updateDoc(refUser, {
-        dob: fields.dob,
-        taille: fields.taille,
-        poids: fields.poids,
-        poste: fields.poste,
-        main: fields.main,
-        departement: fields.departement,
-        club: fields.club,
-        description: fields.description,
-      });
-
-      setUser((prev: any) => ({
-        ...prev,
-        ...fields,
-      }));
-
+      setUser((prev: any) => ({ ...prev, ...fields }));
       setEditMode(false);
     } catch (e) {
-      console.error("Erreur sauvegarde :", e);
+      console.log("🔥 ERREUR saveProfile =", e);
     }
   };
 
-  // Suppression du compte
+  /* ---------------------------------------
+      ❌ SUPPRESSION COMPTE
+  --------------------------------------- */
   const deleteAccount = async () => {
     if (!currentUser) return;
 
@@ -135,7 +230,6 @@ export default function usePlayerProfile() {
       await deleteUser(currentUser);
       return true;
     } catch (e) {
-      console.error("Erreur suppression compte :", e);
       return false;
     }
   };
@@ -143,13 +237,22 @@ export default function usePlayerProfile() {
   return {
     user,
     loading,
+    avatarLoading,
+    galleryLoading,
+    gallery,
+
     editMode,
     setEditMode,
-    avatarLoading,
+
     fields,
     setField,
+
     handleAvatarChange,
     saveProfile,
     deleteAccount,
+
+    addGalleryImage,
+    deleteGalleryImage,
   };
 }
+  
