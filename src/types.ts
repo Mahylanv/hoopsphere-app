@@ -83,6 +83,15 @@ export type RootStackParamList = {
     avatar: string;
   };
 
+  FullGallery: {
+    images: string[];
+    onDeleteImage?: (url: string) => void;
+  };
+
+  FullVideo: {
+    videos: string[];
+  };
+
   ProfilClub: { club: Club };
 
   Search: undefined;

@@ -1,3 +1,5 @@
+// src/services/userService.ts
+
 import { auth, db, storage } from "../config/firebaseConfig";
 import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject, listAll} from "firebase/storage";
