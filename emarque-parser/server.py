@@ -266,6 +266,200 @@ def reconcile_stats(row):
     row["shots_made"] = clamp_stat("shots_made", t + i + e)
     row["points"]     = clamp_stat("points", 3*t + 2*(i+e) + f)
 
+# -------- Numéro de rencontre : extracteurs robustes --------
+# On conserve les espaces pour gérer "RENCONTRE N°" puis numéro à la ligne suivante
+HDR_OCR_CFG = "--oem 1 --psm 6 -l fra+eng -c preserve_interword_spaces=1"
+
+def _fix_ocr_digits(s: str) -> str:
+    # corrige confusions fréquentes de Tesseract + supprime espaces
+    return (s.replace("O", "0")
+             .replace("o", "0")
+             .replace("I", "1")
+             .replace("l", "1")
+             .replace("\u00A0", "")
+             .replace(" ", "")
+             .strip())
+
+# motifs explicites (tolèrent retours à la ligne via \s)
+PAT_STRONGS = [
+    r"(?:N[°o]\s*(?:de\s*)?rencontre)\s*[:\-]?\s*([A-Z0-9][A-Z0-9._\-/\s]{3,})",
+    r"(?:Num(?:é|e)ro\s*de\s*rencontre)\s*[:\-]?\s*([A-Z0-9][A-Z0-9._\-/\s]{3,})",
+    r"(?:Rencontre)\s*N[°o]\s*[:\-]?\s*([A-Z0-9][A-Z0-9._\-/\s]{3,})",
+    r"(?:Match)\s*N[°o]?\s*[:\-]?\s*([A-Z0-9][A-Z0-9._\-/\s]{3,})",
+    r"(?:code\s*rencontre)\s*[:\-]?\s*([A-Z0-9][A-Z0-9._\-/\s]{3,})",
+]
+PAT_LONG_NUM = r"(\d(?:\s?\d){6,11})"                     # nombre 7..12 chiffres avec espaces éventuels
+PAT_GENERIC  = r"([A-Z0-9]{3,}(?:[._\-/][A-Z0-9]{2,})+)"  # alphanum avec séparateurs
+
+def _pick_best_match(s: str) -> str:
+    """Renvoie la meilleure candidate : priorité au long numérique; sinon générique."""
+    if not s:
+        return ""
+    m = re.search(PAT_LONG_NUM, s, flags=re.IGNORECASE)
+    if m:
+        return _fix_ocr_digits(m.group(1))
+    m = re.search(PAT_GENERIC, s, flags=re.IGNORECASE)
+    if m:
+        g = m.group(1)
+        m2 = re.search(PAT_LONG_NUM, g)
+        return _fix_ocr_digits(m2.group(1)) if m2 else g.strip()
+    return ""
+
+def _around_lines_pick(txt: str) -> str:
+    """
+    Stratégie ligne par ligne :
+     - trouve une ligne contenant 'rencontre' ou 'match'
+     - tente sur la même ligne puis dans les 2 lignes suivantes (cas 'RENCONTRE N°' à la ligne d'avant).
+    """
+    lines = txt.splitlines()
+    for i, line in enumerate(lines):
+        lnorm = line.lower()
+        if "rencontre" in lnorm or re.search(r"\bmatch\b", lnorm):
+            # même ligne
+            for pat in PAT_STRONGS:
+                m = re.search(pat, line, flags=re.IGNORECASE)
+                if m:
+                    cand = _pick_best_match(m.group(1))
+                    if cand:
+                        return cand
+            # fenêtre de 2 lignes après
+            tail = " ".join(lines[i+1:i+3])
+            for pat in PAT_STRONGS:
+                m = re.search(pat, tail, flags=re.IGNORECASE)
+                if m:
+                    cand = _pick_best_match(m.group(1))
+                    if cand:
+                        return cand
+            m = re.search(PAT_GENERIC, tail, flags=re.IGNORECASE)
+            if m:
+                cand = _pick_best_match(m.group(1))
+                if cand:
+                    return cand
+            m = re.search(PAT_LONG_NUM, tail, flags=re.IGNORECASE)
+            if m:
+                cand = _pick_best_match(m.group(1))
+                if cand:
+                    return cand
+    return ""
+
+def _pdf_text_first_pages(data: bytes, max_pages: int = 2) -> str:
+    """Texte brut des 1..max_pages via pypdfium2 (sans normaliser ni OCR)."""
+    out = []
+    try:
+        doc = pdfium.PdfDocument(io.BytesIO(data))
+        n = min(len(doc), max_pages)
+        for i in range(n):
+            page = doc.get_page(i)
+            textpage = page.get_textpage()
+            try:
+                txt = textpage.get_text_range()
+            finally:
+                textpage.close()
+                page.close()
+            if txt:
+                out.append(txt)
+    except Exception:
+        pass
+    return "\n".join(out)
+
+def _extract_num_from_text(txt: str) -> str:
+    """Motifs forts (multi-lignes), puis stratégie ligne/voisinage, puis génériques."""
+    if not txt:
+        return ""
+    # motifs forts sur tout le texte (DOTALL pour multi-lignes)
+    for pat in PAT_STRONGS:
+        m = re.search(pat, txt, flags=re.IGNORECASE | re.DOTALL)
+        if m:
+            cand = _pick_best_match(m.group(1))
+            if cand:
+                return cand
+    # voisinage par lignes
+    cand = _around_lines_pick(txt)
+    if cand:
+        return cand
+    # fallback global
+    m = re.search(PAT_GENERIC, txt, flags=re.IGNORECASE)
+    if m:
+        cand = _pick_best_match(m.group(1))
+        if cand:
+            return cand
+    m = re.search(PAT_LONG_NUM, txt, flags=re.IGNORECASE)
+    if m:
+        cand = _pick_best_match(m.group(1))
+        if cand:
+            return cand
+    return ""
+
+def extract_match_number(data: bytes, scale=6) -> (str, str):
+    """
+    Retourne (num_match, debug_text).
+    1) Texte PDF natif (1–2 pages)
+    2) OCR bande haute
+    3) OCR bande droite
+    4) OCR pleine page (PSM 6)
+    5) OCR pleine page (PSM 4)
+    """
+    debug_chunks = []
+
+    # 1) Texte PDF natif
+    pdf_txt = _pdf_text_first_pages(data, max_pages=2)
+    if pdf_txt:
+        debug_chunks.append("---PDF-TEXT---\n" + pdf_txt[:4000])
+        num = _extract_num_from_text(pdf_txt)
+        if num:
+            return num, "\n".join(debug_chunks)
+
+    # 2..5) OCR
+    try:
+        bgr = render_highres_bgr(data, scale=scale)
+        H, W, _ = bgr.shape
+
+        def ocr_try(img, cfg, tag):
+            try:
+                t = pytesseract.image_to_string(img, config=cfg, timeout=10) or ""
+            except pytesseract.TesseractError:
+                t = ""
+            if t.strip():
+                debug_chunks.append(f"{tag}\n{t[:2000]}")
+            return t
+
+        # Bande haute
+        top = bgr[0:int(0.30*H), 0:W]
+        gray_top = cv2.cvtColor(top, cv2.COLOR_BGR2GRAY)
+        gray_top = cv2.bilateralFilter(gray_top, 5, 50, 50)
+        t_top = ocr_try(gray_top, HDR_OCR_CFG, "---OCR-TOP---")
+        num = _extract_num_from_text(t_top)
+        if num:
+            return num, "\n".join(debug_chunks)
+
+        # Bande droite (en cas d'en-tête latéral)
+        right = bgr[0:int(0.45*H), int(0.55*W):W]
+        gray_right = cv2.cvtColor(right, cv2.COLOR_BGR2GRAY)
+        gray_right = cv2.bilateralFilter(gray_right, 5, 50, 50)
+        t_right = ocr_try(gray_right, HDR_OCR_CFG, "---OCR-RIGHT---")
+        num = _extract_num_from_text(t_right)
+        if num:
+            return num, "\n".join(debug_chunks)
+
+        # Pleine page PSM 6
+        gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+        gray = cv2.bilateralFilter(gray, 5, 50, 50)
+        t_full = ocr_try(gray, HDR_OCR_CFG, "---OCR-FULL(6)---")
+        num = _extract_num_from_text(t_full)
+        if num:
+            return num, "\n".join(debug_chunks)
+
+        # Pleine page PSM 4 (blocs)
+        t_full2 = ocr_try(gray, "--oem 1 --psm 4 -l fra+eng -c preserve_interword_spaces=1", "---OCR-FULL(4)---")
+        num = _extract_num_from_text(t_full2)
+        if num:
+            return num, "\n".join(debug_chunks)
+
+    except Exception:
+        pass
+
+    return "", "\n".join(debug_chunks)
+
 # ---------------- Grid OCR principal ----------------
 def grid_ocr_full(
     data: bytes,
@@ -525,13 +719,18 @@ async def parse_emarque(
         teamA = clean_players(teamA)
         teamB = clean_players(teamB)
 
+        match_number, header_debug = extract_match_number(data, scale=scale)
+        match_number = match_number or None
+
         return {
             "ok": True,
+            "match": {"number": match_number},
             "teams": [
                 {"name": "Locaux",   "players": teamA},
                 {"name": "Visiteurs","players": teamB}
             ],
-            "debug_overlay": ("saved to debug_overlay.png" if debug else None)
+            "debug_overlay": ("saved to debug_overlay.png" if debug else None),
+            "header_text": (header_debug if debug else None),
         }
     except HTTPException as he:
         return JSONResponse({"ok": False, "error": he.detail}, status_code=he.status_code)
