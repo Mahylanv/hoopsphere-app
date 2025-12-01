@@ -22,7 +22,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Ionicons } from "@expo/vector-icons";
 
 import ClubPresentation from "./ClubPresentation";
-import ClubTeamsList from "./ClubTeamsList";  // ✅ on remplace ici
+import ClubTeamsList from "./ClubTeamsList"; // ✅ on remplace ici
 import ClubOffers from "./ClubOffers";
 
 type ClubProfileNavProp = NativeStackNavigationProp<
@@ -100,11 +100,6 @@ export default function ProfilClub() {
     }
   };
 
-  const formatDepartment = (dep: string) => {
-    if (!dep) return "";
-    return dep.split(" - ")[1] || dep;
-  };
-
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-black">
@@ -176,7 +171,7 @@ export default function ProfilClub() {
           {safeClub.name}
         </Text>
         <Text className="text-sm text-gray-400">
-          {safeClub.city} • {formatDepartment(safeClub.department)}
+          {safeClub.city} • {safeClub.department}
         </Text>
       </View>
 
@@ -197,7 +192,7 @@ export default function ProfilClub() {
         />
         <Tab.Screen
           name="Équipes"
-          component={ClubTeamsList}  
+          component={ClubTeamsList}
           initialParams={{ club: safeClub }}
         />
         <Tab.Screen
@@ -206,6 +201,27 @@ export default function ProfilClub() {
           initialParams={{ club: safeClub }}
         />
       </Tab.Navigator>
+
+      {/* 🔥 BOUTON DÉCONNEXION EN BAS */}
+      <Pressable
+        onPress={async () => {
+          try {
+            await auth.signOut();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Home" }],
+            });
+          } catch (err) {
+            console.log("Erreur logout :", err);
+            Alert.alert("Erreur", "Impossible de se déconnecter.");
+          }
+        }}
+        className="py-4 items-center"
+      >
+        <Text className="text-red-400 font-semibold text-base">
+          Se déconnecter
+        </Text>
+      </Pressable>
     </SafeAreaView>
   );
 }
