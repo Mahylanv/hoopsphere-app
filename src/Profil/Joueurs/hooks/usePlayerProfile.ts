@@ -1,11 +1,36 @@
-// src/Profil/Joueur/hooks/usePlayerProfile.ts
+// src/Profil/Joueurs/hooks/usePlayerProfile.ts
 
 import { useState, useEffect } from "react";
 import { getAuth, updateProfile, deleteUser } from "firebase/auth";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import {Platform} from "react-native";
+
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  collection,
+  addDoc,
+  deleteDoc,
+  getDocs,
+  serverTimestamp,
+} from "firebase/firestore";
+
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+  listAll,
+} from "firebase/storage";
+
+import * as ImagePicker from "expo-image-picker";
 
 import { db, storage } from "../../../config/firebaseConfig";
+
+export type MediaItem = {
+  url: string;
+  type: "image" | "video";
+};
 
 export default function usePlayerProfile() {
   const auth = getAuth();
@@ -13,11 +38,14 @@ export default function usePlayerProfile() {
 
   const [loading, setLoading] = useState(true);
   const [avatarLoading, setAvatarLoading] = useState(false);
-  const [editMode, setEditMode] = useState(false);
+  const [galleryLoading, setGalleryLoading] = useState(false);
 
+  const [editMode, setEditMode] = useState(false);
   const [user, setUser] = useState<any>(null);
 
-  // Champs du profil
+  // 👉 La galerie contient maintenant une liste d’objets
+  const [gallery, setGallery] = useState<MediaItem[]>([]);
+
   const [fields, setFields] = useState({
     dob: "",
     taille: "",
@@ -34,40 +62,159 @@ export default function usePlayerProfile() {
     setFields((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Charger les données Firestore
+  /* ---------------------------------------
+      🔥 CHARGER PROFIL + GALERIE
+  --------------------------------------- */
   useEffect(() => {
     const fetchData = async () => {
       if (!currentUser) return;
 
-      // ❗ Correction : collection = joueurs (et pas users)
       const docRef = doc(db, "joueurs", currentUser.uid);
-      const snap = await getDoc(docRef);
 
-      if (snap.exists()) {
-        const data = snap.data();
+      try {
+        const snap = await getDoc(docRef);
 
-        setUser({ uid: currentUser.uid, ...data });
+        if (snap.exists()) {
+          const data = snap.data();
 
-        setFields({
-          dob: data.dob || "",
-          taille: data.taille || "",
-          poids: data.poids || "",
-          poste: data.poste || "",
-          main: data.main || "",
-          departement: data.departement || "",
-          club: data.club || "",
-          email: currentUser.email || "",
-          description: data.description || "",
-        });
+          setUser({ uid: currentUser.uid, ...data });
+
+          setFields({
+            dob: data.dob || "",
+            taille: data.taille || "",
+            poids: data.poids || "",
+            poste: data.poste || "",
+            main: data.main || "",
+            departement: data.departement || "",
+            club: data.club || "",
+            email: currentUser.email || "",
+            description: data.description || "",
+          });
+        }
+      } catch (error) {
+        console.log("🔥 ERREUR LECTURE FIRESTORE =", error);
       }
 
+      await loadGallery();
       setLoading(false);
     };
 
     fetchData();
   }, []);
 
-  // Mise à jour Avatar
+  /* ---------------------------------------
+      📸📹 CHARGEMENT GALERIE (images + vidéos)
+  --------------------------------------- */
+  const loadGallery = async () => {
+    if (!currentUser) return;
+
+    setGalleryLoading(true);
+
+    const fsRef = collection(db, "joueurs", currentUser.uid, "gallery");
+
+    try {
+      const snaps = await getDocs(fsRef);
+      if (snaps.empty) {
+        setGallery([]); // galerie vide = ok
+        setGalleryLoading(false);
+        return;
+      }
+
+      // 🔥 Reset avant de recharger (mais UNE seule fois)
+      setGallery([]);
+
+      const items: MediaItem[] = snaps.docs
+        .map((d) => d.data())
+        .filter((item) => item.url && item.type)
+        .map((item) => ({
+          url: item.url,
+          type: item.type,
+        }));
+
+      setGallery(items);
+    } catch (e) {
+      console.log("❌ ERREUR loadGallery =", e);
+    }
+
+    setGalleryLoading(false);
+  };
+
+  /* ---------------------------------------
+      📤 AJOUT PHOTO OU VIDÉO
+  --------------------------------------- */
+  const addGalleryMedia = async (uri: string, isVideo: boolean, file?: File) => {
+    if (!currentUser) return;
+    setGalleryLoading(true);
+  
+    const extension = isVideo ? "mp4" : "jpg";
+    const fileName = `${Date.now()}.${extension}`;
+    const storagePath = `gallery/${currentUser.uid}/${fileName}`;
+    const storageRef = ref(storage, storagePath);
+  
+    try {
+      let blob: Blob;
+  
+      if (Platform.OS === "web" && file) {
+        // 📌 PATCH WEB — utiliser directement le File
+        blob = file;
+      } else {
+        // 📱 Mobile — convertir l’URI en Blob
+        const response = await fetch(uri);
+        blob = await response.blob();
+      }
+  
+      await uploadBytes(storageRef, blob);
+      const url = await getDownloadURL(storageRef);
+  
+      const fsRef = collection(db, "joueurs", currentUser.uid, "gallery");
+  
+      await addDoc(fsRef, {
+        url,
+        type: isVideo ? "video" : "image",
+        createdAt: serverTimestamp(),
+      });
+  
+      setGallery((prev) => [...prev, { url, type: isVideo ? "video" : "image" }]);
+    } catch (error: any) {
+      console.log("🔥 ERREUR addGalleryMedia =", error.message);
+    }
+  
+    setGalleryLoading(false);
+  };  
+
+  /* ---------------------------------------
+      ❌ SUPPRESSION D’UNE PHOTO / VIDÉO
+  --------------------------------------- */
+  const deleteGalleryMedia = async (url: string) => {
+    if (!currentUser) return;
+
+    try {
+      // Supprimer dans STORAGE
+      const storagePath = url.split("/o/")[1].split("?")[0];
+      const fileRef = ref(storage, decodeURIComponent(storagePath));
+
+      await deleteObject(fileRef);
+
+      // Supprimer dans FIRESTORE
+      const fsRef = collection(db, "joueurs", currentUser.uid, "gallery");
+      const snaps = await getDocs(fsRef);
+
+      snaps.forEach(async (d) => {
+        if (d.data().url === url) {
+          await deleteDoc(d.ref);
+        }
+      });
+
+      // Mise à jour instantanée
+      setGallery((prev) => prev.filter((item) => item.url !== url));
+    } catch (e) {
+      console.log("🔥 ERREUR deleteGalleryMedia =", e);
+    }
+  };
+
+  /* ---------------------------------------
+      🖼️ AVATAR
+  --------------------------------------- */
   const handleAvatarChange = async (imageUri: string) => {
     try {
       if (!currentUser) return;
@@ -77,57 +224,45 @@ export default function usePlayerProfile() {
       const response = await fetch(imageUri);
       const blob = await response.blob();
 
-      const storageRef = ref(storage, `avatars/${currentUser.uid}.jpg`);
-      await uploadBytes(storageRef, blob);
+      const storageRef = ref(storage, `avatars/${currentUser.uid}/avatar.jpg`);
 
+      await uploadBytes(storageRef, blob);
       const downloadUrl = await getDownloadURL(storageRef);
 
-      // Mise à jour Auth
       await updateProfile(currentUser, { photoURL: downloadUrl });
 
-      // ❗ Correction Firestore: joueurs
       await updateDoc(doc(db, "joueurs", currentUser.uid), {
         avatar: downloadUrl,
       });
 
       setUser((prev: any) => ({ ...prev, avatar: downloadUrl }));
     } catch (e) {
-      console.error("Erreur avatar :", e);
+      console.error("🔥 ERREUR handleAvatarChange =", e);
     } finally {
       setAvatarLoading(false);
     }
   };
 
-  // Sauvegarder Bio
+  /* ---------------------------------------
+      💾 SAUVEGARDE PROFIL
+  --------------------------------------- */
   const saveProfile = async () => {
     if (!currentUser) return;
 
     try {
-      const refUser = doc(db, "joueurs", currentUser.uid); // ❗ Correction
+      const refUser = doc(db, "joueurs", currentUser.uid);
+      await updateDoc(refUser, { ...fields });
 
-      await updateDoc(refUser, {
-        dob: fields.dob,
-        taille: fields.taille,
-        poids: fields.poids,
-        poste: fields.poste,
-        main: fields.main,
-        departement: fields.departement,
-        club: fields.club,
-        description: fields.description,
-      });
-
-      setUser((prev: any) => ({
-        ...prev,
-        ...fields,
-      }));
-
+      setUser((prev: any) => ({ ...prev, ...fields }));
       setEditMode(false);
     } catch (e) {
-      console.error("Erreur sauvegarde :", e);
+      console.log("🔥 ERREUR saveProfile =", e);
     }
   };
 
-  // Suppression du compte
+  /* ---------------------------------------
+      ❌ SUPPRESSION COMPTE
+  --------------------------------------- */
   const deleteAccount = async () => {
     if (!currentUser) return;
 
@@ -135,7 +270,6 @@ export default function usePlayerProfile() {
       await deleteUser(currentUser);
       return true;
     } catch (e) {
-      console.error("Erreur suppression compte :", e);
       return false;
     }
   };
@@ -143,13 +277,23 @@ export default function usePlayerProfile() {
   return {
     user,
     loading,
+    avatarLoading,
+    galleryLoading,
+
+    gallery, // <--- contient { url, type }
+
     editMode,
     setEditMode,
-    avatarLoading,
+
     fields,
     setField,
+
     handleAvatarChange,
     saveProfile,
     deleteAccount,
+
+    // Upload & delete
+    addGalleryMedia,
+    deleteGalleryMedia,
   };
 }
