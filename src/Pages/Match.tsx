@@ -35,7 +35,7 @@ type ApiResponse = {
 
 // ⚠️ Mets l'URL de ton API ici
 // const API_URL = "http://127.0.0.1:8000/parse-emarque"; // iOS Simu
-const API_URL = "https://cf320aa4fa27.ngrok-free.app/parse-emarque";
+const API_URL = "https://98e95e4e9f1a.ngrok-free.app/parse-emarque";
 // Android émulateur : "http://10.0.2.2:8000/parse-emarque"
 // Appareil physique : "http://ADRESSE_IP_LAN:8000/parse-emarque"
 
