@@ -84,14 +84,19 @@ export type RootStackParamList = {
   };
 
   FullGallery: {
-    images: string[];
-    onDeleteImage?: (url: string) => void;
+    media: MediaItem[];
+    onDeleteMedia?: (url: string) => void;
   };
-
+  
   FullVideo: {
-    videos: string[];
+    url: string; // lecture simple d’une seule vidéo
   };
-
+  
+  FullMediaViewer: {
+    media: MediaItem[];
+    startIndex: number;
+  };
+  
   ProfilClub: { club: Club };
 
   Search: undefined;
@@ -159,4 +164,9 @@ export type TeamPlayer = {
   id?: string;
   prenom: string;
   nom: string;
+};
+
+export type MediaItem = {
+  url: string;
+  type: "image" | "video";
 };
