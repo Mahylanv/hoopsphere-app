@@ -67,11 +67,12 @@ export default function ProfilClub() {
     return uid && club && (club.uid === uid || club.id === uid);
   }, [club]);
 
-  const formatDepartment = (dep: string) => {
-    if (!dep) return "";
-    return dep.split(" - ")[1] || dep;
+  const formatDepartment = (dep: any) => {
+    if (!dep || typeof dep !== "string") return "";
+    if (!dep.includes(" - ")) return dep;
+    return dep.split(" - ")[1];
   };
-
+  
   // Mise à jour du logo (réservé au propriétaire du club)
   const handleChangeLogo = async () => {
     if (!isOwner) return;
@@ -136,8 +137,8 @@ export default function ProfilClub() {
 
   // Normalisation pour l’affichage (ton schéma a parfois nom/ville vs name/city)
   const safeClub = {
-    id: club.id ?? club.uid ?? "",
-    uid: club.uid ?? undefined,
+    id: club.id ?? "",
+    uid: club.id ?? "",
     name: club.nom || club.name || "Nom du club",
     logo:
       club.logo ||
@@ -145,7 +146,7 @@ export default function ProfilClub() {
     city: club.ville || club.city || "Ville inconnue",
     teams: club.teams ?? club.equipes ?? "", // string possible en BDD
     categories: Array.isArray(club.categories) ? club.categories : [],
-    department: club.department || "",
+    department: String(club.department ?? ""),
     email: club.email || "",
     description: club.description || "",
   };

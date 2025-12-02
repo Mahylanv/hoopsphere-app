@@ -1,3 +1,5 @@
+// src/Profil/Joueurs/JoueurDetail.tsx
+
 import React, { useRef, useState } from "react";
 import {
   View,
