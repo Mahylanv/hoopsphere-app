@@ -35,8 +35,7 @@ import JoueurDetail from "./src/Profil/Joueurs/JoueurDetail";
 import EditClubProfile from "./src/Profil/Clubs/EditClubProfile";
 import ClubTeamsList from "./src/Profil/Clubs/ClubTeamsList";
 import ProfilClub from "./src/Profil/Clubs/ProfilClub";
-import FullGalleryScreen from "./src/Profil/Joueurs/screens/FullGalleryScreen";
-import FullVideoScreen from "./src/Profil/Joueurs/screens/FullVideoScreen";
+import FullMediaViewerScreen from "./src/Profil/Joueurs/screens/FullMediaViewerScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -115,17 +114,12 @@ function RootNavigator() {
           component={InscriptionClubStep2}
         />
 
-        <Stack.Screen
-          name="FullGallery"
-          component={FullGalleryScreen}
-          options={{ headerShown: false }}
-        />
 
-        <Stack.Screen
-          name="FullVideo"
-          component={FullVideoScreen}
-          options={{ headerShown: false }}
-        />
+<Stack.Screen
+  name="FullMediaViewer"
+  component={FullMediaViewerScreen}
+  options={{ headerShown: false }}
+/>
 
         {/* Navigation principale */}
         <Stack.Screen name="MainTabs" component={MainTabNavigatorJoueur} />

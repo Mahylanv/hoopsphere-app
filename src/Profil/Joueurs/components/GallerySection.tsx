@@ -191,7 +191,10 @@ export default function GallerySection({
                 onPress={() =>
                   item.type === "video"
                     ? navigation.navigate("FullVideo", { url: item.url }) // ⭐ FULL VIDEO SCREEN
-                    : openFullscreen(index)
+                    : navigation.navigate("FullMediaViewer", {
+                      media: cleanMedia,
+                      startIndex: index,
+                    })
                 }
                 onLongPress={() => openMenu(item)}
               >
