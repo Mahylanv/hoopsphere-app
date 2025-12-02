@@ -106,7 +106,7 @@ export default function ProfilJoueur() {
         {/* --- GALERIE MIXTE IMAGES + VIDÉOS --- */}
         <GallerySection
           media={gallery} // 🔥 ARRAY => [{ url, type }]
-          onAddMedia={pickMedia}
+          onAddMedia={(uri, isVideo, file) => addGalleryMedia(uri, isVideo, file)}
           onDeleteMedia={deleteGalleryMedia}
           onSetAvatar={handleAvatarChange}
         />

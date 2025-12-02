@@ -1,3 +1,5 @@
+// src/Profil/Joueurs/screens/FullVideoScreen.tsx
+
 import React, { useRef, useState } from "react";
 import {
   View,

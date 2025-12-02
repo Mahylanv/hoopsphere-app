@@ -28,7 +28,7 @@ type MediaItem = {
 
 type Props = {
   media: MediaItem[];
-  onAddMedia: (uri: string, isVideo: boolean) => void;
+  onAddMedia: (uri: string, isVideo: boolean, file?: File) => void;
   onDeleteMedia?: (url: string) => void;
   onSetAvatar?: (url: string) => void;
 };
@@ -56,25 +56,48 @@ export default function GallerySection({
       ⭐ AJOUT IMAGE / VIDÉO
   --------------------------------------- */
   const onAddMediaPress = async () => {
+    // 📌 PATCH WEB
+    if (Platform.OS === "web") {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*,video/*"; // autorise images + vidéos
+  
+      input.onchange = async () => {
+        if (!input.files || input.files.length === 0) return;
+  
+        const file = input.files[0];
+        const isVideo = file.type.startsWith("video");
+  
+        // Convertir en blob URL
+        const uri = URL.createObjectURL(file);
+  
+        // On passe le fichier réel au backend
+        onAddMedia(uri, isVideo, file); // 🎥📸 Nouveau param : le File réel
+      };
+  
+      input.click();
+      return;
+    }
+  
+    // 📱 iOS / Android (Expo ImagePicker)
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
     if (!permission.granted) {
       alert("Permission refusée");
       return;
     }
-
+  
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All, // photos + vidéos
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: false,
       quality: 1,
     });
-
+  
     if (!result.canceled) {
       const asset = result.assets[0];
       const isVideo = asset.type === "video";
-      onAddMedia(asset.uri, isVideo);
+      onAddMedia(asset.uri, isVideo, undefined);
     }
-  };
+  };  
 
   /* ---------------------------------------
       ⭐ FULLSCREEN IMAGE

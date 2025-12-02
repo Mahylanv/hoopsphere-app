@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getAuth, updateProfile, deleteUser } from "firebase/auth";
+import {Platform} from "react-native";
 
 import {
   doc,
@@ -141,43 +142,45 @@ export default function usePlayerProfile() {
   /* ---------------------------------------
       📤 AJOUT PHOTO OU VIDÉO
   --------------------------------------- */
-  const addGalleryMedia = async (uri: string, isVideo: boolean) => {
+  const addGalleryMedia = async (uri: string, isVideo: boolean, file?: File) => {
     if (!currentUser) return;
-
     setGalleryLoading(true);
-
+  
     const extension = isVideo ? "mp4" : "jpg";
     const fileName = `${Date.now()}.${extension}`;
     const storagePath = `gallery/${currentUser.uid}/${fileName}`;
-
+    const storageRef = ref(storage, storagePath);
+  
     try {
-      const response = await fetch(uri);
-      const blob = await response.blob();
-
-      const storageRef = ref(storage, storagePath);
-
+      let blob: Blob;
+  
+      if (Platform.OS === "web" && file) {
+        // 📌 PATCH WEB — utiliser directement le File
+        blob = file;
+      } else {
+        // 📱 Mobile — convertir l’URI en Blob
+        const response = await fetch(uri);
+        blob = await response.blob();
+      }
+  
       await uploadBytes(storageRef, blob);
       const url = await getDownloadURL(storageRef);
-
+  
       const fsRef = collection(db, "joueurs", currentUser.uid, "gallery");
-
+  
       await addDoc(fsRef, {
         url,
         type: isVideo ? "video" : "image",
         createdAt: serverTimestamp(),
       });
-
-      // 🔥 Mise à jour instantanée
-      setGallery((prev) => [
-        ...prev,
-        { url, type: isVideo ? "video" : "image" },
-      ]);
+  
+      setGallery((prev) => [...prev, { url, type: isVideo ? "video" : "image" }]);
     } catch (error: any) {
       console.log("🔥 ERREUR addGalleryMedia =", error.message);
     }
-
+  
     setGalleryLoading(false);
-  };
+  };  
 
   /* ---------------------------------------
       ❌ SUPPRESSION D’UNE PHOTO / VIDÉO
