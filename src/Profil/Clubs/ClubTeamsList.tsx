@@ -18,7 +18,7 @@ type Team = { id?: string; label: string; createdAt?: string };
 export default function ClubTeamsList() {
   const { params } = useRoute<ClubProfileRouteProp>();
   const clubParam = params?.club as unknown as Partial<ClubType> & { uid?: string };
-  const clubUid = clubParam?.uid || clubParam?.id || auth.currentUser?.uid;
+  const clubUid = clubParam?.uid; // 👈 UNIQUEMENT uid
 
   const [teams, setTeams] = useState<Team[]>([]);
   const [playersByTeam, setPlayersByTeam] = useState<Record<string, Player[]>>({});
