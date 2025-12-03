@@ -40,6 +40,7 @@ import ClubTeamsList from "./src/Profil/Clubs/ClubTeamsList";
 import ProfilClub from "./src/Profil/Clubs/ProfilClub";
 import FullMediaViewerScreen from "./src/Profil/Joueurs/screens/FullMediaViewerScreen";
 import ManageCandidatures from "./src/Profil/Clubs/Candidatures/ManageCandidatures";
+import ForgotPassword from "./src/Pages/ForgotPassword";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -146,6 +147,11 @@ function RootNavigator() {
         />
         <Stack.Screen name="ProfilClub" component={ProfilClub} />
         <Stack.Screen name="ClubTeamsList" component={ClubTeamsList} />
+        <Stack.Screen
+          name="ForgotPassword"
+          component={ForgotPassword}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </SafeAreaView>
   );

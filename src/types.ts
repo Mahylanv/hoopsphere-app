@@ -49,7 +49,7 @@ export type Message = {
 export type RootStackParamList = {
   Home: undefined;
   Connexion: undefined;
-
+  ForgotPassword: undefined; 
   // --- Inscriptions Joueurs ---
   InscriptionJoueur: undefined;
   InscriptionJoueurStep1: undefined;
