@@ -1,23 +1,58 @@
+// src/Profil/Joueurs/components/AvatarSection.tsx
+
 import React from "react";
-import { View, Image, ImageBackground, TouchableOpacity, Text } from "react-native";
+import {
+  View,
+  Image,
+  ImageBackground,
+  TouchableOpacity,
+  Text,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import CardOverlay from "./CardOverlay";
+
+type PlayerStats = {
+  gamesPlayed: number;
+  pts: number;
+  threes: number;
+  twoInt: number;
+  twoExt: number;
+  lf: number;
+  fouls: number;
+} | null;
 
 type Props = {
   user: {
     avatar: string | null;
     prenom: string;
     nom: string;
+    dob?: string;
+    taille?: string;
+    poids?: string;
+    poste?: string;
+    main?: string;
+    departement?: string;
+    club?: string;
+    description?: string;
   };
   onEditAvatar: (uri: string) => Promise<void>;
   avatarLoading: boolean;
+  stats?: PlayerStats; 
+  rating?: number;
 };
 
-export default function AvatarSection({ user, onEditAvatar, avatarLoading }: Props) {
-  
+export default function AvatarSection({
+  user,
+  onEditAvatar,
+  avatarLoading,
+  stats,
+  rating,
+}: Props) {
   const pickImage = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (status !== "granted") {
         alert("Permission refusée !");
@@ -32,8 +67,7 @@ export default function AvatarSection({ user, onEditAvatar, avatarLoading }: Pro
       });
 
       if (!result.canceled && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
-        await onEditAvatar(uri);
+        await onEditAvatar(result.assets[0].uri);
       }
     } catch (e) {
       console.error("Erreur lors du choix de l'image >", e);
@@ -42,65 +76,51 @@ export default function AvatarSection({ user, onEditAvatar, avatarLoading }: Pro
 
   return (
     <View className="items-center mt-8">
-      
       {/* 🟧 Carte background */}
       <ImageBackground
         source={require("../../../../assets/CARD-NORMAL-FOND.png")}
+        resizeMode="contain"
         style={{
-          width: 470,
-          height: 570,
+          width: 460,
+          height: 600,
           alignItems: "center",
         }}
-        resizeMode="contain"
       >
-
-        {/* 🟦 Avatar dans le grand rond */}
+        {/* 🟦 Avatar dans le rond */}
         <View
+          className="absolute bg-[#111] overflow-hidden"
           style={{
-            position: "absolute",
-            top: 72,         // ajusté pour placer dans le cercle
-            right: 117,
-            width: 134,
-            height: 134,
-            borderRadius: 125 / 2,
-            overflow: "hidden",
-            backgroundColor: "#222",
+            top: 76,
+            right: 106,
+            width: 141,
+            height: 141,
+            borderRadius: 134 / 2,
           }}
         >
           <Image
             source={{
               uri: user.avatar || "https://i.pravatar.cc/300?img=12",
             }}
-            style={{ width: "100%", height: "100%" }}
+            className="w-full h-full"
           />
 
           {/* ✏️ Bouton modifier avatar */}
           <TouchableOpacity
             onPress={pickImage}
             disabled={avatarLoading}
-            style={{
-              position: "absolute",
-              bottom: 4,
-              right: 4,
-              backgroundColor: "rgba(0,0,0,0.6)",
-              padding: 6,
-              borderRadius: 100,
-            }}
+            className="absolute bottom-1 right-1 bg-black/60 p-1.5 rounded-full"
           >
             <Feather name="edit-2" size={16} color="white" />
           </TouchableOpacity>
         </View>
 
-        {/* 🟣 Nom + prénom au centre bas */}
+        {/* 🟣 Nom */}
         <Text
+          className="absolute text-white font-bold text-2xl"
           style={{
-            position: "absolute",
-            top: 240,
-            textAlign: "center",
+            top: 247,
             width: "100%",
-            color: "white",
-            fontWeight: "bold",
-            fontSize: 22,
+            textAlign: "center",
             textShadowColor: "black",
             textShadowOffset: { width: 1, height: 1 },
             textShadowRadius: 4,
@@ -109,6 +129,21 @@ export default function AvatarSection({ user, onEditAvatar, avatarLoading }: Pro
           {user.prenom} {user.nom}
         </Text>
 
+        {/* 🆕 Surcouche d'informations + stats */}
+        <CardOverlay
+          fields={{
+            dob: user.dob,
+            taille: user.taille,
+            poids: user.poids,
+            poste: user.poste,
+            main: user.main,
+            departement: user.departement,
+            club: user.club,
+            description: user.description,
+          }}
+          stats={stats} // 🆕 on passe bien les stats ici
+          rating={rating}     // 👈 AJOUT
+          />
       </ImageBackground>
     </View>
   );

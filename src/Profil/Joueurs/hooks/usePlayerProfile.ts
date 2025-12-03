@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { getAuth, updateProfile, deleteUser } from "firebase/auth";
-import {Platform} from "react-native";
+import { Platform } from "react-native";
+import {
+  computePlayerStats,
+  PlayerAverages,
+} from "../../../utils/computePlayerStats";
 
 import {
   doc,
@@ -27,6 +31,8 @@ import * as ImagePicker from "expo-image-picker";
 
 import { db, storage } from "../../../config/firebaseConfig";
 
+import { computePlayerRating } from "../../../utils/computePlayerRating";
+
 export type MediaItem = {
   url: string;
   type: "image" | "video";
@@ -42,6 +48,8 @@ export default function usePlayerProfile() {
 
   const [editMode, setEditMode] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [stats, setStats] = useState<PlayerAverages | null>(null);
+  const [rating, setRating] = useState<number>(0);
 
   // 👉 La galerie contient maintenant une liste d’objets
   const [gallery, setGallery] = useState<MediaItem[]>([]);
@@ -102,6 +110,28 @@ export default function usePlayerProfile() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const loadStats = async () => {
+      if (!user?.uid) return;
+  
+      const snap = await getDocs(
+        collection(db, "joueurs", user.uid, "matches")
+      );
+  
+      const matches = snap.docs.map((d) => d.data()) as any[];
+  
+      console.log("MATCHES =", matches);
+  
+      const averages = computePlayerStats(matches);
+      setStats(averages);
+  
+      const overall = computePlayerRating(averages, user?.poste);
+      setRating(overall);
+    };
+  
+    loadStats();
+  }, [user]);
+  
   /* ---------------------------------------
       📸📹 CHARGEMENT GALERIE (images + vidéos)
   --------------------------------------- */
@@ -142,18 +172,22 @@ export default function usePlayerProfile() {
   /* ---------------------------------------
       📤 AJOUT PHOTO OU VIDÉO
   --------------------------------------- */
-  const addGalleryMedia = async (uri: string, isVideo: boolean, file?: File) => {
+  const addGalleryMedia = async (
+    uri: string,
+    isVideo: boolean,
+    file?: File
+  ) => {
     if (!currentUser) return;
     setGalleryLoading(true);
-  
+
     const extension = isVideo ? "mp4" : "jpg";
     const fileName = `${Date.now()}.${extension}`;
     const storagePath = `gallery/${currentUser.uid}/${fileName}`;
     const storageRef = ref(storage, storagePath);
-  
+
     try {
       let blob: Blob;
-  
+
       if (Platform.OS === "web" && file) {
         // 📌 PATCH WEB — utiliser directement le File
         blob = file;
@@ -162,25 +196,28 @@ export default function usePlayerProfile() {
         const response = await fetch(uri);
         blob = await response.blob();
       }
-  
+
       await uploadBytes(storageRef, blob);
       const url = await getDownloadURL(storageRef);
-  
+
       const fsRef = collection(db, "joueurs", currentUser.uid, "gallery");
-  
+
       await addDoc(fsRef, {
         url,
         type: isVideo ? "video" : "image",
         createdAt: serverTimestamp(),
       });
-  
-      setGallery((prev) => [...prev, { url, type: isVideo ? "video" : "image" }]);
+
+      setGallery((prev) => [
+        ...prev,
+        { url, type: isVideo ? "video" : "image" },
+      ]);
     } catch (error: any) {
       console.log("🔥 ERREUR addGalleryMedia =", error.message);
     }
-  
+
     setGalleryLoading(false);
-  };  
+  };
 
   /* ---------------------------------------
       ❌ SUPPRESSION D’UNE PHOTO / VIDÉO
@@ -295,5 +332,7 @@ export default function usePlayerProfile() {
     // Upload & delete
     addGalleryMedia,
     deleteGalleryMedia,
+    stats,
+    rating,
   };
 }
