@@ -36,6 +36,7 @@ import EditClubProfile from "./src/Profil/Clubs/EditClubProfile";
 import ClubTeamsList from "./src/Profil/Clubs/ClubTeamsList";
 import ProfilClub from "./src/Profil/Clubs/ProfilClub";
 import FullMediaViewerScreen from "./src/Profil/Joueurs/screens/FullMediaViewerScreen";
+import ManageCandidatures from "./src/Profil/Clubs/Candidatures/ManageCandidatures";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -114,12 +115,16 @@ function RootNavigator() {
           component={InscriptionClubStep2}
         />
 
-
-<Stack.Screen
-  name="FullMediaViewer"
-  component={FullMediaViewerScreen}
-  options={{ headerShown: false }}
-/>
+        <Stack.Screen
+          name="ManageCandidatures"
+          component={ManageCandidatures}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="FullMediaViewer"
+          component={FullMediaViewerScreen}
+          options={{ headerShown: false }}
+        />
 
         {/* Navigation principale */}
         <Stack.Screen name="MainTabs" component={MainTabNavigatorJoueur} />

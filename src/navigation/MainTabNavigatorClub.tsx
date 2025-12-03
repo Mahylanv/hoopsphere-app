@@ -1,4 +1,3 @@
-// src/navigation/MainTabNavigatorClub.tsx
 // 🏢 Navigation principale — réservée aux CLUBS
 
 import React from "react";
@@ -7,10 +6,10 @@ import { Ionicons } from "@expo/vector-icons";
 
 // --- Import des pages du club ---
 import Home from "../Pages/Home";
-import Annonces from "../Pages/Annonces"; // 🆕 page à créer
-import Chat from "../Pages/Chat"; // même composant, mais on filtrera les conversations du club
-import SearchJoueur from "../Components/SearchJoueur"; // 🆕 recherche spécifique joueurs
-import ProfilClub from "../Profil/Clubs/ProfilClub"; // version club du profil
+import ManageCandidatures from "../Profil/Clubs/Candidatures/ManageCandidatures";
+// import Chat from "../Pages/Chat";
+import SearchJoueur from "../Components/SearchJoueur";
+import ProfilClub from "../Profil/Clubs/ProfilClub";
 
 import { MainTabParamListClub } from "../types";
 
@@ -22,7 +21,7 @@ export default function MainTabNavigatorClub() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: "#1f2937", // gris foncé
+          backgroundColor: "#1f2937",
           borderTopColor: "#111827",
           height: 70,
           paddingBottom: 8,
@@ -40,12 +39,12 @@ export default function MainTabNavigatorClub() {
             case "Home":
               iconName = "home-outline";
               break;
-            case "Annonces":
-              iconName = "megaphone-outline"; // 🔔 icône pour les offres/annonces
+            case "Candidatures":
+              iconName = "document-text-outline"; // 📄 icône pour candidatures
               break;
-            case "Chat":
-              iconName = "chatbubble-outline";
-              break;
+            // case "Chat":
+            //   iconName = "chatbubble-outline";
+            //   break;
             case "SearchJoueur":
               iconName = "search-outline";
               break;
@@ -68,19 +67,19 @@ export default function MainTabNavigatorClub() {
         options={{ tabBarLabel: "Accueil" }}
       />
 
-      {/* 📢 Annonces / Offres */}
+      {/* 📄 Candidatures */}
       <Tab.Screen
-        name="Annonces"
-        component={Annonces}
-        options={{ tabBarLabel: "Annonces" }}
+        name="Candidatures"
+        component={ManageCandidatures}
+        options={{ tabBarLabel: "Candidatures" }}
       />
 
-      {/* 💬 Messagerie club */}
+      {/* 💬 Messagerie club
       <Tab.Screen
         name="Chat"
         component={Chat}
         options={{ tabBarLabel: "Messages" }}
-      />
+      /> */}
 
       {/* 🔍 Recherche de joueurs */}
       <Tab.Screen

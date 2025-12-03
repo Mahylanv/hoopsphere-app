@@ -111,7 +111,7 @@ export type RootStackParamList = {
   EditOffer: { offer: Offer }; // nouvelle page de modification
   SearchJoueur: undefined;
   JoueurDetail: { joueur: Joueur };
-
+  ManageCandidatures: undefined;
   ClubTeamsList: undefined;
 };
 
@@ -129,8 +129,8 @@ export type MainTabParamListJoueur = {
 
 export type MainTabParamListClub = {
   Home: undefined;
-  Annonces: undefined;
-  Chat: undefined;
+  Candidatures: undefined;  
+  // Chat: undefined;
   SearchJoueur: undefined;
   ProfilClub: undefined;
 };
