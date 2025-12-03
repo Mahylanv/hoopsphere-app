@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.hoopsphere.app",
+      "bundleIdentifier": "com.hoopsphere.go",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -31,11 +31,6 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "4ac1fc98-f76d-4027-b185-abda8f7d7de0"
-      }
     }
   }
 }
