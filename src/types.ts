@@ -83,15 +83,6 @@ export type RootStackParamList = {
     avatar: string;
   };
 
-  FullGallery: {
-    media: MediaItem[];
-    onDeleteMedia?: (url: string) => void;
-  };
-  
-  FullVideo: {
-    url: string; // lecture simple d’une seule vidéo
-  };
-  
   FullMediaViewer: {
     media: MediaItem[];
     startIndex: number;

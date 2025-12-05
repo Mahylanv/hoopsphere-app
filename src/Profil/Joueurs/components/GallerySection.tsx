@@ -163,7 +163,7 @@ export default function GallerySection({
         {cleanMedia.length > 0 && (
           <TouchableOpacity
             onPress={() =>
-              navigation.navigate("FullGallery", {
+              navigation.navigate("FullMediaViewer", {
                 media: cleanMedia,
                 onDeleteMedia,
               })

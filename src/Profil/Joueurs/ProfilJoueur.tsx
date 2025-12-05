@@ -1,13 +1,7 @@
 // src/Profil/Joueur/profiljoueur.tsx
 
 import React, { useRef } from "react";
-import {
-  Text,
-  View,
-  Alert,
-  Animated,
-  Dimensions,
-} from "react-native";
+import { Text, View, Alert, Animated, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as Sharing from "expo-sharing";
@@ -20,6 +14,8 @@ import DeleteAccountSection from "./components/DeleteAccountSection";
 import LogoutButton from "./components/LogoutButton";
 import FloatingShareButton from "./components/FloatingShareButton";
 import usePlayerProfile from "./hooks/usePlayerProfile";
+import EditProfileModal from "./components/EditProfileModal/EditProfileModal";
+import { Modalize } from "react-native-modalize";
 
 const CARD_WIDTH = Dimensions.get("window").width * 0.9;
 const CARD_HEIGHT = CARD_WIDTH * 1.3;
@@ -31,12 +27,12 @@ export default function ProfilJoueur() {
   const {
     user,
     loading,
-    editMode,
     avatarLoading,
     handleAvatarChange,
     saveProfile,
     fields,
-    setField,
+    setEditField,
+    editFields, 
     gallery,
     stats,
     rating,
@@ -45,6 +41,9 @@ export default function ProfilJoueur() {
   } = usePlayerProfile();
 
   const cardRef = useRef<ViewShot>(null);
+  const editModalRef = useRef<Modalize>(null);
+  const openEditModal = () => editModalRef.current?.open();
+  const closeEditModal = () => editModalRef.current?.close();
 
   /* -----------------------------------------------------
       🔥 ANIMATION SCROLL
@@ -122,13 +121,11 @@ export default function ProfilJoueur() {
       </SafeAreaView>
     );
   }
-
   /* -----------------------------------------------------
       🔥 RENDER
   ----------------------------------------------------- */
   return (
     <SafeAreaView className="flex-1 bg-[#0E0D0D]">
-
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
@@ -141,7 +138,6 @@ export default function ProfilJoueur() {
           { useNativeDriver: true }
         )}
       >
-
         {/* 🔥 CARTE ANIMÉE */}
         <Animated.View
           style={{
@@ -189,32 +185,35 @@ export default function ProfilJoueur() {
         {/* 🔥 BIO */}
         <View className="mt-4">
           <BioSection
-            editMode={editMode}
+            editMode={false}
+            onToggleEdit={openEditModal}
             birthYear={fields.dob}
-            setBirthYear={(v) => setField("dob", v)}
+            setBirthYear={(v) => setEditField("dob", v)}
             height={fields.taille}
-            setHeight={(v) => setField("taille", v)}
+            setHeight={(v) => setEditField("taille", v)}
             onSelectHeight={() => {}}
             weight={fields.poids}
-            setWeight={(v) => setField("poids", v)}
+            setWeight={(v) => setEditField("poids", v)}
             onSelectWeight={() => {}}
             position={fields.poste}
-            setPosition={(v) => setField("poste", v)}
+            setPosition={(v) => setEditField("poste", v)}
             onSelectPoste={() => {}}
             strongHand={fields.main}
-            setStrongHand={(v) => setField("main", v)}
+            setStrongHand={(v) => setEditField("main", v)}
             departement={fields.departement}
             onSelectDepartement={() => {}}
             club={fields.club}
             onSelectClub={() => {}}
             phone={""}
             setPhone={() => {}}
+            email={fields.email}
+            setEmail={(v) => setEditField("email", v)}
             level={""}
             onSelectLevel={() => {}}
             experience={""}
             setExperience={() => {}}
             bio={fields.description}
-            setBio={(v) => setField("description", v)}
+            setBio={(v) => setEditField("description", v)}
             onSave={saveProfile}
           />
         </View>
@@ -232,6 +231,17 @@ export default function ProfilJoueur() {
         <LogoutButton />
         <DeleteAccountSection />
       </Animated.ScrollView>
+      {/* 🔥 MODAL ÉDITION PROFIL */
+      <EditProfileModal
+      ref={editModalRef}
+      fields={fields}
+      editFields={editFields}        // ← AJOUT OBLIGATOIRE
+      setEditField={setEditField}
+      saveProfile={async () => {
+        await saveProfile();
+        closeEditModal();
+      }}
+    />}
     </SafeAreaView>
   );
 }
