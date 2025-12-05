@@ -1,4 +1,4 @@
-// src/Profil/Joueurs/components/modals/EditProfileSections.tsx
+// src/Profil/Joueurs/components/EditProfileModal/EditProfileSections.tsx
 import React from "react";
 import {
   View,

@@ -32,12 +32,20 @@ export default function ProfilJoueur() {
     saveProfile,
     fields,
     setEditField,
-    editFields, 
+    editFields,
     gallery,
     stats,
     rating,
     addGalleryMedia,
     deleteGalleryMedia,
+
+    // 🔥 AJOUT DES VARIABLES EMAIL
+    passwordModalVisible,
+    setPasswordModalVisible,
+    passwordForReauth,
+    setPasswordForReauth,
+    tempNewEmail,
+    setTempNewEmail,
   } = usePlayerProfile();
 
   const cardRef = useRef<ViewShot>(null);
@@ -231,17 +239,26 @@ export default function ProfilJoueur() {
         <LogoutButton />
         <DeleteAccountSection />
       </Animated.ScrollView>
-      {/* 🔥 MODAL ÉDITION PROFIL */
-      <EditProfileModal
-      ref={editModalRef}
-      fields={fields}
-      editFields={editFields}        // ← AJOUT OBLIGATOIRE
-      setEditField={setEditField}
-      saveProfile={async () => {
-        await saveProfile();
-        closeEditModal();
-      }}
-    />}
+      {
+        /* 🔥 MODAL ÉDITION PROFIL */
+        <EditProfileModal
+          ref={editModalRef}
+          fields={fields}
+          editFields={editFields}
+          setEditField={setEditField}
+          saveProfile={async () => {
+            await saveProfile();
+            closeEditModal();
+          }}
+          // 🔥 IMPORTANTS : tu dois les passer au modal !
+          passwordModalVisible={passwordModalVisible}
+          setPasswordModalVisible={setPasswordModalVisible}
+          passwordForReauth={passwordForReauth}
+          setPasswordForReauth={setPasswordForReauth}
+          tempNewEmail={tempNewEmail}
+          setTempNewEmail={setTempNewEmail}
+        />
+      }
     </SafeAreaView>
   );
 }

@@ -1,7 +1,14 @@
 // src/Profil/Joueurs/hooks/usePlayerProfile.ts
 
 import { useState, useEffect } from "react";
-import { getAuth, updateProfile, deleteUser } from "firebase/auth";
+import {
+  getAuth,
+  updateProfile,
+  deleteUser,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updateEmail,
+} from "firebase/auth";
 import { Platform } from "react-native";
 import {
   doc,
@@ -21,7 +28,10 @@ import {
 } from "firebase/storage";
 
 import { db, storage } from "../../../config/firebaseConfig";
-import { computePlayerStats, PlayerAverages } from "../../../utils/computePlayerStats";
+import {
+  computePlayerStats,
+  PlayerAverages,
+} from "../../../utils/computePlayerStats";
 import { computePlayerRating } from "../../../utils/computePlayerRating";
 
 export type MediaItem = {
@@ -47,6 +57,10 @@ export default function usePlayerProfile() {
 
   const [emailError, setEmailError] = useState("");
   const [phoneError, setPhoneError] = useState("");
+
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [tempNewEmail, setTempNewEmail] = useState("");
+  const [passwordForReauth, setPasswordForReauth] = useState("");
 
   /** Champs affichés dans l'app */
   const [fields, setFields] = useState({
@@ -124,7 +138,9 @@ export default function usePlayerProfile() {
     const loadStats = async () => {
       if (!user?.uid) return;
 
-      const snap = await getDocs(collection(db, "joueurs", user.uid, "matches"));
+      const snap = await getDocs(
+        collection(db, "joueurs", user.uid, "matches")
+      );
       const matches = snap.docs.map((d) => d.data()) as any[];
 
       const averages = computePlayerStats(matches);
@@ -161,7 +177,11 @@ export default function usePlayerProfile() {
     setGalleryLoading(false);
   };
 
-  const addGalleryMedia = async (uri: string, isVideo: boolean, file?: File) => {
+  const addGalleryMedia = async (
+    uri: string,
+    isVideo: boolean,
+    file?: File
+  ) => {
     if (!currentUser) return;
     setGalleryLoading(true);
 
@@ -172,9 +192,7 @@ export default function usePlayerProfile() {
 
     try {
       const blob =
-        Platform.OS === "web" && file
-          ? file
-          : await (await fetch(uri)).blob();
+        Platform.OS === "web" && file ? file : await (await fetch(uri)).blob();
 
       await uploadBytes(storageRef, blob);
       const url = await getDownloadURL(storageRef);
@@ -244,38 +262,102 @@ export default function usePlayerProfile() {
     }
   };
 
+  const reauthenticate = async (password: string) => {
+    if (!currentUser || !currentUser.email) return false;
+
+    try {
+      const cred = EmailAuthProvider.credential(currentUser.email, password);
+      await reauthenticateWithCredential(currentUser, cred);
+      return true;
+    } catch (e) {
+      console.log("❌ ERREUR RE-AUTH :", e);
+      return false;
+    }
+  };
+
   /* -----------------------------------------------------
       🔥 SAUVEGARDE (BDD uniquement quand on clique)
   ----------------------------------------------------- */
   const saveProfile = async () => {
     if (!currentUser) return;
 
-    // EMAIL
+    /* -----------------------------------------------------
+        VALIDATION EMAIL + TÉLÉPHONE
+    ----------------------------------------------------- */
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const cleanedPhone = editFields.phone.replace(/\s/g, "");
+
     if (!emailRegex.test(editFields.email)) {
       setEmailError("Email invalide");
       return;
     }
 
-    // TELEPHONE
-    const cleaned = editFields.phone.replace(/\s/g, "");
-    if (!/^(\+33|0)[67]\d{8}$/.test(cleaned)) {
+    if (!/^(\+33|0)[67]\d{8}$/.test(cleanedPhone)) {
       setPhoneError("Numéro invalide");
       return;
     }
 
+    /* -----------------------------------------------------
+        CAS 1 : L’EMAIL A CHANGÉ → demander mot de passe
+    ----------------------------------------------------- */
+    const emailChanged = editFields.email !== fields.email;
+
+    if (emailChanged) {
+      setTempNewEmail(editFields.email);   // ⭐ sauvegarde l’email à appliquer
+    }
+
+    if (emailChanged && !passwordForReauth) {
+      // 👉 Affiche la modal dans EditProfileModal
+      setPasswordModalVisible(true);
+      return; // On stoppe ici : pas de sauvegarde tant que mdp non fourni
+    }
+
     try {
+      /* -----------------------------------------------------
+          1️⃣ Mise à jour Firestore (tous les champs sauf email pour l'instant)
+      ----------------------------------------------------- */
       const refUser = doc(db, "joueurs", currentUser.uid);
+      await updateDoc(refUser, { ...editFields, email: fields.email });
+      // ⚠️ on garde l'ancien email tant que reauth pas faite
 
-      await updateDoc(refUser, { ...editFields });
+      /* -----------------------------------------------------
+          2️⃣ SI L’EMAIL DOIT ÊTRE MODIFIÉ → réauth + update Auth
+      ----------------------------------------------------- */
+      if (emailChanged) {
+        console.log("📩 Tentative de mise à jour email...");
 
-      // → Mise à jour des champs visibles
+        // Réauth
+        const ok = await reauthenticate(passwordForReauth);
+        if (!ok) {
+          alert("❌ Mot de passe incorrect.");
+          return;
+        }
+
+        // Mise à jour Firebase Auth
+        await updateEmail(currentUser, editFields.email);
+
+        // Mise à jour Firestore
+        await updateDoc(refUser, { email: editFields.email });
+
+        console.log("✅ Email mis à jour !");
+      }
+
+      /* -----------------------------------------------------
+          3️⃣ Mise à jour de l’UI
+      ----------------------------------------------------- */
       setFields(editFields);
+      setUser((prev: any) => ({
+        ...prev,
+        ...editFields,
+        email: editFields.email,
+      }));
 
-      // → Mise à jour globale utilisateur
-      setUser((prev: any) => ({ ...prev, ...editFields }));
+      // On reset le password
+      setPasswordForReauth("");
+      setPasswordModalVisible(false);
     } catch (e) {
       console.log("🔥 ERREUR saveProfile:", e);
+      alert("Impossible de sauvegarder les modifications.");
     }
   };
 
@@ -319,5 +401,12 @@ export default function usePlayerProfile() {
     setEmailError,
     phoneError,
     setPhoneError,
+
+    passwordModalVisible,
+    setPasswordModalVisible,
+    passwordForReauth,
+    setPasswordForReauth,
+    tempNewEmail,
+    setTempNewEmail,
   };
 }

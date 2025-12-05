@@ -1,3 +1,5 @@
+// src/Profil/Joueurs/components/EditProfileModal/EditProfileConstants.ts
+
 /* ---------------------------------------------------------
    CONSTANTES UTILISÉES DANS LE MODAL D'ÉDITION PROFIL
 --------------------------------------------------------- */
