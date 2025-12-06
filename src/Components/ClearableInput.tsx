@@ -1,15 +1,13 @@
-// src/Components/ClearableInput.tsx
-
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 
 type Props = {
   label?: string;
   value: string;
-  onChange: (v: string) => void;
+  onChange: (v: string) => void; // 👈 plus de curseur ici
   placeholder?: string;
   keyboardType?: any;
-  error?: string; // message d’erreur éventuel
+  error?: string;
 };
 
 export default function ClearableInput({
@@ -20,16 +18,12 @@ export default function ClearableInput({
   keyboardType = "default",
   error,
 }: Props) {
-  // 👉 NEW : savoir si l’input a été touché / quitté
   const [touched, setTouched] = useState(false);
 
-  // 👉 Déterminer la bordure finale
   const getBorderColor = () => {
-    if (!touched) return ""; // aucune bordure tant que pas touché
-
+    if (!touched) return "";
     if (error) return "border border-red-500";
     if (!error && value !== "") return "border border-green-500";
-
     return "";
   };
 
@@ -40,22 +34,22 @@ export default function ClearableInput({
       <View className="relative">
         <TextInput
           value={value}
-          onChangeText={(v) => {
-            onChange(v);
-          }}
           placeholder={placeholder}
           placeholderTextColor="#777"
           keyboardType={keyboardType}
-          onBlur={() => setTouched(true)} // 👉 devient vert seulement après sortie
+          onBlur={() => setTouched(true)}
+          selectionColor="#ff8800"
+          onChangeText={(text) => {
+            onChange(text);
+          }}
           className={`bg-[#222] text-white p-3 rounded-lg pr-10 ${getBorderColor()}`}
         />
 
-        {/* ❌ Croix pour effacer */}
+        {/* ❌ Effacer */}
         {value !== "" && (
           <TouchableOpacity
             onPress={() => {
               onChange("");
-              // reset validation si on efface tout
               setTouched(false);
             }}
             className="absolute right-3 top-1/2 -translate-y-1/2"
@@ -65,7 +59,6 @@ export default function ClearableInput({
         )}
       </View>
 
-      {/* Erreur affichée UNIQUEMENT si touched */}
       {touched && error && (
         <Text className="text-red-500 text-xs mt-1">{error}</Text>
       )}

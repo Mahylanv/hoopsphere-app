@@ -195,6 +195,7 @@ export default function ProfilJoueur() {
           <BioSection
             editMode={false}
             onToggleEdit={openEditModal}
+            onSave={saveProfile}
             birthYear={fields.dob}
             setBirthYear={(v) => setEditField("dob", v)}
             height={fields.taille}
@@ -212,17 +213,16 @@ export default function ProfilJoueur() {
             onSelectDepartement={() => {}}
             club={fields.club}
             onSelectClub={() => {}}
-            phone={""}
-            setPhone={() => {}}
+            phone={fields.phone} // ✅ FIX
+            setPhone={(v) => setEditField("phone", v)} // ✅ FIX
             email={fields.email}
             setEmail={(v) => setEditField("email", v)}
-            level={""}
+            level={fields.level} // ✅ FIX
             onSelectLevel={() => {}}
-            experience={""}
-            setExperience={() => {}}
+            experience={fields.experience} // ✅ FIX
+            setExperience={(v) => setEditField("experience", v)}
             bio={fields.description}
             setBio={(v) => setEditField("description", v)}
-            onSave={saveProfile}
           />
         </View>
 

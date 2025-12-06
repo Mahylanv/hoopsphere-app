@@ -99,6 +99,19 @@ export default function EditProfileSections(props: Props) {
     editFields.poste?.split(",").map((x: string) => x.trim().toLowerCase()) ??
     [];
 
+    const formatPhoneLive = (raw: string) => {
+      const digits = raw.replace(/\D/g, "").slice(0, 10); // max 10 chiffres FR
+    
+      return digits
+        .replace(/(\d{2})(?=\d)/g, "$1 ") // ajoute un espace toutes les 2 digits
+        .trim();
+    };
+    
+    const updatePhone = (value: string) => {
+      const formatted = formatPhoneLive(value);
+      setEditField("phone", formatted);
+    };
+
   return (
     <>
       {/* ⭐ PHOTO DE PROFIL */}
@@ -415,7 +428,7 @@ export default function EditProfileSections(props: Props) {
             placeholder="06 00 00 00 00"
             keyboardType="phone-pad"
             error={phoneError}
-            onChange={handlePhoneInput}
+            onChange={updatePhone}
           />
         </View>
       </View>
@@ -439,7 +452,12 @@ export default function EditProfileSections(props: Props) {
           <Modal visible={openLevelModal} animationType="slide">
             <View className="flex-1 bg-black p-6">
               <TouchableOpacity onPress={() => setOpenLevelModal(false)}>
-                <Ionicons name="arrow-back" size={28} color="#fff" className="mt-10 mb-5" />
+                <Ionicons
+                  name="arrow-back"
+                  size={28}
+                  color="#fff"
+                  className="mt-10 mb-5"
+                />
               </TouchableOpacity>
 
               <Text className="text-white text-xl font-bold mb-4">

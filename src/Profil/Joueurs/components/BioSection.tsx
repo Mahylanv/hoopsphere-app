@@ -4,6 +4,7 @@ import React from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import clsx from "clsx";
 import { Feather } from "@expo/vector-icons";
+import { formatPhone } from "./EditProfileModal/ EditProfileHandlers";
 
 // Mapping codes → labels lisibles
 const POSITION_LABELS: Record<string, string> = {
@@ -302,7 +303,9 @@ export default function BioSection({
               className="text-lg text-white border-b border-gray-500"
             />
           ) : (
-            <Text className="text-lg text-white">{phone || "-"}</Text>
+            <Text className="text-lg text-white">
+              {phone ? formatPhone(phone) : "-"}
+            </Text>
           )}
         </View>
 
