@@ -1,4 +1,3 @@
-// src/components/Connexion.tsx
 import React, { useState } from "react";
 import {
   View,
@@ -41,7 +40,6 @@ export default function Connexion() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
 
-      // 🔎 Vérifie dans "joueurs"
       const joueurDoc = await getDoc(doc(db, "joueurs", uid));
       if (joueurDoc.exists()) {
         await AsyncStorage.setItem("userType", "joueur");
@@ -138,7 +136,17 @@ export default function Connexion() {
             <Text className="text-white font-bold text-lg">Se connecter</Text>
           )}
         </Pressable>
+        <Pressable
+          onPress={() => navigation.navigate("ForgotPassword")}
+          className="items-center -mt-2 mb-4"
+        >
+          <Text className="mt-8 underline font-semibold" style={{ color: "#F97316" }}>
+            Mot de passe oublié ?
+          </Text>
+        </Pressable>
 
+        {/* ⚡ Message d'erreur */}
+        {error && <Text className="text-red-500 text-center mb-2">{error}</Text>}
         <Pressable className="items-center mt-2" onPress={() => navigation.goBack()}>
           <Text className="text-white underline">Retour</Text>
         </Pressable>
