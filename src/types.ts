@@ -109,7 +109,7 @@ export type RootStackParamList = {
 // NAVIGATION — JOUEUR
 
 export type MainTabParamListJoueur = {
-  MainJoueur: undefined;
+  HomeScreen: undefined;
   Match: undefined;
   Chat: undefined;
   Search: undefined;
