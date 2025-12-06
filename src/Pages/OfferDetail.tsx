@@ -24,10 +24,8 @@ import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/fires
 type RouteProps = RouteProp<RootStackParamList, "OfferDetail">;
 type NavProps = NativeStackNavigationProp<RootStackParamList, "OfferDetail">;
 
-// On étend localement l'offre pour inclure id/clubUid si absent du type global
 type LocalOffer = OfferType & { id?: string; clubUid?: string };
 
-// ------- helpers sûrs pour department -------
 function displayDepartment(dep: unknown): string {
     if (typeof dep === "string") {
         const parts = dep.split(" - ");
@@ -105,27 +103,39 @@ export default function OfferDetail() {
         };
     }, [offer.clubUid]);
 
-    const composeEmailToClub = async (clubEmail: string, subject: string, body: string) => {
+    type MailStatus = "sent" | "cancelled" | "saved" | "unavailable" | "opened-external" | "error";
+
+    const composeEmailToClub = async (
+        clubEmail: string,
+        subject: string,
+        body: string
+    ): Promise<MailStatus> => {
         try {
             const available = await MailComposer.isAvailableAsync();
             if (available) {
-                await MailComposer.composeAsync({
+                const result = await MailComposer.composeAsync({
                     recipients: [clubEmail],
                     subject,
                     body,
                 });
+                if (result.status === "sent") return "sent";
+                if (result.status === "saved") return "saved";
+                return "cancelled";
             } else {
-                // Fallback mailto
+                // Fallback mailto: on ne peut PAS savoir s’il a été envoyé ensuite
                 const url = `mailto:${encodeURIComponent(clubEmail)}?subject=${encodeURIComponent(
                     subject
                 )}&body=${encodeURIComponent(body)}`;
                 await Linking.openURL(url);
+                return "opened-external";
             }
         } catch (e) {
             console.error("composeEmailToClub failed", e);
-            // On ne bloque pas la navigation si l'email échoue à s'ouvrir
+            return "error";
         }
     };
+
+
 
     const handleApply = async () => {
         if (!isLogged) {
@@ -138,64 +148,81 @@ export default function OfferDetail() {
             Alert.alert("Erreur", "Informations d’offre incomplètes.");
             return;
         }
+
         try {
             setSending(true);
 
-            // 1) Enregistrer la candidature côté Firestore
-            await addDoc(
-                collection(db, "clubs", offer.clubUid, "offres", offer.id, "candidatures"),
-                {
-                    applicantUid: auth.currentUser?.uid,
-                    applicantEmail: auth.currentUser?.email || null,
-                    message: motivation || "",
-                    createdAt: serverTimestamp(),
-                    status: "pending",
-
-                    // 👇 champs dérivés pour requêtes & affichage
-                    clubUid: offer.clubUid,
-                    offerId: offer.id,
-                    offerTitle: offer.title || "",
-                    offerLocation: offer.location || "",
-                }
-            );
-
-
-            // 2) Envoi d'un e-mail depuis le client (depuis le compte du joueur)
-            //    On utilise l'appli mail native via expo-mail-composer.
-            const to = club?.email;
-            if (to) {
-                const subject = `Candidature – ${offer.title || "Offre"} – ${auth.currentUser?.email ?? "Joueur"}`;
-                const bodyLines = [
-                    `Bonjour ${clubName},`,
-                    "",
-                    `Je souhaite postuler à l’offre : ${offer.title || "Sans titre"}.`,
-                    offer.location ? `Localisation : ${offer.location}` : "",
-                    "",
-                    "Message :",
-                    motivation || "(aucun message renseigné)",
-                    "",
-                    `Cordialement,`,
-                    `${auth.currentUser?.email ?? ""}`,
-                ].filter(Boolean);
-                const body = bodyLines.join("\n");
-                await composeEmailToClub(to, subject, body);
-            } else {
-                // Si pas d'email club, on informe juste l'utilisateur
-                Alert.alert(
-                    "Candidature envoyée",
-                    "Le club n’a pas d’e-mail renseigné. Ta candidature a tout de même été enregistrée."
-                );
+            // 1) Tenter l’email d’abord
+            const to = club?.email?.trim();
+            if (!to) {
+                Alert.alert("Impossible d’envoyer l’email", "Ce club n’a pas d’adresse e-mail renseignée.");
+                return;
             }
 
-            Alert.alert("Candidature envoyée ✅", "Le club a bien reçu ta candidature.");
-            navigation.goBack();
+            const subject = `Candidature – ${offer.title || "Offre"} – ${auth.currentUser?.email ?? "Joueur"}`;
+            const body = [
+                `Bonjour ${clubName},`,
+                "",
+                `Je souhaite postuler à l’offre : ${offer.title || "Sans titre"}.`,
+                offer.location ? `Localisation : ${offer.location}` : "",
+                "",
+                "Message :",
+                motivation || "(aucun message renseigné)",
+                "",
+                "Cordialement,",
+                auth.currentUser?.email ?? "",
+            ]
+                .filter(Boolean)
+                .join("\n");
+
+            const emailStatus = await composeEmailToClub(to, subject, body);
+
+            // 2) Si ET SEULEMENT SI l’email a été envoyé, on enregistre la candidature côté club
+            if (emailStatus === "sent") {
+                await addDoc(
+                    collection(db, "clubs", offer.clubUid, "offres", offer.id, "candidatures"),
+                    {
+                        applicantUid: auth.currentUser?.uid,
+                        applicantEmail: auth.currentUser?.email || null,
+                        message: motivation || "",
+                        createdAt: serverTimestamp(),
+                        status: "pending",
+                        clubUid: offer.clubUid,
+                        offerId: offer.id,
+                        offerTitle: offer.title || "",
+                        offerLocation: offer.location || "",
+                    }
+                );
+                Alert.alert("Candidature envoyée ✅", "Ton email a bien été envoyé au club.");
+                navigation.goBack();
+                return;
+            }
+
+            if (emailStatus === "saved") {
+                Alert.alert("Brouillon enregistré", "Ton brouillon d’email est prêt. Envoie-le pour finaliser la candidature.");
+            } else if (emailStatus === "cancelled") {
+                Alert.alert("Envoi annulé", "L’email n’a pas été envoyé. Aucune candidature n’a été enregistrée.");
+            } else if (emailStatus === "opened-external") {
+                Alert.alert(
+                    "Vérifie ton envoi",
+                    "Ton application mail s’est ouverte. La candidature ne sera enregistrée côté club que si tu envoies l’email."
+                );
+            } else if (emailStatus === "unavailable") {
+                Alert.alert(
+                    "Email indisponible",
+                    "L’envoi d’email n’est pas disponible sur cet appareil. Aucune candidature n’a été enregistrée."
+                );
+            } else {
+                Alert.alert("Erreur", "Une erreur est survenue lors de l’ouverture de l’email. Aucune candidature n’a été enregistrée.");
+            }
         } catch (e) {
             console.error(e);
-            Alert.alert("Erreur", "Impossible d’envoyer la candidature.");
+            Alert.alert("Erreur", "Impossible d’initier la candidature.");
         } finally {
             setSending(false);
         }
     };
+
 
     const goToClub = () => {
         if (!club) return;
