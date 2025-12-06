@@ -204,7 +204,7 @@ export default function SearchJoueur() {
           renderItem={({ item }) => (
             <TouchableOpacity
               onPress={() =>
-                navigation.navigate("JoueurDetail", { joueur: item })
+                navigation.navigate("JoueurDetail", { uid: item.uid })
               }
               activeOpacity={0.8}
               className="flex-row items-center bg-[#1a1b1f] rounded-2xl p-4 mb-4 border border-gray-800"

@@ -1,6 +1,6 @@
 // src/Profil/Joueurs/JoueurDetail.tsx
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -9,29 +9,85 @@ import {
   Animated,
   Dimensions,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../types";
-import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-
+import { Ionicons } from "@expo/vector-icons";
 import ViewShot from "react-native-view-shot";
 import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
+
+import usePlayerProfile from "./hooks/usePlayerProfile"; // adapte le path exactement
+import { computePlayerStats } from "../../utils/computePlayerStats";
+import { collection, getDocs } from "firebase/firestore";
+
+import { RootStackParamList } from "../../types";
+import { db } from "../../config/firebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
 
 import JoueurCard from "../../Components/JoueurCard";
 
 const CARD_WIDTH = Dimensions.get("window").width * 0.9;
 const CARD_HEIGHT = CARD_WIDTH * 0.68;
 
-type JoueurDetailRouteProp = RouteProp<RootStackParamList, "JoueurDetail">;
-type NavProp = NativeStackNavigationProp<RootStackParamList, "JoueurDetail">;
+type RouteProps = RouteProp<RootStackParamList, "JoueurDetail">;
+type NavProps = NativeStackNavigationProp<RootStackParamList, "JoueurDetail">;
 
 export default function JoueurDetail() {
-  const navigation = useNavigation<NavProp>();
-  const route = useRoute<JoueurDetailRouteProp>();
-  const { joueur } = route.params;
+  const navigation = useNavigation<NavProps>();
+  const route = useRoute<RouteProps>();
+
+  const { uid } = route.params;
+
+  const [joueur, setJoueur] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>(null);
+
+  /* =============================================
+     🔥 FETCH DU JOUEUR PAR UID
+  ===============================================*/
+  useEffect(() => {
+    const loadPlayer = async () => {
+      try {
+        const ref = doc(db, "joueurs", uid);
+        const snap = await getDoc(ref);
+
+        if (!snap.exists()) {
+          Alert.alert("Erreur", "Joueur introuvable.");
+          navigation.goBack();
+          return;
+        }
+        const raw = snap.data();
+
+        setJoueur({
+          ...raw,
+          email: raw.email ?? "-",
+          dob: raw.dob ?? "-",
+          departement: raw.departement ?? "-",
+          club: raw.club ?? "-",
+          taille: raw.taille ?? "-",
+          poids: raw.poids ?? "-",
+          genre: raw.genre ?? "-",
+          main: raw.main ?? "-",
+        });
+
+        // 🔥 Charger les statistiques
+        const matchSnap = await getDocs(
+          collection(db, "joueurs", uid, "matches")
+        );
+        const matches = matchSnap.docs.map((d) => d.data() as any);
+        setStats(computePlayerStats(matches));
+      } catch (e) {
+        console.log("❌ Erreur fetch joueur :", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPlayer();
+  }, [uid]);
 
   /* -----------------------------------------------------
      🔥 REF POUR LA CAPTURE
@@ -90,7 +146,7 @@ export default function JoueurDetail() {
     }).start(() => setSheetOpen(false));
 
   /* -----------------------------------------------------
-     🔥 CAPTURE LOGIQUEr
+     🔥 CAPTURE LOGIQUE
   ----------------------------------------------------- */
 
   const captureCard = async () => {
@@ -120,10 +176,23 @@ export default function JoueurDetail() {
   const shareCard = async () => {
     const uri = await captureCard();
     if (!uri) return;
+
     await Sharing.shareAsync(uri);
   };
 
   const addFavorite = () => Alert.alert("Favoris", "Joueur ajouté !");
+
+  /* -----------------------------------------------------
+     🔥 LOADING SCREEN
+  ----------------------------------------------------- */
+  if (loading || !joueur) {
+    return (
+      <View className="flex-1 bg-black items-center justify-center">
+        <ActivityIndicator size="large" color="#F97316" />
+        <Text className="text-white mt-3">Chargement du joueur...</Text>
+      </View>
+    );
+  }
 
   /* -----------------------------------------------------
      🔥 RENDER
@@ -151,7 +220,7 @@ export default function JoueurDetail() {
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         contentContainerStyle={{
-          paddingTop: CARD_HEIGHT * 2.15,
+          paddingTop: CARD_HEIGHT * 2.1,
           paddingBottom: 120,
         }}
         onScroll={Animated.event(
@@ -159,7 +228,7 @@ export default function JoueurDetail() {
           { useNativeDriver: true }
         )}
       >
-        {/* 🔥 CARTE (ANIMÉE ET CAPTURABLE) */}
+        {/* 🔥 CARTE ANIMÉE */}
         <Animated.View
           style={{
             position: "absolute",
@@ -179,20 +248,19 @@ export default function JoueurDetail() {
             options={{ format: "png", quality: 1 }}
             style={{ borderRadius: 20, overflow: "hidden" }}
           >
-            <JoueurCard
-              joueur={joueur}
-              onPressActions={openSheet}
-              showActionsButton={false} // 🔥 pas de bouton dans l'image capturée
-            />
+            <JoueurCard joueur={joueur} showActionsButton={false} />
           </ViewShot>
 
-          {/* VERSION AVEC BOUTON POUR L’UI */}
           <View style={{ position: "absolute" }}>
-            <JoueurCard joueur={joueur} onPressActions={openSheet} />
+            <JoueurCard
+              joueur={joueur}
+              stats={stats}
+              onPressActions={openSheet}
+            />
           </View>
         </Animated.View>
 
-        {/* INFORMATIONS */}
+        {/* 🔥 Infos joueur */}
         <View className="px-5 mt-4">
           <Text className="text-white text-xl font-semibold mb-2">
             Informations personnelles
@@ -201,16 +269,24 @@ export default function JoueurDetail() {
           <View className="bg-[#111] rounded-2xl p-5 border border-gray-800 shadow-lg shadow-black/40">
             <InfoRow icon="mail" label="Email" value={joueur.email} />
             <InfoRow icon="calendar" label="Naissance" value={joueur.dob} />
-            <InfoRow icon="location" label="Département" value={joueur.departement} />
+            <InfoRow
+              icon="location"
+              label="Département"
+              value={joueur.departement}
+            />
             <InfoRow icon="basketball" label="Club" value={joueur.club} />
             <InfoRow icon="body" label="Taille" value={joueur.taille} />
             <InfoRow icon="barbell" label="Poids" value={joueur.poids} />
             <InfoRow icon="male-female" label="Genre" value={joueur.genre} />
-            <InfoRow icon="hand-right" label="Main" value={joueur.main} />
+            <InfoRow
+              icon="hand-left-outline"
+              label="Main"
+              value={joueur.main}
+            />
           </View>
         </View>
 
-        {/* BOUTON CONTACT */}
+        {/* CONTACT */}
         <View className="px-5 mt-10 mb-16">
           <TouchableOpacity className="bg-[#ff6600] py-4 rounded-2xl items-center shadow-lg shadow-[#ff6600]/40">
             <Text className="text-white text-lg font-semibold">
@@ -250,8 +326,12 @@ export default function JoueurDetail() {
       >
         <Text className="text-white text-xl font-bold mb-4">Actions</Text>
 
-        <Option icon="download-outline" label="Télécharger" onPress={downloadCard} />
-        <Option icon="share-social-outline" label="Partager" onPress={shareCard} />
+        <Option
+          icon="download-outline"
+          label="Télécharger"
+          onPress={downloadCard}
+        />
+        <Option icon="share-outline" label="Partager" onPress={shareCard} />
         <Option icon="star-outline" label="Favoris" onPress={addFavorite} />
       </Animated.View>
     </SafeAreaView>
@@ -295,7 +375,9 @@ const InfoRow = ({
 
     <View className="flex-1">
       <Text className="text-gray-400 text-xs">{label}</Text>
-      <Text className="text-white text-base font-medium">{value ?? "-"} </Text>
+      <Text className="text-white text-base font-medium">
+        {value ? String(value) : "-"}
+      </Text>
     </View>
   </View>
 );

@@ -101,9 +101,14 @@ export type RootStackParamList = {
   Payment: undefined;
   EditOffer: { offer: Offer }; // nouvelle page de modification
   SearchJoueur: undefined;
-  JoueurDetail: { joueur: Joueur };
+  // JoueurDetail: { joueur: Joueur };
+  JoueurDetail: { uid: string };
   ManageCandidatures: undefined;
   ClubTeamsList: undefined;
+  VideoFeed: {
+    startIndex: number;
+    videos: any[];
+  };
 };
 
 // NAVIGATION — JOUEUR

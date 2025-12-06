@@ -41,6 +41,7 @@ import ProfilClub from "./src/Profil/Clubs/ProfilClub";
 import FullMediaViewerScreen from "./src/Profil/Joueurs/screens/FullMediaViewerScreen";
 import ManageCandidatures from "./src/Profil/Clubs/Candidatures/ManageCandidatures";
 import ForgotPassword from "./src/Pages/ForgotPassword";
+import VideoFeedScreen from "./src/Home/VideoFeedScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -152,6 +153,7 @@ function RootNavigator() {
           component={ForgotPassword}
           options={{ headerShown: false }}
         />
+        <Stack.Screen name="VideoFeed" component={VideoFeedScreen} />
       </Stack.Navigator>
     </SafeAreaView>
   );

@@ -1,25 +1,39 @@
 // src/Components/JoueurCard.tsx
 
-import React, { useMemo } from "react";
+import React from "react";
 import { View, Text, Image, Dimensions, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Joueur } from "../types";
+import { PlayerAverages } from "../utils/computePlayerStats";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.9;
 
 type Props = {
   joueur: Joueur;
+  stats?: PlayerAverages | null; 
+  rating?: number; 
   onPressActions?: () => void;
-  showActionsButton?: boolean; // 🔥 permet de cacher le bouton dans la capture
+  showActionsButton?: boolean;
 };
 
 export default function JoueurCard({
   joueur,
+  stats,
   onPressActions,
-  showActionsButton = true, // 🔥 par défaut le bouton est visible
+  rating,
+  showActionsButton = true,
 }: Props) {
-  const note = useMemo(() => Math.floor(Math.random() * 20) + 80, []);
+  // 🔥 Valeurs sécurisées (0 si pas de stats)
+  const MJ = stats?.gamesPlayed ?? 0;
+  const twoExt = stats?.twoExt ?? 0;
+  const threes = stats?.threes ?? 0;
+  const twoInt = stats?.twoInt ?? 0;
+
+  const pts = stats?.pts ?? 0;
+  const threesPts = stats?.threes ?? 0;
+  const lf = stats?.lf ?? 0;
+  const fouls = stats?.fouls ?? 0;
 
   return (
     <View className="flex-1 items-center pt-4">
@@ -30,16 +44,16 @@ export default function JoueurCard({
           aspectRatio: 0.68,
         }}
       >
-        {/* 🌌 Fond de carte */}
+        {/* 🌌 Fond */}
         <Image
           source={require("../../assets/CARD-NORMAL-FOND.png")}
           className="absolute w-full h-full"
           resizeMode="contain"
         />
 
-        {/* 🟠 NOTE */}
+        {/* 🟠 NOTE (ta note aléatoire OU tu veux mettre autre chose ?) */}
         <View className="absolute top-[12.5%] left-[21%] bg-orange-500/90 w-[58px] h-[58px] rounded-full items-center justify-center">
-          <Text className="text-white text-xl font-bold">{note}</Text>
+          <Text className="text-white text-xl font-bold">{rating ?? "-"}</Text>
         </View>
 
         {/* Poste */}
@@ -53,9 +67,7 @@ export default function JoueurCard({
         <View className="absolute top-[12%] right-[19%] w-[125px] h-[125px] rounded-full overflow-hidden bg-[#0e0e10]">
           <Image
             source={{
-              uri:
-                joueur.avatar ||
-                "https://via.placeholder.com/200x200.png?text=Joueur",
+              uri: joueur.avatar || "https://via.placeholder.com/200.png",
             }}
             className="w-full h-full"
           />
@@ -68,22 +80,22 @@ export default function JoueurCard({
           </Text>
         </View>
 
-        {/* Statistiques */}
+        {/* 📊 Statistiques */}
         <View className="absolute top-[50%] w-[90%] self-center flex-row justify-between">
           {/* Bloc gauche */}
           <View className="flex-row w-[46%] justify-end">
             <View className="space-y-3.5 items-end pr-3">
-              <Text className="text-white text-[20px] py-1 font-extrabold">
-                90
+              <Text className="text-white text-[20px] py-2 font-extrabold">
+                {MJ}
               </Text>
-              <Text className="text-white text-[20px] py-1 font-extrabold">
-                300
+              <Text className="text-white text-[20px] font-extrabold">
+                {twoExt}
               </Text>
-              <Text className="text-white text-[20px] py-1 font-extrabold">
-                75
+              <Text className="text-white text-[20px] py-2 font-extrabold">
+                {threes}
               </Text>
-              <Text className="text-white text-[20px] py-1 font-extrabold">
-                42
+              <Text className="text-white text-[20px] font-extrabold">
+                {twoInt}
               </Text>
             </View>
 
@@ -95,7 +107,7 @@ export default function JoueurCard({
                 2EXT
               </Text>
               <Text className="text-gray-300 text-[13px] py-2 font-semibold">
-                TR
+                3PTS
               </Text>
               <Text className="text-gray-300 text-[13px] py-2 font-semibold">
                 2INT
@@ -107,16 +119,16 @@ export default function JoueurCard({
           <View className="flex-row w-[46%] justify-start">
             <View className="space-y-3.5 items-end pr-3">
               <Text className="text-white text-[20px] py-1 font-extrabold">
-                18
+                {pts}
               </Text>
               <Text className="text-white text-[20px] py-1 font-extrabold">
-                9
+                {threesPts}
               </Text>
               <Text className="text-white text-[20px] py-1 font-extrabold">
-                22
+                {lf}
               </Text>
               <Text className="text-white text-[20px] py-1 font-extrabold">
-                7
+                {fouls}
               </Text>
             </View>
 
@@ -137,24 +149,15 @@ export default function JoueurCard({
           </View>
         </View>
 
-        {/* 🔥 Bouton share — affiché uniquement SI showActionsButton = true */}
+        {/* Bouton share */}
         {showActionsButton && (
           <TouchableOpacity
             onPress={onPressActions}
             className="absolute bottom-[6%] right-[8%]"
-            activeOpacity={0.8}
           >
             <View
               className="w-12 h-12 rounded-full items-center justify-center"
-              style={{
-                backgroundColor: "rgba(255, 102, 0, 0.85)",
-                shadowColor: "#ff6600",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.6,
-                shadowRadius: 8,
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.15)",
-              }}
+              style={{ backgroundColor: "rgba(255, 102, 0, 0.85)" }}
             >
               <Ionicons name="share-social-outline" size={26} color="#fff" />
             </View>

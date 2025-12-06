@@ -177,6 +177,27 @@ export default function usePlayerProfile() {
     setGalleryLoading(false);
   };
 
+  /* -----------------------------------------------------
+   🔥 PUBLIE UNE VIDÉO DANS LA COLLECTION GLOBALE
+----------------------------------------------------- */
+  const publishVideoToGlobalGallery = async (url: string) => {
+    if (!currentUser) return;
+
+    try {
+      await addDoc(collection(db, "gallery"), {
+        url,
+        type: "video",
+        playerUid: currentUser.uid,
+        createdAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.log("🔥 ERREUR publishVideoToGlobalGallery:", e);
+    }
+  };
+
+  /* -----------------------------------------------------
+   🔥 AJOUT MEDIA DANS LA GALERIE + GLOBALE SI VIDEO
+----------------------------------------------------- */
   const addGalleryMedia = async (
     uri: string,
     isVideo: boolean,
@@ -197,11 +218,17 @@ export default function usePlayerProfile() {
       await uploadBytes(storageRef, blob);
       const url = await getDownloadURL(storageRef);
 
+      // 🟧 Ajout dans la galerie privée du joueur
       await addDoc(collection(db, "joueurs", currentUser.uid, "gallery"), {
         url,
         type: isVideo ? "video" : "image",
         createdAt: serverTimestamp(),
       });
+
+      // 🔥 Ajout global (pour TikTok)
+      if (isVideo) {
+        await publishVideoToGlobalGallery(url);
+      }
 
       setGallery((p) => [...p, { url, type: isVideo ? "video" : "image" }]);
     } catch (e) {
@@ -303,7 +330,7 @@ export default function usePlayerProfile() {
     const emailChanged = editFields.email !== fields.email;
 
     if (emailChanged) {
-      setTempNewEmail(editFields.email);   // ⭐ sauvegarde l’email à appliquer
+      setTempNewEmail(editFields.email); // ⭐ sauvegarde l’email à appliquer
     }
 
     if (emailChanged && !passwordForReauth) {
