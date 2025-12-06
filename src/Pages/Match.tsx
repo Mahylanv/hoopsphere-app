@@ -1,9 +1,8 @@
 // src/Pages/Match.tsx
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
@@ -11,21 +10,21 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { auth, db } from "../config/firebaseConfig";
 
 type PlayerStats = {
   jersey?: number | null;
   name: string;
-  starter?: boolean | null;        // Top 5 de départ
-  play_time?: string | null;       // Temps de jeu (MM:SS)
-  shots_made?: number | null;      // Nb tirs réussis (total)
-  points?: number | null;          // Pts
-  threes?: number | null;          // 3 pts réussis
-  two_int?: number | null;         // 2 int réussis
-  two_ext?: number | null;         // 2 ext réussis
-  ft_made?: number | null;         // LF réussis
-  fouls_committed?: number | null; // Fautes commises
+  starter?: boolean | null;
+  play_time?: string | null;
+  shots_made?: number | null;
+  points?: number | null;
+  threes?: number | null;
+  two_int?: number | null;
+  two_ext?: number | null;
+  ft_made?: number | null;
+  fouls_committed?: number | null;
 };
 
 type ApiResponse = {
@@ -33,11 +32,7 @@ type ApiResponse = {
   teams?: Array<{ name: string; players: PlayerStats[] }>;
 };
 
-// ⚠️ Mets l'URL de ton API ici
-// const API_URL = "http://127.0.0.1:8000/parse-emarque"; // iOS Simu
-const API_URL = "https://d4a534b62fb2.ngrok-free.app/parse-emarque";
-// Android émulateur : "http://10.0.2.2:8000/parse-emarque"
-// Appareil physique : "http://ADRESSE_IP_LAN:8000/parse-emarque"
+const API_URL = "https://b95a86c8b3ef.ngrok-free.app/parse-emarque";
 
 function normalize(s: string) {
   return s
@@ -70,13 +65,59 @@ function Row({ label, value }: { label: string; value: any }) {
 }
 
 export default function Match() {
-  const [fullName, setFullName] = useState("");
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [fullName, setFullName] = useState<string>("");
   const [pdfName, setPdfName] = useState<string | null>(null);
   const [pdfUri, setPdfUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [matchNumber, setMatchNumber] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Récupère Prenom/Nom depuis joueurs/{uid}, en gérant les 2 casings
+  useEffect(() => {
+    const run = async () => {
+      const user = auth.currentUser;
+      if (!user?.uid) {
+        setProfileLoading(false);
+        Alert.alert("Connexion requise", "Tu dois être connecté pour utiliser l’import e-Marque.");
+        return;
+      }
+      try {
+        const ref = doc(db, "joueurs", user.uid);
+        const snap = await getDoc(ref);
+
+        let computed = "";
+        if (snap.exists()) {
+          const d = snap.data() as any;
+          const prenom = (d?.prenom ?? d?.Prenom ?? "").toString().trim();
+          const nom = (d?.nom ?? d?.Nom ?? "").toString().trim();
+          if (prenom || nom) {
+            computed = [prenom, nom].filter(Boolean).join(" ");
+          }
+        }
+
+        // Fallback si le doc ne contient pas encore les champs
+        if (!computed && user.displayName) {
+          computed = user.displayName.trim();
+        }
+
+        setFullName(computed);
+        // Debug utile si besoin :
+        // console.log("Fullname from Firestore/auth =", computed);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+    run();
+  }, []);
+
+  const canParse = useMemo(
+    () => !!pdfUri && !!fullName?.trim() && !profileLoading,
+    [pdfUri, fullName, profileLoading]
+  );
 
   const pickPdf = async () => {
     const res = await DocumentPicker.getDocumentAsync({
@@ -92,8 +133,12 @@ export default function Match() {
   };
 
   const handleParse = async () => {
+    if (profileLoading) return;
     if (!fullName.trim()) {
-      Alert.alert("Nom requis", "Entre ton Nom Prénom tel qu’inscrit sur la feuille.");
+      Alert.alert(
+        "Nom introuvable",
+        "Impossible de déterminer ton Nom Prénom depuis le profil (champs prenom/nom)."
+      );
       return;
     }
     if (!pdfUri) {
@@ -107,14 +152,11 @@ export default function Match() {
 
       const form = new FormData();
       form.append("fullname", fullName);
-      form.append(
-        "file",
-        {
-          name: pdfName || "feuille.pdf",
-          type: "application/pdf",
-          uri: pdfUri,
-        } as any
-      );
+      form.append("file", {
+        name: pdfName || "feuille.pdf",
+        type: "application/pdf",
+        uri: pdfUri,
+      } as any);
 
       const resp = await fetch(API_URL, { method: "POST", body: form });
       if (!resp.ok) {
@@ -138,7 +180,7 @@ export default function Match() {
       if (!found) {
         Alert.alert(
           "Introuvable",
-          "Ton nom n’a pas été trouvé. Essaie sans accents ou inverse Nom/Prénom."
+          "Ton nom n’a pas été trouvé dans la feuille. Mets à jour ton profil (prenom / nom) si besoin."
         );
         return;
       }
@@ -168,7 +210,6 @@ export default function Match() {
 
     try {
       setSaving(true);
-      // Doc unique par numéro de match pour ce joueur
       const ref = doc(db, "joueurs", user.uid, "matches", String(matchNumber));
       await setDoc(
         ref,
@@ -189,7 +230,7 @@ export default function Match() {
           sourcePdfName: pdfName ?? null,
           parsedAt: serverTimestamp(),
         },
-        { merge: true } // remplace si déjà existant (même numéro)
+        { merge: true }
       );
 
       Alert.alert("Enregistré", "Tes stats ont été sauvegardées pour ce match.");
@@ -209,22 +250,18 @@ export default function Match() {
           Créer un match (import e-Marque)
         </Text>
 
-        <Text style={{ color: "#aaa", marginBottom: 6 }}>Nom Prénom (comme sur la feuille)</Text>
-        <TextInput
-          value={fullName}
-          onChangeText={setFullName}
-          placeholder="Ex: Louis Dubruel"
-          placeholderTextColor="#888"
+        <View
           style={{
-            color: "#fff",
-            borderColor: "#555",
-            borderWidth: 1,
-            borderRadius: 10,
+            marginBottom: 12,
             padding: 12,
-            marginBottom: 14,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: "#555",
+            backgroundColor: "#151515",
           }}
-          autoCapitalize="words"
-        />
+        >
+          <Row label="Joueur" value={profileLoading ? "Chargement..." : (fullName || "—")} />
+        </View>
 
         <TouchableOpacity
           onPress={pickPdf}
@@ -244,9 +281,9 @@ export default function Match() {
 
         <TouchableOpacity
           onPress={handleParse}
-          disabled={loading || !pdfUri || !fullName.trim()}
+          disabled={loading || !canParse}
           style={{
-            backgroundColor: !pdfUri || !fullName.trim() ? "#444" : "#16a34a",
+            backgroundColor: !canParse ? "#444" : "#16a34a",
             padding: 14,
             borderRadius: 12,
             alignItems: "center",
