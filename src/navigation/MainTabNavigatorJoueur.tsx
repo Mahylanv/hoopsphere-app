@@ -6,7 +6,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
 // --- Import des écrans destinés aux joueurs ---
-import MainJoueur from "../Profil/Joueurs/MainJoueur";
+import HomeScreen from "../Home/HomeScreen";
 import Chat from "../Pages/Chat";
 import Search from "../Components/Search";
 import ProfilJoueur from "../Profil/Joueurs/ProfilJoueur";
@@ -37,7 +37,7 @@ export default function MainTabNavigatorJoueur() {
           let iconName: React.ComponentProps<typeof Ionicons>["name"];
 
           switch (route.name) {
-            case "MainJoueur":
+            case "HomeScreen":
               iconName = "home-outline";
               break;
             case "Match":
@@ -63,8 +63,8 @@ export default function MainTabNavigatorJoueur() {
     >
       {/* 🏠 Accueil joueur */}
       <Tab.Screen
-        name="MainJoueur"
-        component={MainJoueur}
+        name="HomeScreen"
+        component={HomeScreen}
         options={{ tabBarLabel: "Accueil" }}
       />
 
