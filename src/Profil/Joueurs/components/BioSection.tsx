@@ -3,9 +3,22 @@
 import React from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import clsx from "clsx";
+import { Feather } from "@expo/vector-icons";
+import { formatPhone } from "./EditProfileModal/ EditProfileHandlers";
+
+// Mapping codes → labels lisibles
+const POSITION_LABELS: Record<string, string> = {
+  MEN: "Meneur (MEN)",
+  ARR: "Arrière (ARR)",
+  AIL: "Ailier (AIL)",
+  AF: "Ailier fort (AF)",
+  PIV: "Pivot (PIV)",
+};
 
 export type BioSectionProps = {
   editMode: boolean;
+  onToggleEdit?: () => void;
+  onSave: () => void;
 
   // Année de naissance
   birthYear: string;
@@ -39,6 +52,10 @@ export type BioSectionProps = {
   onSelectClub: () => void;
 
   // Champs ajoutés
+  email: string;
+  setEmail: (v: string) => void;
+
+  // Champs ajoutés
   phone: string;
   setPhone: (v: string) => void;
 
@@ -50,12 +67,11 @@ export type BioSectionProps = {
 
   bio: string; // Description textuelle
   setBio: (v: string) => void;
-
-    /** ➕ AJOUTER ICI */
-  onSave: () => void;
 };
 
 export default function BioSection({
+  onToggleEdit, // ← AJOUT
+  onSave,
   editMode,
   birthYear,
   setBirthYear,
@@ -76,6 +92,8 @@ export default function BioSection({
   onSelectClub,
   phone,
   setPhone,
+  email,
+  setEmail,
   level,
   onSelectLevel,
   experience,
@@ -85,7 +103,25 @@ export default function BioSection({
 }: BioSectionProps) {
   return (
     <View className="mt-8 px-6">
-      <Text className="text-xl font-bold mb-4 text-white">Biographie</Text>
+      {/* Header + bouton modifier */}
+      <View className="flex-row justify-between items-center mb-4">
+        <Text className="text-xl font-bold text-white">Biographie</Text>
+
+        {/* Bouton icône */}
+        <TouchableOpacity
+          onPress={() => {
+            if (editMode) onSave();
+            if (onToggleEdit) onToggleEdit();
+          }}
+          className="p-2"
+        >
+          {editMode ? (
+            <Feather name="check" size={24} color="#00FF88" />
+          ) : (
+            <Feather name="edit-2" size={22} color="white" />
+          )}
+        </TouchableOpacity>
+      </View>
 
       {/* Ligne 1 — Année + Taille */}
       <View className="flex-row justify-between mb-4 gap-x-4">
@@ -110,12 +146,19 @@ export default function BioSection({
               onPress={onSelectHeight}
               className="border-2 rounded-lg h-14 px-4 justify-center border-white"
             >
-              <Text className={clsx("text-base", height ? "text-white" : "text-gray-400")}>
-                {height || "Sélectionne ta taille"}
+              <Text
+                className={clsx(
+                  "text-base",
+                  height ? "text-white" : "text-gray-400"
+                )}
+              >
+                {height ? `${height} cm` : "Sélectionne ta taille"}
               </Text>
             </TouchableOpacity>
           ) : (
-            <Text className="text-lg text-white">{height || "-"}</Text>
+            <Text className="text-lg text-white">
+              {height ? `${height} cm` : "-"}
+            </Text>
           )}
         </View>
       </View>
@@ -129,12 +172,19 @@ export default function BioSection({
               onPress={onSelectWeight}
               className="border-2 rounded-lg h-14 px-4 justify-center border-white"
             >
-              <Text className={clsx("text-base", weight ? "text-white" : "text-gray-400")}>
-                {weight || "Sélectionne ton poids"}
+              <Text
+                className={clsx(
+                  "text-base",
+                  weight ? "text-white" : "text-gray-400"
+                )}
+              >
+                {weight ? `${weight} Kg` : "Sélectionne ton poids"}
               </Text>
             </TouchableOpacity>
           ) : (
-            <Text className="text-lg text-white">{weight || "-"}</Text>
+            <Text className="text-lg text-white">
+              {weight ? `${weight} Kg` : "-"}
+            </Text>
           )}
         </View>
 
@@ -145,12 +195,24 @@ export default function BioSection({
               onPress={onSelectPoste}
               className="border-2 rounded-lg h-14 px-4 justify-center border-white"
             >
-              <Text className={clsx("text-base", position ? "text-white" : "text-gray-400")}>
+              <Text
+                className={clsx(
+                  "text-base",
+                  position ? "text-white" : "text-gray-400"
+                )}
+              >
                 {position || "Sélectionne ton poste"}
               </Text>
             </TouchableOpacity>
           ) : (
-            <Text className="text-lg text-white">{position || "-"}</Text>
+            <Text className="text-lg text-white">
+              {position
+                ? position
+                    .split(",")
+                    .map((p) => POSITION_LABELS[p.trim()] || p)
+                    .join(", ")
+                : "-"}
+            </Text>
           )}
         </View>
       </View>
@@ -168,11 +230,15 @@ export default function BioSection({
                   onPress={() => setStrongHand(opt)}
                   className={clsx(
                     "rounded-lg py-3 px-5 flex-1",
-                    strongHand === opt ? "border-2 border-orange-500" : "border-2 border-white",
+                    strongHand === opt
+                      ? "border-2 border-orange-500"
+                      : "border-2 border-white",
                     opt === "Gauche" ? "mr-2" : ""
                   )}
                 >
-                  <Text className="text-white text-center text-base">{opt}</Text>
+                  <Text className="text-white text-center text-base">
+                    {opt}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -189,7 +255,10 @@ export default function BioSection({
               className="border-2 rounded-lg h-14 px-4 justify-center border-white"
             >
               <Text
-                className={clsx("text-base", departement ? "text-white" : "text-gray-400")}
+                className={clsx(
+                  "text-base",
+                  departement ? "text-white" : "text-gray-400"
+                )}
               >
                 {departement || "Sélectionne ton département"}
               </Text>
@@ -208,7 +277,12 @@ export default function BioSection({
             onPress={onSelectClub}
             className="border-2 rounded-lg h-14 px-4 justify-center border-white"
           >
-            <Text className={clsx("text-base", club ? "text-white" : "text-gray-400")}>
+            <Text
+              className={clsx(
+                "text-base",
+                club ? "text-white" : "text-gray-400"
+              )}
+            >
               {club || "Sélectionne ton club"}
             </Text>
           </TouchableOpacity>
@@ -217,7 +291,7 @@ export default function BioSection({
         )}
       </View>
 
-      {/* Ligne 5 — Téléphone + Niveau */}
+      {/* Ligne 5 — Téléphone + Email */}
       <View className="flex-row justify-between mb-4 gap-x-4">
         <View className="w-1/2">
           <Text className="text-base text-gray-400">Téléphone</Text>
@@ -229,10 +303,27 @@ export default function BioSection({
               className="text-lg text-white border-b border-gray-500"
             />
           ) : (
-            <Text className="text-lg text-white">{phone || "-"}</Text>
-          )}
+            <Text className="text-lg text-white">
+              {phone ? formatPhone(phone) : "-"}
+            </Text>          )}
         </View>
 
+        <View className="w-1/2">
+          <Text className="text-base text-gray-400">Email</Text>
+          {editMode ? (
+            <TextInput
+              value={email}
+              editable={false} // si tu veux empêcher modification
+              className="text-lg text-gray-400 border-b border-gray-700"
+            />
+          ) : (
+            <Text className="text-lg text-white">{email || "-"}</Text>
+          )}
+        </View>
+      </View>
+
+      {/* Ligne 6 — Niveau + Années d'expérience */}
+      <View className="flex-row justify-between mb-4 gap-x-4">
         <View className="w-1/2">
           <Text className="text-base text-gray-400">Niveau</Text>
           {editMode ? (
@@ -240,7 +331,12 @@ export default function BioSection({
               onPress={onSelectLevel}
               className="border-2 rounded-lg h-14 px-4 justify-center border-white"
             >
-              <Text className={clsx("text-base", level ? "text-white" : "text-gray-400")}>
+              <Text
+                className={clsx(
+                  "text-base",
+                  level ? "text-white" : "text-gray-400"
+                )}
+              >
                 {level || "Sélectionne ton niveau"}
               </Text>
             </TouchableOpacity>
@@ -248,21 +344,20 @@ export default function BioSection({
             <Text className="text-lg text-white">{level || "-"}</Text>
           )}
         </View>
-      </View>
 
-      {/* Ligne 6 — Expérience */}
-      <View className="mb-4">
-        <Text className="text-base text-gray-400">Années d'expérience</Text>
-        {editMode ? (
-          <TextInput
-            value={experience}
-            onChangeText={setExperience}
-            keyboardType="numeric"
-            className="text-lg text-white border-b border-gray-500"
-          />
-        ) : (
-          <Text className="text-lg text-white">{experience || "-"}</Text>
-        )}
+        <View className="w-1/2">
+          <Text className="text-base text-gray-400">Années d'expérience</Text>
+          {editMode ? (
+            <TextInput
+              value={experience}
+              onChangeText={setExperience}
+              keyboardType="numeric"
+              className="text-lg text-white border-b border-gray-500"
+            />
+          ) : (
+            <Text className="text-lg text-white">{experience || "-"}</Text>
+          )}
+        </View>
       </View>
 
       {/* Ligne 7 — Bio */}

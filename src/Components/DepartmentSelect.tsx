@@ -15,34 +15,52 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DEPARTEMENTS } from "../constants/departements";
 
 type Props = {
-  value?: string[];                     // ← peut être undefined
-  onSelect: (value: string[]) => void;  // ← toujours un tableau à la sortie
+  value?: string[]; // ← peut être undefined
+  onSelect: (value: string[]) => void; // ← toujours un tableau à la sortie
   placeholder?: string;
+  single?: boolean;
 };
 
-export default function DepartmentSelect({ value, onSelect, placeholder }: Props) {
+export default function DepartmentSelect({
+  value,
+  onSelect,
+  placeholder,
+  single, 
+}: Props) {
   const [visible, setVisible] = useState(false);
   const [search, setSearch] = useState("");
 
   // valeur sûre pour toutes les opérations
-  const safeValue = Array.isArray(value) ? value : [];
+  const safeValue = Array.isArray(value)
+    ? value
+    : value
+      ? [value] // ← IMPORTANT !
+      : [];
 
   const insets = useSafeAreaInsets();
   const topSpacing =
     Platform.OS === "ios" ? insets.top || 16 : StatusBar.currentHeight || 16;
 
   const filtered = useMemo(
-    () => DEPARTEMENTS.filter((d) =>
-      d.toLowerCase().includes(search.toLowerCase())
-    ),
+    () =>
+      DEPARTEMENTS.filter((d) =>
+        d.toLowerCase().includes(search.toLowerCase())
+      ),
     [search]
   );
 
   const toggleDepartment = (item: string) => {
-    if (safeValue.includes(item)) {
-      onSelect(safeValue.filter((v) => v !== item)); // retire
+    if (single) {
+      // mode sélection unique
+      onSelect([item]);
+      setVisible(false);
     } else {
-      onSelect([...safeValue, item]);                 // ajoute
+      // mode multi-select classique
+      if (safeValue.includes(item)) {
+        onSelect(safeValue.filter((v) => v !== item));
+      } else {
+        onSelect([...safeValue, item]);
+      }
     }
   };
 
@@ -98,12 +116,21 @@ export default function DepartmentSelect({ value, onSelect, placeholder }: Props
               return (
                 <TouchableOpacity
                   onPress={() => toggleDepartment(item)}
-                  className={`py-3 px-4 mb-2 rounded-xl border ${selected ? "bg-orange-600 border-orange-400" : "bg-[#1c2331] border-gray-700"
-                    }`}
+                  className={`py-3 px-4 mb-2 rounded-xl border ${
+                    selected
+                      ? "bg-orange-600 border-orange-400"
+                      : "bg-[#1c2331] border-gray-700"
+                  }`}
                 >
                   <View className="flex-row justify-between items-center">
                     <Text className="text-white text-[16px]">{item}</Text>
-                    {selected && <Ionicons name="checkmark-circle" size={22} color="#fff" />}
+                    {selected && (
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={22}
+                        color="#fff"
+                      />
+                    )}
                   </View>
                 </TouchableOpacity>
               );

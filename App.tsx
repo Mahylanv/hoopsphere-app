@@ -1,3 +1,5 @@
+// App.tsx
+
 import "./global.css";
 import "nativewind";
 import React from "react";
@@ -14,6 +16,7 @@ import {
   initialWindowMetrics,
 } from "react-native-safe-area-context";
 import { StatusBar, ActivityIndicator, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { RootStackParamList } from "./src/types";
@@ -150,18 +153,20 @@ function RootNavigator() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <StatusBar
-          translucent
-          backgroundColor="transparent"
-          barStyle="light-content"
-        />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+          <StatusBar
+            translucent
+            backgroundColor="transparent"
+            barStyle="light-content"
+          />
 
-        <PersistedNavContainer>
-          <RootNavigator />
-        </PersistedNavContainer>
-      </SafeAreaProvider>
-    </AuthProvider>
+          <PersistedNavContainer>
+            <RootNavigator />
+          </PersistedNavContainer>
+        </SafeAreaProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

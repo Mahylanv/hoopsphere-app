@@ -1,13 +1,15 @@
 // src/Profil/Joueurs/hooks/usePlayerProfile.ts
 
 import { useState, useEffect } from "react";
-import { getAuth, updateProfile, deleteUser } from "firebase/auth";
-import { Platform } from "react-native";
 import {
-  computePlayerStats,
-  PlayerAverages,
-} from "../../../utils/computePlayerStats";
-
+  getAuth,
+  updateProfile,
+  deleteUser,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updateEmail,
+} from "firebase/auth";
+import { Platform } from "react-native";
 import {
   doc,
   getDoc,
@@ -18,19 +20,18 @@ import {
   getDocs,
   serverTimestamp,
 } from "firebase/firestore";
-
 import {
   ref,
   uploadBytes,
   getDownloadURL,
   deleteObject,
-  listAll,
 } from "firebase/storage";
 
-import * as ImagePicker from "expo-image-picker";
-
 import { db, storage } from "../../../config/firebaseConfig";
-
+import {
+  computePlayerStats,
+  PlayerAverages,
+} from "../../../utils/computePlayerStats";
 import { computePlayerRating } from "../../../utils/computePlayerRating";
 
 export type MediaItem = {
@@ -42,19 +43,29 @@ export default function usePlayerProfile() {
   const auth = getAuth();
   const currentUser = auth.currentUser;
 
+  /* -----------------------------------------------------
+      STATES
+  ----------------------------------------------------- */
   const [loading, setLoading] = useState(true);
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [galleryLoading, setGalleryLoading] = useState(false);
 
-  const [editMode, setEditMode] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState<PlayerAverages | null>(null);
   const [rating, setRating] = useState<number>(0);
-
-  // 👉 La galerie contient maintenant une liste d’objets
   const [gallery, setGallery] = useState<MediaItem[]>([]);
 
+  const [emailError, setEmailError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [tempNewEmail, setTempNewEmail] = useState("");
+  const [passwordForReauth, setPasswordForReauth] = useState("");
+
+  /** Champs affichés dans l'app */
   const [fields, setFields] = useState({
+    prenom: "",
+    nom: "",
     dob: "",
     taille: "",
     poids: "",
@@ -63,44 +74,54 @@ export default function usePlayerProfile() {
     departement: "",
     club: "",
     email: "",
+    phone: "",
+    level: "",
+    experience: "",
     description: "",
+    avatar: "",
   });
 
-  const setField = (key: string, value: string) => {
-    setFields((prev) => ({ ...prev, [key]: value }));
+  /** Champs modifiables → sauvegardés uniquement quand on clique sur Enregistrer */
+  const [editFields, setEditFields] = useState(fields);
+
+  const setEditField = (k: string, v: string) => {
+    setEditFields((prev) => ({ ...prev, [k]: v }));
   };
 
-  /* ---------------------------------------
-      🔥 CHARGER PROFIL + GALERIE
-  --------------------------------------- */
+  /* -----------------------------------------------------
+      🔥 CHARGEMENT PROFIL + GALERIE
+  ----------------------------------------------------- */
   useEffect(() => {
     const fetchData = async () => {
       if (!currentUser) return;
 
-      const docRef = doc(db, "joueurs", currentUser.uid);
+      const refUser = doc(db, "joueurs", currentUser.uid);
+      const snap = await getDoc(refUser);
 
-      try {
-        const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data();
 
-        if (snap.exists()) {
-          const data = snap.data();
+        const loaded = {
+          prenom: data.prenom || "",
+          nom: data.nom || "",
+          dob: data.dob || "",
+          taille: data.taille || "",
+          poids: data.poids || "",
+          poste: data.poste || "",
+          main: data.main || "",
+          departement: data.departement || "",
+          club: data.club || "",
+          email: currentUser.email || "",
+          phone: data.phone || "",
+          level: data.level || "",
+          experience: data.experience || "",
+          description: data.description || "",
+          avatar: data.avatar || "",
+        };
 
-          setUser({ uid: currentUser.uid, ...data });
-
-          setFields({
-            dob: data.dob || "",
-            taille: data.taille || "",
-            poids: data.poids || "",
-            poste: data.poste || "",
-            main: data.main || "",
-            departement: data.departement || "",
-            club: data.club || "",
-            email: currentUser.email || "",
-            description: data.description || "",
-          });
-        }
-      } catch (error) {
-        console.log("🔥 ERREUR LECTURE FIRESTORE =", error);
+        setUser({ uid: currentUser.uid, ...loaded });
+        setFields(loaded);
+        setEditFields(loaded); // ← valeurs initiales dans le modal
       }
 
       await loadGallery();
@@ -110,68 +131,52 @@ export default function usePlayerProfile() {
     fetchData();
   }, []);
 
+  /* -----------------------------------------------------
+      🔥 RECHARGE STATS + RATING
+  ----------------------------------------------------- */
   useEffect(() => {
     const loadStats = async () => {
       if (!user?.uid) return;
-  
+
       const snap = await getDocs(
         collection(db, "joueurs", user.uid, "matches")
       );
-  
       const matches = snap.docs.map((d) => d.data()) as any[];
-  
-      console.log("MATCHES =", matches);
-  
+
       const averages = computePlayerStats(matches);
       setStats(averages);
-  
-      const overall = computePlayerRating(averages, user?.poste);
+
+      const overall = computePlayerRating(averages, user.poste);
       setRating(overall);
     };
-  
+
     loadStats();
   }, [user]);
-  
-  /* ---------------------------------------
-      📸📹 CHARGEMENT GALERIE (images + vidéos)
-  --------------------------------------- */
+
+  /* -----------------------------------------------------
+      🔥 GALERIE
+  ----------------------------------------------------- */
   const loadGallery = async () => {
     if (!currentUser) return;
-
     setGalleryLoading(true);
 
-    const fsRef = collection(db, "joueurs", currentUser.uid, "gallery");
-
     try {
+      const fsRef = collection(db, "joueurs", currentUser.uid, "gallery");
       const snaps = await getDocs(fsRef);
-      if (snaps.empty) {
-        setGallery([]); // galerie vide = ok
-        setGalleryLoading(false);
-        return;
-      }
 
-      // 🔥 Reset avant de recharger (mais UNE seule fois)
-      setGallery([]);
-
-      const items: MediaItem[] = snaps.docs
+      const list = snaps.docs
         .map((d) => d.data())
-        .filter((item) => item.url && item.type)
-        .map((item) => ({
-          url: item.url,
-          type: item.type,
-        }));
+        .filter((i: any) => i.url && i.type)
+        .map((i: any) => ({ url: i.url, type: i.type }));
 
-      setGallery(items);
+      setGallery(list);
     } catch (e) {
-      console.log("❌ ERREUR loadGallery =", e);
+      console.log("🔥 ERREUR loadGallery:", e);
     }
 
     setGalleryLoading(false);
   };
 
-  /* ---------------------------------------
-      📤 AJOUT PHOTO OU VIDÉO
-  --------------------------------------- */
   const addGalleryMedia = async (
     uri: string,
     isVideo: boolean,
@@ -180,159 +185,228 @@ export default function usePlayerProfile() {
     if (!currentUser) return;
     setGalleryLoading(true);
 
-    const extension = isVideo ? "mp4" : "jpg";
-    const fileName = `${Date.now()}.${extension}`;
-    const storagePath = `gallery/${currentUser.uid}/${fileName}`;
+    const ext = isVideo ? "mp4" : "jpg";
+    const filename = `${Date.now()}.${ext}`;
+    const storagePath = `gallery/${currentUser.uid}/${filename}`;
     const storageRef = ref(storage, storagePath);
 
     try {
-      let blob: Blob;
-
-      if (Platform.OS === "web" && file) {
-        // 📌 PATCH WEB — utiliser directement le File
-        blob = file;
-      } else {
-        // 📱 Mobile — convertir l’URI en Blob
-        const response = await fetch(uri);
-        blob = await response.blob();
-      }
+      const blob =
+        Platform.OS === "web" && file ? file : await (await fetch(uri)).blob();
 
       await uploadBytes(storageRef, blob);
       const url = await getDownloadURL(storageRef);
 
-      const fsRef = collection(db, "joueurs", currentUser.uid, "gallery");
-
-      await addDoc(fsRef, {
+      await addDoc(collection(db, "joueurs", currentUser.uid, "gallery"), {
         url,
         type: isVideo ? "video" : "image",
         createdAt: serverTimestamp(),
       });
 
-      setGallery((prev) => [
-        ...prev,
-        { url, type: isVideo ? "video" : "image" },
-      ]);
-    } catch (error: any) {
-      console.log("🔥 ERREUR addGalleryMedia =", error.message);
+      setGallery((p) => [...p, { url, type: isVideo ? "video" : "image" }]);
+    } catch (e) {
+      console.log("🔥 ERREUR addGalleryMedia:", e);
     }
 
     setGalleryLoading(false);
   };
 
-  /* ---------------------------------------
-      ❌ SUPPRESSION D’UNE PHOTO / VIDÉO
-  --------------------------------------- */
   const deleteGalleryMedia = async (url: string) => {
     if (!currentUser) return;
 
     try {
-      // Supprimer dans STORAGE
-      const storagePath = url.split("/o/")[1].split("?")[0];
-      const fileRef = ref(storage, decodeURIComponent(storagePath));
+      const storagePath = decodeURIComponent(url.split("/o/")[1].split("?")[0]);
+      await deleteObject(ref(storage, storagePath));
 
-      await deleteObject(fileRef);
-
-      // Supprimer dans FIRESTORE
       const fsRef = collection(db, "joueurs", currentUser.uid, "gallery");
       const snaps = await getDocs(fsRef);
 
-      snaps.forEach(async (d) => {
-        if (d.data().url === url) {
-          await deleteDoc(d.ref);
+      snaps.forEach(async (docSnap) => {
+        if (docSnap.data().url === url) {
+          await deleteDoc(docSnap.ref);
         }
       });
 
-      // Mise à jour instantanée
-      setGallery((prev) => prev.filter((item) => item.url !== url));
+      setGallery((p) => p.filter((m) => m.url !== url));
     } catch (e) {
-      console.log("🔥 ERREUR deleteGalleryMedia =", e);
+      console.log("🔥 ERREUR deleteGalleryMedia:", e);
     }
   };
 
-  /* ---------------------------------------
-      🖼️ AVATAR
-  --------------------------------------- */
+  /* -----------------------------------------------------
+      🔥 AVATAR (mise à jour immédiate dans UI & BDD)
+  ----------------------------------------------------- */
   const handleAvatarChange = async (imageUri: string) => {
-    try {
-      if (!currentUser) return;
+    if (!currentUser) return;
 
+    try {
       setAvatarLoading(true);
 
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
-
+      const blob = await (await fetch(imageUri)).blob();
       const storageRef = ref(storage, `avatars/${currentUser.uid}/avatar.jpg`);
 
       await uploadBytes(storageRef, blob);
-      const downloadUrl = await getDownloadURL(storageRef);
+      const url = await getDownloadURL(storageRef);
 
-      await updateProfile(currentUser, { photoURL: downloadUrl });
+      await updateProfile(currentUser, { photoURL: url });
+      await updateDoc(doc(db, "joueurs", currentUser.uid), { avatar: url });
 
-      await updateDoc(doc(db, "joueurs", currentUser.uid), {
-        avatar: downloadUrl,
-      });
-
-      setUser((prev: any) => ({ ...prev, avatar: downloadUrl }));
+      // UI : avatar visible immédiatement
+      setFields((p) => ({ ...p, avatar: url }));
+      setEditFields((p) => ({ ...p, avatar: url }));
+      setUser((p: any) => ({ ...p, avatar: url }));
     } catch (e) {
-      console.error("🔥 ERREUR handleAvatarChange =", e);
+      console.log("🔥 ERREUR avatar:", e);
     } finally {
       setAvatarLoading(false);
     }
   };
 
-  /* ---------------------------------------
-      💾 SAUVEGARDE PROFIL
-  --------------------------------------- */
-  const saveProfile = async () => {
-    if (!currentUser) return;
+  const reauthenticate = async (password: string) => {
+    if (!currentUser || !currentUser.email) return false;
 
     try {
-      const refUser = doc(db, "joueurs", currentUser.uid);
-      await updateDoc(refUser, { ...fields });
-
-      setUser((prev: any) => ({ ...prev, ...fields }));
-      setEditMode(false);
-    } catch (e) {
-      console.log("🔥 ERREUR saveProfile =", e);
-    }
-  };
-
-  /* ---------------------------------------
-      ❌ SUPPRESSION COMPTE
-  --------------------------------------- */
-  const deleteAccount = async () => {
-    if (!currentUser) return;
-
-    try {
-      await deleteUser(currentUser);
+      const cred = EmailAuthProvider.credential(currentUser.email, password);
+      await reauthenticateWithCredential(currentUser, cred);
       return true;
     } catch (e) {
+      console.log("❌ ERREUR RE-AUTH :", e);
       return false;
     }
   };
 
+  /* -----------------------------------------------------
+      🔥 SAUVEGARDE (BDD uniquement quand on clique)
+  ----------------------------------------------------- */
+  const saveProfile = async () => {
+    if (!currentUser) return;
+
+    /* -----------------------------------------------------
+        VALIDATION EMAIL + TÉLÉPHONE
+    ----------------------------------------------------- */
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const cleanedPhone = editFields.phone.replace(/\s/g, "");
+
+    if (!emailRegex.test(editFields.email)) {
+      setEmailError("Email invalide");
+      return;
+    }
+
+    if (!/^(\+33|0)[67]\d{8}$/.test(cleanedPhone)) {
+      setPhoneError("Numéro invalide");
+      return;
+    }
+
+    /* -----------------------------------------------------
+        CAS 1 : L’EMAIL A CHANGÉ → demander mot de passe
+    ----------------------------------------------------- */
+    const emailChanged = editFields.email !== fields.email;
+
+    if (emailChanged) {
+      setTempNewEmail(editFields.email);   // ⭐ sauvegarde l’email à appliquer
+    }
+
+    if (emailChanged && !passwordForReauth) {
+      // 👉 Affiche la modal dans EditProfileModal
+      setPasswordModalVisible(true);
+      return; // On stoppe ici : pas de sauvegarde tant que mdp non fourni
+    }
+
+    try {
+      /* -----------------------------------------------------
+          1️⃣ Mise à jour Firestore (tous les champs sauf email pour l'instant)
+      ----------------------------------------------------- */
+      const refUser = doc(db, "joueurs", currentUser.uid);
+      await updateDoc(refUser, { ...editFields, email: fields.email });
+      // ⚠️ on garde l'ancien email tant que reauth pas faite
+
+      /* -----------------------------------------------------
+          2️⃣ SI L’EMAIL DOIT ÊTRE MODIFIÉ → réauth + update Auth
+      ----------------------------------------------------- */
+      if (emailChanged) {
+        console.log("📩 Tentative de mise à jour email...");
+
+        // Réauth
+        const ok = await reauthenticate(passwordForReauth);
+        if (!ok) {
+          alert("❌ Mot de passe incorrect.");
+          return;
+        }
+
+        // Mise à jour Firebase Auth
+        await updateEmail(currentUser, editFields.email);
+
+        // Mise à jour Firestore
+        await updateDoc(refUser, { email: editFields.email });
+
+        console.log("✅ Email mis à jour !");
+      }
+
+      /* -----------------------------------------------------
+          3️⃣ Mise à jour de l’UI
+      ----------------------------------------------------- */
+      setFields(editFields);
+      setUser((prev: any) => ({
+        ...prev,
+        ...editFields,
+        email: editFields.email,
+      }));
+
+      // On reset le password
+      setPasswordForReauth("");
+      setPasswordModalVisible(false);
+    } catch (e) {
+      console.log("🔥 ERREUR saveProfile:", e);
+      alert("Impossible de sauvegarder les modifications.");
+    }
+  };
+
+  /* -----------------------------------------------------
+      ❌ SUPPRESSION COMPTE
+  ----------------------------------------------------- */
+  const deleteAccount = async () => {
+    if (!currentUser) return false;
+    try {
+      await deleteUser(currentUser);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  /* -----------------------------------------------------
+      EXPORTS
+  ----------------------------------------------------- */
   return {
     user,
     loading,
     avatarLoading,
     galleryLoading,
 
-    gallery, // <--- contient { url, type }
-
-    editMode,
-    setEditMode,
-
+    gallery,
     fields,
-    setField,
+    editFields,
+    setEditField,
 
     handleAvatarChange,
     saveProfile,
     deleteAccount,
 
-    // Upload & delete
     addGalleryMedia,
     deleteGalleryMedia,
+
     stats,
     rating,
+    emailError,
+    setEmailError,
+    phoneError,
+    setPhoneError,
+
+    passwordModalVisible,
+    setPasswordModalVisible,
+    passwordForReauth,
+    setPasswordForReauth,
+    tempNewEmail,
+    setTempNewEmail,
   };
 }
