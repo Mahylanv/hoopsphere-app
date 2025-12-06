@@ -1,7 +1,15 @@
 // src/Profil/Joueur/profiljoueur.tsx
 
 import React, { useRef } from "react";
-import { Text, View, Alert, Animated, Dimensions } from "react-native";
+import {
+  Text,
+  View,
+  Alert,
+  Animated,
+  Dimensions,
+  ScrollView,
+  Easing,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as Sharing from "expo-sharing";
@@ -52,6 +60,8 @@ export default function ProfilJoueur() {
   const editModalRef = useRef<Modalize>(null);
   const openEditModal = () => editModalRef.current?.open();
   const closeEditModal = () => editModalRef.current?.close();
+  const scrollRef = useRef<ScrollView>(null);
+  const autoScroll = useRef(new Animated.Value(0)).current;
 
   /* -----------------------------------------------------
       🔥 ANIMATION SCROLL
@@ -119,6 +129,28 @@ export default function ProfilJoueur() {
     }
   };
 
+  React.useEffect(() => {
+    const id = autoScroll.addListener(({ value }) => {
+      scrollRef.current?.scrollTo({
+        y: value,
+        animated: false,
+      });
+    });
+
+    setTimeout(() => {
+      Animated.timing(autoScroll, {
+        toValue: CARD_HEIGHT * 0.4,
+        duration: 1200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    }, 300);
+
+    return () => {
+      autoScroll.removeListener(id);
+    };
+  }, []);
+
   /* -----------------------------------------------------
       🟠 LOADING
   ----------------------------------------------------- */
@@ -129,12 +161,14 @@ export default function ProfilJoueur() {
       </SafeAreaView>
     );
   }
+
   /* -----------------------------------------------------
       🔥 RENDER
   ----------------------------------------------------- */
   return (
     <SafeAreaView className="flex-1 bg-[#0E0D0D]">
       <Animated.ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         contentContainerStyle={{

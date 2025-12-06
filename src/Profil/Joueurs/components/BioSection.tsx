@@ -305,8 +305,7 @@ export default function BioSection({
           ) : (
             <Text className="text-lg text-white">
               {phone ? formatPhone(phone) : "-"}
-            </Text>
-          )}
+            </Text>          )}
         </View>
 
         <View className="w-1/2">
