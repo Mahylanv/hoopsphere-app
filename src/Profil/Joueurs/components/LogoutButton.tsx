@@ -29,10 +29,7 @@ export default function LogoutButton() {
 
   return (
     <View className="items-center mt-10">
-      <Animatable.View
-        animation="pulse"
-        iterationCount="infinite"
-        duration={2000}
+      <View
       >
         <TouchableOpacity
           onPress={handleLogout}
@@ -40,7 +37,7 @@ export default function LogoutButton() {
         >
           <Text className="text-white text-lg font-bold">Déconnexion</Text>
         </TouchableOpacity>
-      </Animatable.View>
+      </View>
     </View>
   );
 }

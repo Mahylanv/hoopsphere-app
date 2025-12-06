@@ -1,4 +1,4 @@
-//
+// src/Profil/Clubs/EditClubProfile.tsx
 
 import React, { useState, useEffect } from "react";
 import {
@@ -27,7 +27,7 @@ export default function EditClubProfile() {
 
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
-  const [department, setDepartment] = useState("");
+  const [department, setDepartment] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
@@ -78,7 +78,7 @@ export default function EditClubProfile() {
       });
 
       Alert.alert("Succès 🎉", "Informations mises à jour !");
-      navigation.goBack();
+      navigation.navigate("ProfilClub" as never);
     } catch (err) {
       console.error(err);
       Alert.alert("Erreur", "Impossible d’enregistrer les modifications.");
