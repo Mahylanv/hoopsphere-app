@@ -88,6 +88,21 @@ export default function usePlayerProfile() {
     setEditFields((prev) => ({ ...prev, [k]: v }));
   };
 
+  const normalizePoste = (poste: string) => {
+    if (!poste) return "";
+  
+    const map: Record<string, string> = {
+      "Pivot": "PIV",
+      "Ailier": "AI",
+      "Ailier Fort": "AF",
+      "Meneur": "M",
+      "Arrière": "ARR",
+    };
+  
+    return map[poste] ?? poste; // si déjà un code => pas modifié
+  };
+  
+
   /* -----------------------------------------------------
       🔥 CHARGEMENT PROFIL + GALERIE
   ----------------------------------------------------- */
@@ -107,7 +122,7 @@ export default function usePlayerProfile() {
           dob: data.dob || "",
           taille: data.taille || "",
           poids: data.poids || "",
-          poste: data.poste || "",
+          poste: normalizePoste(data.poste || ""),
           main: data.main || "",
           departement: data.departement || "",
           club: data.club || "",
@@ -306,20 +321,25 @@ export default function usePlayerProfile() {
       🔥 SAUVEGARDE (BDD uniquement quand on clique)
   ----------------------------------------------------- */
   const saveProfile = async () => {
-    if (!currentUser) return;
+    console.log("🔥 saveProfile CALLED");
+    if (!currentUser) {
+      console.log("❌ currentUser absent");
+      return;
+    }
 
     /* -----------------------------------------------------
         VALIDATION EMAIL + TÉLÉPHONE
     ----------------------------------------------------- */
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const cleanedPhone = editFields.phone.replace(/\s/g, "");
+    const cleanedPhone = (editFields.phone ?? "").replace(/\s/g, "");
 
     if (!emailRegex.test(editFields.email)) {
       setEmailError("Email invalide");
       return;
     }
 
-    if (!/^(\+33|0)[67]\d{8}$/.test(cleanedPhone)) {
+    // Autoriser vide + numéro valide
+    if (cleanedPhone !== "" && !/^(\+33|0)[67]\d{8}$/.test(cleanedPhone)) {
       setPhoneError("Numéro invalide");
       return;
     }
@@ -382,6 +402,9 @@ export default function usePlayerProfile() {
       // On reset le password
       setPasswordForReauth("");
       setPasswordModalVisible(false);
+
+      console.log("Firestore email:", fields.email);
+      console.log("Auth email:", currentUser.email);
     } catch (e) {
       console.log("🔥 ERREUR saveProfile:", e);
       alert("Impossible de sauvegarder les modifications.");

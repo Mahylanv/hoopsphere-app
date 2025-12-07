@@ -22,6 +22,7 @@ import * as Sharing from "expo-sharing";
 import usePlayerProfile from "./hooks/usePlayerProfile"; // adapte le path exactement
 import { computePlayerStats } from "../../utils/computePlayerStats";
 import { collection, getDocs } from "firebase/firestore";
+import { computePlayerRating } from "../../utils/computePlayerRating";
 
 import { RootStackParamList } from "../../types";
 import { db } from "../../config/firebaseConfig";
@@ -44,6 +45,7 @@ export default function JoueurDetail() {
   const [joueur, setJoueur] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
+  const [rating, setRating] = useState<number | null>(null);
 
   /* =============================================
      🔥 FETCH DU JOUEUR PAR UID
@@ -78,7 +80,13 @@ export default function JoueurDetail() {
           collection(db, "joueurs", uid, "matches")
         );
         const matches = matchSnap.docs.map((d) => d.data() as any);
-        setStats(computePlayerStats(matches));
+
+        const averages = computePlayerStats(matches);
+        setStats(averages);
+
+        // Calcul du rating
+        const finalRating = computePlayerRating(averages, raw.poste);
+        setRating(finalRating);
       } catch (e) {
         console.log("❌ Erreur fetch joueur :", e);
       } finally {
@@ -248,13 +256,14 @@ export default function JoueurDetail() {
             options={{ format: "png", quality: 1 }}
             style={{ borderRadius: 20, overflow: "hidden" }}
           >
-            <JoueurCard joueur={joueur} showActionsButton={false} />
+            <JoueurCard joueur={joueur} showActionsButton={false} rating={rating ?? undefined} />
           </ViewShot>
 
           <View style={{ position: "absolute" }}>
             <JoueurCard
               joueur={joueur}
               stats={stats}
+              rating={rating ?? undefined}
               onPressActions={openSheet}
             />
           </View>
