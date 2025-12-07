@@ -190,7 +190,10 @@ export default function GallerySection({
                 key={index}
                 onPress={() =>
                   item.type === "video"
-                    ? navigation.navigate("FullVideo", { url: item.url }) // ⭐ FULL VIDEO SCREEN
+                    ? navigation.navigate("FullMediaViewer", {
+                      media: [{ url: item.url, type: "video" }],
+                      startIndex: 0,
+                    })
                     : navigation.navigate("FullMediaViewer", {
                       media: cleanMedia,
                       startIndex: index,

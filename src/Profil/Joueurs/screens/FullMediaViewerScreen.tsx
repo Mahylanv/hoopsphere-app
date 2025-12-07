@@ -1,3 +1,5 @@
+// src/Profil/Joueurs/screens/FullMediaViewerScreen.tsx
+
 import React, { useRef, useState } from "react";
 import {
   View,
@@ -13,7 +15,45 @@ import ImageViewer from "react-native-image-zoom-viewer";
 const { height, width } = Dimensions.get("window");
 
 export default function FullMediaViewerScreen({ route, navigation }: any) {
-  const { media, startIndex } = route.params;
+  // 🔥 Sécurisation : si media absent → tableau vide
+  const media = route.params?.media ?? [];
+
+  // 🔥 Si media vide → écran fallback (anti-crash)
+  if (!Array.isArray(media) || media.length === 0) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "black",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Text style={{ color: "white" }}>Aucun média à afficher</Text>
+
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{
+            marginTop: 20,
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+            borderRadius: 20,
+            backgroundColor: "#333",
+          }}
+        >
+          <Text style={{ color: "white" }}>Retour</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // 🔥 startIndex sécurisé
+  const startIndex =
+    typeof route.params?.startIndex === "number" &&
+    route.params.startIndex >= 0 &&
+    route.params.startIndex < media.length
+      ? route.params.startIndex
+      : 0;
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -21,8 +61,7 @@ export default function FullMediaViewerScreen({ route, navigation }: any) {
   const [currentIndex, setCurrentIndex] = useState(startIndex);
 
   const onScroll = (event: any) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    const index = Math.round(offsetY / height);
+    const index = Math.round(event.nativeEvent.contentOffset.y / height);
     if (index !== currentIndex) setCurrentIndex(index);
   };
 
@@ -35,8 +74,8 @@ export default function FullMediaViewerScreen({ route, navigation }: any) {
             enableSwipeDown={false}
             backgroundColor="black"
             saveToLocalByLongPress={false}
-            renderHeader={() => <></>} // ❌ Enlever 1/1 original
-            renderIndicator={() => <></>} // ❌ Désactiver indicator original
+            renderHeader={() => <></>} // supprime le header de base
+            renderIndicator={() => <></>} // supprime le compteur 1/1 intégré
           />
         </View>
       );
