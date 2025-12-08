@@ -1,4 +1,4 @@
-// src/screens/auth/InscriptionJoueurStep1.tsx
+// src/Inscription/Joueurs/InscriptionJoueurStep1.tsx
 
 import React, { useState } from "react";
 import {
@@ -7,103 +7,88 @@ import {
   TextInput,
   Pressable,
   StatusBar,
-  Alert,
   TouchableOpacity,
-  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 
-type InscriptionStep1NavProp = NativeStackNavigationProp<
+type NavProps = NativeStackNavigationProp<
   RootStackParamList,
   "InscriptionJoueurStep1"
 >;
 
 export default function InscriptionJoueurStep1() {
-  const navigation = useNavigation<InscriptionStep1NavProp>();
+  const navigation = useNavigation<NavProps>();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // ✅ Vérifications
+  // -------- VALIDATION --------
   const isValidEmail = (email: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  const isValidPassword = (pwd: string) => {
-    const hasMinLength = pwd.length >= 8;
-    const hasUppercase = /[A-Z]/.test(pwd);
-    const hasNumber = /\d/.test(pwd);
-    return hasMinLength && hasUppercase && hasNumber;
-  };
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /\d/.test(password);
 
+  const isValidPassword = hasMinLength && hasUppercase && hasNumber;
+
+  // -------- CONTINUE --------
   const handleContinue = async () => {
     setSubmitted(true);
 
-    if (!isValidEmail(email) || !isValidPassword(password)) {
-      Alert.alert("Erreur", "Merci de vérifier vos informations.");
-      return;
-    }
+    if (!isValidEmail(email) || !isValidPassword) return;
 
     setLoading(true);
-    try {
-      // 👉 On passe les données à l'étape suivante
-      navigation.navigate("InscriptionJoueurStep2", { email, password });
-    } catch (err: any) {
-      Alert.alert("Erreur", err.message || "Une erreur est survenue.");
-    } finally {
-      setLoading(false);
-    }
+    navigation.navigate("InscriptionJoueurStep2", { email, password });
+    setLoading(false);
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0E0D0D" }}>
-      <StatusBar barStyle="light-content" translucent />
+    <SafeAreaView className="flex-1 bg-[#0E0D0D] px-6">
+      <StatusBar barStyle="light-content" />
 
-      {/* ⬅️ Header haut gauche */}
-      <View className="px-6 mt-6">
-        <Pressable
+      {/* ---------- HEADER ---------- */}
+      <View className="flex-row items-center mt-6 mb-8">
+        <TouchableOpacity
           onPress={() => navigation.goBack()}
-          className="flex-row items-center space-x-3"
+          className="mr-3 p-2"
         >
-          <Image
-            source={require("../../../assets/arrow-left.png")}
-            className="w-9 h-9"
-          />
-          <Text className="text-white text-xl ml-3">Inscription joueur</Text>
-        </Pressable>
+          <Ionicons name="arrow-back" size={26} color="#fff" />
+        </TouchableOpacity>
+
+        <Text className="text-white text-xl font-semibold">
+          Inscription joueur
+        </Text>
       </View>
 
-      {/* 🧾 Formulaire */}
-      <View className="flex-1 justify-center px-6 space-y-4">
-        {/* Email */}
-        <View>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="E-mail"
-            placeholderTextColor="#ccc"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            textContentType="emailAddress"
-            className="border border-gray-400 rounded-md h-14 px-4 py-0 text-white text-lg"
-          />
+      {/* ---------- PAGE CENTRÉE ---------- */}
+      <View className="flex-1 justify-center">
+        {/* ---------- EMAIL ---------- */}
+        <TextInput
+          value={email}
+          onChangeText={setEmail}
+          placeholder="E-mail"
+          placeholderTextColor="#ccc"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          className="border border-gray-500 bg-[#151515] rounded-xl h-14 px-4 text-white text-lg"
+        />
 
-          {submitted && !isValidEmail(email) && (
-            <Text className="text-sm text-red-500 mt-1">
-              Format d'email invalide
-            </Text>
-          )}
-        </View>
+        {submitted && !isValidEmail(email) && (
+          <Text className="text-red-500 text-sm mt-1">
+            Format d'email invalide
+          </Text>
+        )}
 
-        {/* Mot de passe */}
-        <View className="relative mt-4">
+        {/* ---------- PASSWORD ---------- */}
+        <View className="relative mt-5">
           <TextInput
             value={password}
             onChangeText={setPassword}
@@ -111,8 +96,9 @@ export default function InscriptionJoueurStep1() {
             placeholderTextColor="#ccc"
             secureTextEntry={!showPassword}
             autoCapitalize="none"
-            className="border border-gray-400 rounded-md h-14 px-4 pr-10 text-white text-lg"
+            className="border border-gray-500 bg-[#151515] rounded-xl h-14 px-4 pr-10 text-white text-lg"
           />
+
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
             className="absolute right-3 top-4"
@@ -125,21 +111,21 @@ export default function InscriptionJoueurStep1() {
           </TouchableOpacity>
         </View>
 
-        {/* Règles mot de passe */}
-        {submitted && !isValidPassword(password) && (
-          <View className="space-y-1 mt-2">
-            <Text className="text-sm text-red-500">• 8 caractères minimum</Text>
-            <Text className="text-sm text-red-500">• 1 majuscule</Text>
-            <Text className="text-sm text-red-500">• 1 chiffre</Text>
+        {/* ---------- PASSWORD CHECKS ---------- */}
+        {(password.length > 0 || submitted) && (
+          <View className="mt-4 space-y-1">
+            <ValidationLine valid={hasMinLength} label="8 caractères minimum" />
+            <ValidationLine valid={hasUppercase} label="1 lettre majuscule" />
+            <ValidationLine valid={hasNumber} label="1 chiffre" />
           </View>
         )}
 
-        {/* Bouton Continuer */}
+        {/* ---------- BOUTON CONTINUER ---------- */}
         <Pressable
           onPress={handleContinue}
           disabled={loading}
-          className={`py-4 rounded-2xl items-center mt-4 ${
-            !isValidEmail(email) || !isValidPassword(password)
+          className={`py-4 rounded-2xl items-center mt-6 ${
+            !isValidEmail(email) || !isValidPassword
               ? "bg-gray-600 opacity-60"
               : "bg-orange-500"
           }`}
@@ -148,7 +134,47 @@ export default function InscriptionJoueurStep1() {
             {loading ? "Chargement..." : "Continuer"}
           </Text>
         </Pressable>
+
+        {/* ---------- LIEN CONNEXION ---------- */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Connexion")}
+          className="mt-4 self-center"
+        >
+          <Text className="text-gray-300">
+            Déjà un compte ?{" "}
+            <Text className="text-orange-500 font-semibold">Se connecter</Text>
+          </Text>
+        </TouchableOpacity>
+
+        {/* ---------- STEP INDICATOR (PLUS PETIT + CENTRÉ) ---------- */}
+        <View className="flex-row items-center justify-center mt-6">
+          <View className="w-2 h-2 rounded-full bg-orange-500" />
+          <View className="w-6 h-[2px] bg-gray-600 mx-1" />
+          <View className="w-2 h-2 rounded-full bg-gray-600" />
+          <View className="w-6 h-[2px] bg-gray-600 mx-1" />
+          <View className="w-2 h-2 rounded-full bg-gray-600" />
+        </View>
       </View>
     </SafeAreaView>
+  );
+}
+
+/* ---------------------------------------------------------
+   🔧 Composant Ligne de Validation Live
+--------------------------------------------------------- */
+function ValidationLine({ valid, label }: { valid: boolean; label: string }) {
+  return (
+    <View className="flex-row items-center">
+      <Ionicons
+        name={valid ? "checkmark-circle" : "close-circle"}
+        size={18}
+        color={valid ? "#22c55e" : "#ef4444"}
+      />
+      <Text
+        className={`ml-2 text-sm ${valid ? "text-green-400" : "text-red-400"}`}
+      >
+        {label}
+      </Text>
+    </View>
   );
 }
