@@ -1,26 +1,35 @@
-import React, { useState } from 'react';
+// src/Inscription/Clubs/InscriptionClubStep2.tsx
+
+import React, { useState } from "react";
 import {
   View,
   Text,
   TextInput,
   Pressable,
   TouchableOpacity,
-  Image,
   StatusBar,
   ScrollView,
   Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types';
+  Platform,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
+import { RootStackParamList } from "../../types";
 
 // Firebase
-import { db } from '../../config/firebaseConfig'; 
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from "../../config/firebaseConfig";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
-type NavProps = NativeStackNavigationProp<RootStackParamList, 'InscriptionClubStep2'>;
-type RouteProps = RouteProp<RootStackParamList, 'InscriptionClubStep2'>;
+// Component
+import DepartmentSelect from "../../Components/DepartmentSelect";
+
+type NavProps = NativeStackNavigationProp<
+  RootStackParamList,
+  "InscriptionClubStep2"
+>;
+type RouteProps = RouteProp<RootStackParamList, "InscriptionClubStep2">;
 
 export default function InscriptionClubStep2() {
   const navigation = useNavigation<NavProps>();
@@ -29,20 +38,22 @@ export default function InscriptionClubStep2() {
   const uid = params.uid;
   const emailFromAuth = params.email;
 
-  const [clubName, setClubName] = useState('');
-  const [department, setDepartment] = useState('');
-  const [city, setCity] = useState('');
-  const [selection, setSelection] =
-    useState<'masculines' | 'feminines' | 'les deux' | null>(null);
+  const [clubName, setClubName] = useState("");
+  const [department, setDepartment] = useState<string[]>([]); // ← array pour DepartmentSelect
+  const [city, setCity] = useState("");
+  const [selection, setSelection] = useState<
+    "masculines" | "feminines" | "les deux" | null
+  >(null);
 
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const isValid = Boolean(clubName && department && city && selection && uid);
+  const isValid =
+    Boolean(clubName && city && selection && uid) && department.length > 0;
 
   const saveClub = async () => {
     if (!uid) {
-      setErr('Session expirée. Merci de recommencer l’inscription.');
+      setErr("Session expirée. Merci de recommencer l’inscription.");
       return;
     }
     if (!isValid || saving) return;
@@ -52,12 +63,12 @@ export default function InscriptionClubStep2() {
 
     try {
       await setDoc(
-        doc(db, 'clubs', uid),
+        doc(db, "clubs", uid),
         {
           uid,
           email: emailFromAuth,
           name: clubName.trim(),
-          department: department.trim(),
+          department: department[0], // single select
           city: city.trim(),
           teams: selection,
           createdAt: serverTimestamp(),
@@ -66,92 +77,123 @@ export default function InscriptionClubStep2() {
         { merge: true }
       );
 
-      navigation.navigate('Home');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "ProfilClub", params: { uid } }],
+      });
     } catch (e) {
       console.error(e);
       setErr("Impossible d'enregistrer les infos du club. Réessaie.");
-      Alert.alert('Erreur', "Impossible d'enregistrer les infos du club. Réessaie.");
+      Alert.alert(
+        "Erreur",
+        "Impossible d'enregistrer les infos du club. Réessaie."
+      );
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-black px-6">
+    <SafeAreaView className="flex-1 bg-[#0E0D0D] px-6">
       <StatusBar barStyle="light-content" />
-      <ScrollView contentContainerStyle={{ paddingVertical: 20 }}>
-        {/* Header */}
-        <View className="flex-row items-center mt-4 mb-8">
-          <Pressable onPress={() => navigation.goBack()}>
-            <Image
-              source={require('../../../assets/arrow-left.png')}
-              className="w-6 h-6"
-              resizeMode="contain"
-            />
-          </Pressable>
-          <Text className="text-white text-xl font-semibold ml-4">Infos de club</Text>
-        </View>
 
-        {/* Form */}
-        <View className="space-y-5">
+      {/* ---------- HEADER ---------- */}
+      <View className="flex-row items-center mt-6 mb-6">
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color="white" />
+        </TouchableOpacity>
+        <Text className="text-white text-xl ml-4">Informations du club</Text>
+      </View>
+
+      {/* ---------- FORMULAIRE ---------- */}
+      <View className="flex-1 justify-center">
+        <View className="w-full max-w-md">
+          {/* Nom du club */}
           <TextInput
-            placeholder="Nom de club"
+            placeholder="Nom du club"
             placeholderTextColor="#ccc"
             value={clubName}
             onChangeText={setClubName}
-            className="border border-gray-500 rounded-lg px-4 py-3 text-white"
+            className="border border-gray-600 rounded-xl px-4 h-14 text-white bg-[#111] mb-6"
           />
-          <TextInput
-            placeholder="Département"
-            placeholderTextColor="#ccc"
-            value={department}
-            onChangeText={setDepartment}
-            className="border border-gray-500 rounded-lg px-4 py-3 text-white"
-          />
+
+          {/* Département */}
+          <View className="mb-6">
+            <DepartmentSelect
+              value={department}
+              onSelect={setDepartment}
+              placeholder="Sélectionner un département"
+              single
+            />
+          </View>
+
+          {/* Ville */}
           <TextInput
             placeholder="Ville"
             placeholderTextColor="#ccc"
             value={city}
             onChangeText={setCity}
-            className="border border-gray-500 rounded-lg px-4 py-3 text-white"
+            className="border border-gray-600 rounded-xl px-4 h-14 text-white bg-[#111] mb-8"
           />
 
-          {/* Boutons de sélection */}
-          {(['masculines', 'feminines', 'les deux'] as const).map((option) => (
-            <TouchableOpacity
-              key={option}
-              onPress={() => setSelection(option)}
-              className={`px-4 py-3 rounded-lg border ${selection === option ? 'border-orange-500 text-orange-500' : 'border-gray-500'
-                }`}
-              style={{ backgroundColor: selection === option ? '#1f1f1f' : 'transparent' }}
-            >
-              <Text
-                className={`text-white ${selection === option ? 'text-orange-500 font-semibold' : ''
+          {/* ---------- ÉQUIPES CONCERNÉES ---------- */}
+          <Text className="text-white mb-3 text-center">
+            Équipes concernées
+          </Text>
+
+          <View className="flex-row justify-between mb-8">
+            {(["masculines", "feminines", "les deux"] as const).map((opt) => {
+              const selected = selection === opt;
+
+              return (
+                <TouchableOpacity
+                  key={opt}
+                  onPress={() => setSelection(opt)}
+                  className={`flex-1 mx-1 px-3 py-3 rounded-lg border ${
+                    selected
+                      ? "border-orange-500 bg-orange-500/20"
+                      : "border-gray-600"
                   }`}
-              >
-                {option === 'masculines'
-                  ? 'équipes masculines'
-                  : option === 'feminines'
-                    ? 'équipes féminines'
-                    : 'les deux'}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                >
+                  <Text
+                    className={`text-center text-sm ${
+                      selected ? "text-orange-400 font-semibold" : "text-white"
+                    }`}
+                  >
+                    {opt === "masculines"
+                      ? "Masculines"
+                      : opt === "feminines"
+                        ? "Féminines"
+                        : "Les deux"}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
-          {err ? <Text className="text-red-400">{err}</Text> : null}
+          {err && <Text className="text-red-400 mb-4 text-center">{err}</Text>}
 
+          {/* ---------- BOUTON ---------- */}
           <Pressable
             disabled={!isValid || saving}
             onPress={saveClub}
-            className={`mt-4 py-4 rounded-xl items-center ${isValid ? 'bg-orange-500' : 'bg-gray-600'
-              }`}
+            className={`py-4 rounded-xl items-center ${
+              isValid ? "bg-orange-500" : "bg-gray-600 opacity-40"
+            }`}
           >
-            <Text className="text-white font-bold text-base">
-              {saving ? '...' : 'Continuer'}
+            <Text className="text-white font-bold text-lg">
+              {saving ? "Enregistrement..." : "Continuer"}
             </Text>
           </Pressable>
+
+          {/* ---------- STEPPER ---------- */}
+          <View className="flex-row justify-center items-center mt-6">
+            <View className="w-2 h-2 rounded-full bg-gray-600" />
+            <View className="w-6 h-[2px] bg-gray-600 mx-1" />
+            <View className="w-2 h-2 rounded-full bg-orange-500" />
+          </View>
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
