@@ -1,5 +1,3 @@
-// src/Inscription/Clubs/InscriptionClub.tsx
-
 import React, { useState, useRef } from "react";
 import {
   View,
@@ -14,11 +12,10 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
-import { Feather } from "@expo/vector-icons";
 import { TextInput as RNTextInput } from "react-native";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../config/firebaseConfig";
@@ -38,20 +35,16 @@ export default function InscriptionClub() {
 
   const passwordRef = useRef<RNTextInput>(null);
 
-  // --------- VALIDATIONS ----------
+  // VALIDATION
   const isValidEmail = (v: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
-  const isValidPassword = (v: string) => {
-    const hasMin = v.length >= 8;
-    const hasUpper = /[A-Z]/.test(v);
-    const hasNumber = /\d/.test(v);
-    return hasMin && hasUpper && hasNumber;
-  };
+  const isValidPassword = (v: string) =>
+    v.length >= 8 && /[A-Z]/.test(v) && /\d/.test(v);
 
   const formValid = isValidEmail(email) && isValidPassword(password);
 
-  // --------- CONTINUE ----------
+  // CONTINUE
   const handleContinue = async () => {
     setSubmitted(true);
 
@@ -84,18 +77,16 @@ export default function InscriptionClub() {
     }
   };
 
-  const isWeb = Platform.OS === "web";
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0E0D0D" }}>
       <StatusBar barStyle="light-content" />
 
-      {isWeb ? (
-        // ------- MODE WEB : pas de TouchableWithoutFeedback -------
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
           className="flex-1 px-6"
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          {/* ---------- HEADER ---------- */}
+          {/* HEADER */}
           <View className="flex-row items-center mt-6 mb-4">
             <TouchableOpacity onPress={() => navigation.goBack()}>
               <Ionicons name="arrow-back" size={28} color="white" />
@@ -104,19 +95,17 @@ export default function InscriptionClub() {
             <Text className="text-white text-xl ml-4">Inscription club</Text>
           </View>
 
-          {/* ---------- CONTENU CENTRÉ ---------- */}
+          {/* CONTENU */}
           <View className="flex-1 justify-center items-center">
-            {/* Titre */}
             <Text className="text-white text-3xl font-bold text-center mb-4">
               Crée ton espace club
             </Text>
 
-            {/* Sous-titre */}
             <Text className="text-gray-400 text-center mb-8">
               Étape 1 — Identifiants du compte
             </Text>
 
-            {/* ---------- FORMULAIRE ---------- */}
+            {/* FORMULAIRE */}
             <View className="w-full max-w-md">
               {/* Email */}
               <TextInput
@@ -195,7 +184,7 @@ export default function InscriptionClub() {
               {err && <Text className="text-red-400 text-sm mt-2">{err}</Text>}
             </View>
 
-            {/* ---------- BOUTON ---------- */}
+            {/* BOUTON */}
             <Pressable
               disabled={!formValid}
               onPress={handleContinue}
@@ -206,7 +195,7 @@ export default function InscriptionClub() {
               <Text className="text-white font-bold text-lg">Continuer</Text>
             </Pressable>
 
-            {/* ---------- LIEN CONNEXION ---------- */}
+            {/* LIEN CONNEXION */}
             <TouchableOpacity
               onPress={() => navigation.navigate("Connexion")}
               className="mt-6"
@@ -219,7 +208,7 @@ export default function InscriptionClub() {
               </Text>
             </TouchableOpacity>
 
-            {/* ---------- STEPPER ---------- */}
+            {/* STEPPER */}
             <View className="flex-row justify-center items-center mt-8 mb-6">
               <View className="w-2 h-2 rounded-full bg-orange-500" />
               <View className="w-6 h-[2px] bg-gray-600 mx-1" />
@@ -229,38 +218,7 @@ export default function InscriptionClub() {
             </View>
           </View>
         </KeyboardAvoidingView>
-      ) : (
-        // ------- MODE MOBILE (iOS/Android) --------
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <KeyboardAvoidingView
-            className="flex-1 px-6"
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-          >
-            {/* ---------- HEADER ---------- */}
-            <View className="flex-row items-center mt-6 mb-4">
-              <TouchableOpacity onPress={() => navigation.goBack()}>
-                <Ionicons name="arrow-back" size={28} color="white" />
-              </TouchableOpacity>
-
-              <Text className="text-white text-xl ml-4">Inscription club</Text>
-            </View>
-
-            {/* ---------- CONTENU IDENTIQUE ---------- */}
-            <View className="flex-1 justify-center items-center">
-              <Text className="text-white text-3xl font-bold text-center mb-4">
-                Crée ton espace club
-              </Text>
-
-              <Text className="text-gray-400 text-center mb-8">
-                Étape 1 — Identifiants du compte
-              </Text>
-
-              {/* Form + bouton + stepper → identique */}
-              {/* (je répète pas pour raccourcir, mais tu peux coller le même bloc ici) */}
-            </View>
-          </KeyboardAvoidingView>
-        </TouchableWithoutFeedback>
-      )}
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 }

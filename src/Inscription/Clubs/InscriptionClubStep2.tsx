@@ -1,5 +1,3 @@
-// src/Inscription/Clubs/InscriptionClubStep2.tsx
-
 import React, { useState } from "react";
 import {
   View,
@@ -8,9 +6,11 @@ import {
   Pressable,
   TouchableOpacity,
   StatusBar,
-  ScrollView,
   Alert,
+  KeyboardAvoidingView,
   Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -39,7 +39,7 @@ export default function InscriptionClubStep2() {
   const emailFromAuth = params.email;
 
   const [clubName, setClubName] = useState("");
-  const [department, setDepartment] = useState<string[]>([]); // ← array pour DepartmentSelect
+  const [department, setDepartment] = useState<string[]>([]);
   const [city, setCity] = useState("");
   const [selection, setSelection] = useState<
     "masculines" | "feminines" | "les deux" | null
@@ -51,6 +51,7 @@ export default function InscriptionClubStep2() {
   const isValid =
     Boolean(clubName && city && selection && uid) && department.length > 0;
 
+  // --- SAVE ---
   const saveClub = async () => {
     if (!uid) {
       setErr("Session expirée. Merci de recommencer l’inscription.");
@@ -68,7 +69,7 @@ export default function InscriptionClubStep2() {
           uid,
           email: emailFromAuth,
           name: clubName.trim(),
-          department: department[0], // single select
+          department: department[0],
           city: city.trim(),
           teams: selection,
           createdAt: serverTimestamp(),
@@ -79,8 +80,17 @@ export default function InscriptionClubStep2() {
 
       navigation.reset({
         index: 0,
-        routes: [{ name: "ProfilClub", params: { uid } }],
+        routes: [
+          {
+            name: "MainTabsClub",
+            params: {
+              screen: "ProfilClub",
+              params: { uid },
+            },
+          },
+        ],
       });
+      
     } catch (e) {
       console.error(e);
       setErr("Impossible d'enregistrer les infos du club. Réessaie.");
@@ -93,107 +103,138 @@ export default function InscriptionClubStep2() {
     }
   };
 
+  // --- TOGGLE DE SÉLECTION / DESELECTION ---
+  const toggleSelection = (opt: "masculines" | "feminines" | "les deux") => {
+    if (selection === opt) {
+      setSelection(null); // → déselection si on reclique
+    } else {
+      setSelection(opt);
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-[#0E0D0D] px-6">
       <StatusBar barStyle="light-content" />
 
-      {/* ---------- HEADER ---------- */}
-      <View className="flex-row items-center mt-6 mb-6">
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color="white" />
-        </TouchableOpacity>
-        <Text className="text-white text-xl ml-4">Informations du club</Text>
-      </View>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1"
+        >
 
-      {/* ---------- FORMULAIRE ---------- */}
-      <View className="flex-1 justify-center">
-        <View className="w-full max-w-md">
-          {/* Nom du club */}
-          <TextInput
-            placeholder="Nom du club"
-            placeholderTextColor="#ccc"
-            value={clubName}
-            onChangeText={setClubName}
-            className="border border-gray-600 rounded-xl px-4 h-14 text-white bg-[#111] mb-6"
-          />
-
-          {/* Département */}
-          <View className="mb-6">
-            <DepartmentSelect
-              value={department}
-              onSelect={setDepartment}
-              placeholder="Sélectionner un département"
-              single
-            />
+          {/* ---------- HEADER ---------- */}
+          <View className="flex-row items-center mt-6 mb-4">
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={28} color="white" />
+            </TouchableOpacity>
+            <Text className="text-white text-xl ml-4">Informations du club</Text>
           </View>
 
-          {/* Ville */}
-          <TextInput
-            placeholder="Ville"
-            placeholderTextColor="#ccc"
-            value={city}
-            onChangeText={setCity}
-            className="border border-gray-600 rounded-xl px-4 h-14 text-white bg-[#111] mb-8"
-          />
+          <View className="flex-1 justify-center w-full max-w-md self-center">
+          {/* ---------- TITRE ---------- */}
+          <View className="mb-8 mt-4">
+            <Text className="text-white text-3xl font-bold text-center">
+              Configure ton club
+            </Text>
+            <Text className="text-gray-400 text-center mt-2">
+              Étape 2 — Informations générales du club
+            </Text>
+          </View>
 
-          {/* ---------- ÉQUIPES CONCERNÉES ---------- */}
-          <Text className="text-white mb-3 text-center">
-            Équipes concernées
-          </Text>
+          {/* ---------- FORMULAIRE ---------- */}
 
-          <View className="flex-row justify-between mb-8">
-            {(["masculines", "feminines", "les deux"] as const).map((opt) => {
-              const selected = selection === opt;
+            {/* Nom du club */}
+            <TextInput
+              placeholder="Nom du club"
+              placeholderTextColor="#ccc"
+              value={clubName}
+              onChangeText={setClubName}
+              className="border border-gray-600 rounded-xl px-4 h-14 text-white bg-[#111] mb-6"
+            />
 
-              return (
-                <TouchableOpacity
-                  key={opt}
-                  onPress={() => setSelection(opt)}
-                  className={`flex-1 mx-1 px-3 py-3 rounded-lg border ${
-                    selected
-                      ? "border-orange-500 bg-orange-500/20"
-                      : "border-gray-600"
-                  }`}
-                >
-                  <Text
-                    className={`text-center text-sm ${
-                      selected ? "text-orange-400 font-semibold" : "text-white"
+            {/* Département */}
+            <View className="mb-6">
+              <DepartmentSelect
+                value={department}
+                onSelect={setDepartment}
+                placeholder="Sélectionner un département"
+                single
+              />
+            </View>
+
+            {/* Ville */}
+            <TextInput
+              placeholder="Ville"
+              placeholderTextColor="#ccc"
+              value={city}
+              onChangeText={setCity}
+              className="border border-gray-600 rounded-xl px-4 h-14 text-white bg-[#111] mb-8"
+            />
+
+            {/* ---------- ÉQUIPES CONCERNÉES ---------- */}
+            <Text className="text-white mb-3 text-center">
+              Équipes concernées
+            </Text>
+
+            <View className="flex-row justify-between mb-8">
+              {(["masculines", "feminines", "les deux"] as const).map((opt) => {
+                const selected = selection === opt;
+
+                return (
+                  <TouchableOpacity
+                    key={opt}
+                    onPress={() => toggleSelection(opt)}
+                    className={`flex-1 mx-1 px-3 py-3 rounded-lg border ${
+                      selected
+                        ? "border-orange-500 bg-orange-500/20"
+                        : "border-gray-600"
                     }`}
                   >
-                    {opt === "masculines"
-                      ? "Masculines"
-                      : opt === "feminines"
+                    <Text
+                      className={`text-center text-sm ${
+                        selected
+                          ? "text-orange-400 font-semibold"
+                          : "text-white"
+                      }`}
+                    >
+                      {opt === "masculines"
+                        ? "Masculines"
+                        : opt === "feminines"
                         ? "Féminines"
                         : "Les deux"}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {err && (
+              <Text className="text-red-400 mb-4 text-center">{err}</Text>
+            )}
+
+            {/* ---------- BOUTON ---------- */}
+            <Pressable
+              disabled={!isValid || saving}
+              onPress={saveClub}
+              className={`py-4 rounded-xl items-center ${
+                isValid ? "bg-orange-500" : "bg-gray-600 opacity-40"
+              }`}
+            >
+              <Text className="text-white font-bold text-lg">
+                {saving ? "Enregistrement..." : "Continuer"}
+              </Text>
+            </Pressable>
+
+            {/* ---------- STEPPER ---------- */}
+            <View className="flex-row justify-center items-center mt-6 mb-6">
+              <View className="w-2 h-2 rounded-full bg-gray-600" />
+              <View className="w-6 h-[2px] bg-gray-600 mx-1" />
+              <View className="w-2 h-2 rounded-full bg-orange-500" />
+            </View>
+
           </View>
-
-          {err && <Text className="text-red-400 mb-4 text-center">{err}</Text>}
-
-          {/* ---------- BOUTON ---------- */}
-          <Pressable
-            disabled={!isValid || saving}
-            onPress={saveClub}
-            className={`py-4 rounded-xl items-center ${
-              isValid ? "bg-orange-500" : "bg-gray-600 opacity-40"
-            }`}
-          >
-            <Text className="text-white font-bold text-lg">
-              {saving ? "Enregistrement..." : "Continuer"}
-            </Text>
-          </Pressable>
-
-          {/* ---------- STEPPER ---------- */}
-          <View className="flex-row justify-center items-center mt-6">
-            <View className="w-2 h-2 rounded-full bg-gray-600" />
-            <View className="w-6 h-[2px] bg-gray-600 mx-1" />
-            <View className="w-2 h-2 rounded-full bg-orange-500" />
-          </View>
-        </View>
-      </View>
+        </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 }
