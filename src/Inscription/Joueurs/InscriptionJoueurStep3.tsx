@@ -24,6 +24,8 @@ import * as ImagePicker from "expo-image-picker";
 import DepartmentSelect from "../../Components/DepartmentSelect";
 import { registerPlayer } from "../../services/authService";
 
+import { auth } from "../../config/firebaseConfig";
+
 const tailles = Array.from({ length: 71 }, (_, i) => `${150 + i} cm`);
 const poidsOptions = Array.from({ length: 101 }, (_, i) => `${40 + i} kg`);
 const postes = ["Meneur", "Arrière", "Ailier", "Ailier fort", "Pivot"];
@@ -61,7 +63,7 @@ export default function InscriptionJoueurStep3() {
   const [loading, setLoading] = useState(false);
 
   const isValid =
-    taille && poids && main && poste && departement.length === 1 && club;
+    taille && poids && main && poste && departement.length === 1;
 
   // -----------------------------
   // PICK AVATAR
@@ -97,19 +99,27 @@ export default function InscriptionJoueurStep3() {
         prenom,
         dob,
         genre,
-        taille,
-        poids,
+        taille: parseInt(taille),   // convertit "178 cm" → 178
+        poids: parseInt(poids),
         main,
         poste,
         departement: departement[0], // 🔥 SINGLE VALUE
-        club,
+        club: club || null,
         avatar,
       });
 
       Alert.alert("Succès", "Compte joueur créé avec succès !");
       navigation.reset({
         index: 0,
-        routes: [{ name: "MainTabs" }],
+        routes: [
+          {
+            name: "MainTabs",
+            params: {
+              screen: "ProfilJoueur",   // ← l’onglet exact dans ton MainTabs joueur
+              params: { uid: auth.currentUser?.uid },
+            },
+          },
+        ],
       });
     } catch (error: any) {
       Alert.alert("Erreur", error.message || "Impossible de créer le compte.");

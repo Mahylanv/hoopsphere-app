@@ -54,9 +54,21 @@ export default function Chat() {
   return (
     <SafeAreaView className="flex-1 bg-black">
       <StatusBar barStyle="light-content" />
+
       <View className="flex-1 px-4 pt-4">
+
+        {/* --- TITRE --- */}
         <Text className="text-2xl font-bold text-white mb-4">Discussions</Text>
 
+        {/* --- BOUTON HOME --- */}
+        <Pressable
+          onPress={() => navigation.navigate("Home")}
+          className="absolute right-4 top-4 bg-orange-500 px-4 py-2 rounded-lg"
+        >
+          <Text className="text-white font-bold">Home</Text>
+        </Pressable>
+
+        {/* --- BARRE DE RECHERCHE --- */}
         <TextInput
           value={search}
           onChangeText={setSearch}
@@ -65,6 +77,7 @@ export default function Chat() {
           className="border border-gray-700 rounded-lg px-4 py-2 mb-4 bg-gray-900 text-white"
         />
 
+        {/* --- LISTE DES CONVERSATIONS --- */}
         <FlatList
           data={data}
           keyExtractor={item => item.id}
