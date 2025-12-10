@@ -9,6 +9,7 @@ import {
   Dimensions,
   ScrollView,
   Easing,
+  Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
@@ -24,6 +25,7 @@ import FloatingShareButton from "./components/FloatingShareButton";
 import usePlayerProfile from "./hooks/usePlayerProfile";
 import EditProfileModal from "./components/EditProfileModal/EditProfileModal";
 import { Modalize } from "react-native-modalize";
+import { updateUserProfile } from "../../services/userService"; // adapte le chemin si nécessaire
 
 const CARD_WIDTH = Dimensions.get("window").width * 0.9;
 const CARD_HEIGHT = CARD_WIDTH * 1.3;
@@ -269,6 +271,37 @@ export default function ProfilJoueur() {
           onDeleteMedia={deleteGalleryMedia}
           onSetAvatar={handleAvatarChange}
         />
+
+        {/* 🔥 TOGGLE PREMIUM POUR TESTS DEV */}
+        <View className="mt-10 px-5">
+          <Text className="text-white text-lg font-semibold mb-2">
+            Mode Premium (test développeur)
+          </Text>
+
+          <View className="flex-row items-center justify-between bg-[#1A1A1A] px-4 py-3 rounded-xl">
+            <Text className="text-white">Activer Premium</Text>
+
+            <Switch
+              value={user?.premium ?? false}
+              onValueChange={async (value) => {
+                try {
+                  await updateUserProfile({ premium: value });
+
+                  Alert.alert(
+                    "Statut mis à jour",
+                    value
+                      ? "Le compte est maintenant Premium ✨"
+                      : "Le compte n'est plus Premium."
+                  );
+                } catch (e) {
+                  console.log("Erreur maj premium:", e);
+                }
+              }}
+              thumbColor={user?.premium ? "#F97316" : "#888"}
+              trackColor={{ false: "#555", true: "#FBBF24" }}
+            />
+          </View>
+        </View>
 
         <LogoutButton />
         <DeleteAccountSection />

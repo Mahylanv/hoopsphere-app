@@ -33,12 +33,14 @@ export const registerPlayer = async (data: any) => {
   }
 
   // 3️⃣ Création du document principal du joueur
-  await setDoc(doc(db, "joueurs", user.uid), {
-    ...profileData,
-    email,
-    avatar: avatarUrl,
-    createdAt: serverTimestamp(),
-  });
+ await setDoc(doc(db, "joueurs", user.uid), {
+  ...profileData,
+  email,
+  avatar: avatarUrl,
+  createdAt: serverTimestamp(),
+  premium: false,        // 🔥 Nouveau
+  premiumSince: null,    // 🔥 Optionnel
+});
 
   // 4️⃣ Création automatique d’une sous-collection "gallery"
   await addDoc(collection(db, "joueurs", user.uid, "gallery"), {
