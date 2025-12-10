@@ -123,37 +123,6 @@ export default function Chat() {
           }
         />
       </View>
-
-      {/* 🔥 TOGGLE PREMIUM POUR TESTS DEV */}
-              <View className="mt-10 px-5">
-                <Text className="text-white text-lg font-semibold mb-2">
-                  Mode Premium (test développeur)
-                </Text>
-      
-                <View className="flex-row items-center justify-between bg-[#1A1A1A] px-4 py-3 rounded-xl">
-                  <Text className="text-white">Activer Premium</Text>
-      
-                  <Switch
-                    value={user?.premium ?? false}
-                    onValueChange={async (value) => {
-                      try {
-                        await updateUserProfile({ premium: value });
-      
-                        Alert.alert(
-                          "Statut mis à jour",
-                          value
-                            ? "Le compte est maintenant Premium ✨"
-                            : "Le compte n'est plus Premium."
-                        );
-                      } catch (e) {
-                        console.log("Erreur maj premium:", e);
-                      }
-                    }}
-                    thumbColor={user?.premium ? "#F97316" : "#888"}
-                    trackColor={{ false: "#555", true: "#FBBF24" }}
-                  />
-                </View>
-              </View>
     </SafeAreaView>
   );
 }

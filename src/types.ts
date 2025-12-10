@@ -109,6 +109,8 @@ export type RootStackParamList = {
     startIndex: number;
     videos: any[];
   };
+  Visitors: undefined;
+  TestPrenium: undefined;
 };
 
 // NAVIGATION — JOUEUR
@@ -116,7 +118,8 @@ export type RootStackParamList = {
 export type MainTabParamListJoueur = {
   HomeScreen: undefined;
   Match: undefined;
-  Chat: undefined;
+  // Chat: undefined;
+  TestPrenium: undefined;
   Search: undefined;
   Profil: undefined;
 };

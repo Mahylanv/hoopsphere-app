@@ -21,14 +21,19 @@ import * as Sharing from "expo-sharing";
 
 import usePlayerProfile from "./hooks/usePlayerProfile"; // adapte le path exactement
 import { computePlayerStats } from "../../utils/computePlayerStats";
-import { collection, getDocs } from "firebase/firestore";
 import { computePlayerRating } from "../../utils/computePlayerRating";
-
 import { RootStackParamList } from "../../types";
+import JoueurCard from "../../Components/JoueurCard";
+
+import {
+  collection,
+  getDocs,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { db } from "../../config/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
-
-import JoueurCard from "../../Components/JoueurCard";
+import { getAuth } from "firebase/auth";
 
 const CARD_WIDTH = Dimensions.get("window").width * 0.9;
 const CARD_HEIGHT = CARD_WIDTH * 0.68;
@@ -74,6 +79,22 @@ export default function JoueurDetail() {
           genre: raw.genre ?? "-",
           main: raw.main ?? "-",
         });
+
+        const auth = getAuth();
+        const currentUid = auth.currentUser?.uid;
+
+        if (currentUid && currentUid !== uid) {
+          try {
+            await addDoc(collection(db, "joueurs", uid, "views"), {
+              viewerUid: currentUid,
+              viewerType: "joueur", // plus tard : "club"
+              viewedAt: serverTimestamp(),
+            });
+            console.log("👀 Visite enregistrée !");
+          } catch (e) {
+            console.log("Erreur enregistrement visite :", e);
+          }
+        }
 
         // 🔥 Charger les statistiques
         const matchSnap = await getDocs(
@@ -256,7 +277,11 @@ export default function JoueurDetail() {
             options={{ format: "png", quality: 1 }}
             style={{ borderRadius: 20, overflow: "hidden" }}
           >
-            <JoueurCard joueur={joueur} showActionsButton={false} rating={rating ?? undefined} />
+            <JoueurCard
+              joueur={joueur}
+              showActionsButton={false}
+              rating={rating ?? undefined}
+            />
           </ViewShot>
 
           <View style={{ position: "absolute" }}>
