@@ -13,6 +13,7 @@ import ProfilJoueur from "../Profil/Joueurs/ProfilJoueur";
 import Match from "../Pages/Match";
 
 import { MainTabParamListJoueur } from "../types";
+import TestPrenium from "../Pages/TestPrenium";
 
 const Tab = createBottomTabNavigator<MainTabParamListJoueur>();
 
@@ -43,7 +44,7 @@ export default function MainTabNavigatorJoueur() {
             case "Match":
               iconName = "basketball-outline";
               break;
-            case "Chat":
+            case "TestPrenium":
               iconName = "chatbubble-outline";
               break;
             case "Search":
@@ -77,8 +78,8 @@ export default function MainTabNavigatorJoueur() {
 
       {/* 💬 Messagerie */}
       <Tab.Screen
-        name="Chat"
-        component={Chat}
+        name="TestPrenium"
+        component={TestPrenium}
         options={{ tabBarLabel: "Messages" }}
       />
 
