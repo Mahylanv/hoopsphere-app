@@ -1,3 +1,4 @@
+// src/navigation/MainTabNavigatorClub.tsx
 // 🏢 Navigation principale — réservée aux CLUBS
 
 import React from "react";

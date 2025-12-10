@@ -132,6 +132,7 @@ export default function usePlayerProfile() {
           experience: data.experience || "",
           description: data.description || "",
           avatar: data.avatar || "",
+          premium: data.premium ?? false,
         };
 
         setUser({ uid: currentUser.uid, ...loaded });

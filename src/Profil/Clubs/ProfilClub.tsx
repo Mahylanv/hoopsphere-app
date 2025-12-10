@@ -127,13 +127,23 @@ export default function ProfilClub() {
 
   if (!club) {
     return (
-      <View className="flex-1 justify-center items-center bg-black">
-        <Text className="text-white text-lg font-semibold">
+      <View className="flex-1 justify-center items-center bg-black px-6">
+        <Text className="text-white text-lg font-semibold mb-4 text-center">
           Aucun profil club trouvé
         </Text>
+  
+        <Pressable
+          onPress={() => navigation.navigate("Home")}
+          className="bg-orange-500 px-6 py-3 rounded-xl mt-2"
+        >
+          <Text className="text-white font-bold text-base">
+            Retour à l'accueil
+          </Text>
+        </Pressable>
       </View>
     );
   }
+  
 
   // Normalisation pour l’affichage (ton schéma a parfois nom/ville vs name/city)
   const safeClub = {
