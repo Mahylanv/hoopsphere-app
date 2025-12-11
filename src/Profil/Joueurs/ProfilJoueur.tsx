@@ -1,20 +1,22 @@
-// src/Profil/Joueur/profiljoueur.tsx
-
-import React, { useRef } from "react";
+// src/Profil/Joueurs/ProfilJoueur.tsx
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   Text,
   View,
   Alert,
   Animated,
   Dimensions,
-  ScrollView,
   Easing,
   Switch,
+  ScrollView,
+  RefreshControl,
+  DeviceEventEmitter,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as Sharing from "expo-sharing";
 import ViewShot from "react-native-view-shot";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import AvatarSection from "./components/AvatarSection";
 import BioSection from "./components/BioSection";
@@ -31,9 +33,6 @@ const CARD_WIDTH = Dimensions.get("window").width * 0.9;
 const CARD_HEIGHT = CARD_WIDTH * 1.3;
 
 export default function ProfilJoueur() {
-  /* -----------------------------------------------------
-      🔥 HOOKS — toujours en premier
-  ----------------------------------------------------- */
   const {
     user,
     loading,
@@ -49,54 +48,79 @@ export default function ProfilJoueur() {
     addGalleryMedia,
     deleteGalleryMedia,
 
-    // 🔥 AJOUT DES VARIABLES EMAIL
+    // gestion email / ré-auth
     passwordModalVisible,
     setPasswordModalVisible,
     passwordForReauth,
     setPasswordForReauth,
     tempNewEmail,
     setTempNewEmail,
-  } = usePlayerProfile();
 
+    // 👇 IMPORTANT : on suppose que ton hook expose un refetch() pour relire Firestore
+    // Si ce n'est pas le cas, tu peux à la place déclencher un "remount" via focusKey (voir plus bas)
+    refetch,
+  } = usePlayerProfile() as any;
+
+  const navigation = useNavigation();
+
+  // ————————— Remontage forcé (si ton hook n'a pas refetch)
+  const [focusKey, setFocusKey] = useState(0);
+  const remount = useCallback(() => setFocusKey((k) => k + 1), []);
+
+  // ————————— Rechargement à chaque FOCUS
+  useFocusEffect(
+    useCallback(() => {
+      // option A : si le hook a refetch()
+      if (typeof refetch === "function") refetch();
+      // option B : sinon, dé-commente la ligne suivante pour remonter le composant
+      // remount();
+      return () => { };
+    }, [refetch, remount])
+  );
+
+  // ————————— Rechargement quand on re-clique sur l’onglet déjà actif
+  useEffect(() => {
+    const unsub = navigation.addListener("tabPress" as any, () => {
+      if (typeof refetch === "function") refetch();
+      // remount(); // alternative si pas de refetch
+    });
+    return unsub;
+  }, [navigation, refetch]);
+
+  // ————————— Rechargement immédiat quand Match émet "force-profile-reload"
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener("force-profile-reload", () => {
+      if (typeof refetch === "function") refetch();
+      // remount();
+    });
+    return () => sub.remove();
+  }, [refetch]);
+
+  // Refs / animations
   const cardRef = useRef<ViewShot>(null);
   const editModalRef = useRef<Modalize>(null);
   const openEditModal = () => editModalRef.current?.open();
   const closeEditModal = () => editModalRef.current?.close();
+
   const scrollRef = useRef<ScrollView>(null);
   const autoScroll = useRef(new Animated.Value(0)).current;
-
-  /* -----------------------------------------------------
-      🔥 ANIMATION SCROLL
-  ----------------------------------------------------- */
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const scale = scrollY.interpolate({
-    inputRange: [0, 170],
-    outputRange: [1, 0.6],
-    extrapolate: "clamp",
-  });
+  const scale = scrollY.interpolate({ inputRange: [0, 170], outputRange: [1, 0.6], extrapolate: "clamp" });
+  const translateY = scrollY.interpolate({ inputRange: [0, 260], outputRange: [0, -40], extrapolate: "clamp" });
+  const adjustedTranslate = scrollY.interpolate({ inputRange: [0, 170], outputRange: [0, CARD_HEIGHT * 0.55], extrapolate: "clamp" });
+  const opacity = scrollY.interpolate({ inputRange: [0, 300], outputRange: [1, 0], extrapolate: "clamp" });
 
-  const translateY = scrollY.interpolate({
-    inputRange: [0, 260],
-    outputRange: [0, -40],
-    extrapolate: "clamp",
-  });
+  // Pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    if (typeof refetch === "function") await refetch();
+    // remount();
+    setTimeout(() => setRefreshing(false), 400);
+  };
 
-  const adjustedTranslate = scrollY.interpolate({
-    inputRange: [0, 170],
-    outputRange: [0, CARD_HEIGHT * 0.55],
-    extrapolate: "clamp",
-  });
-
-  const opacity = scrollY.interpolate({
-    inputRange: [0, 300],
-    outputRange: [1, 0],
-    extrapolate: "clamp",
-  });
-
-  /* -----------------------------------------------------
-      📸 Capture + Partage
-  ----------------------------------------------------- */
+  // Capture & partage
   const captureCard = async () => {
     try {
       const uri = await cardRef.current?.capture?.();
@@ -106,40 +130,27 @@ export default function ProfilJoueur() {
       return null;
     }
   };
-
   const shareCard = async () => {
     const uri = await captureCard();
-    if (!uri) {
-      Alert.alert("Erreur", "Impossible de capturer la carte.");
-      return;
-    }
+    if (!uri) return Alert.alert("Erreur", "Impossible de capturer la carte.");
     await Sharing.shareAsync(uri);
   };
 
-  /* -----------------------------------------------------
-      📤 PICK MEDIA
-  ----------------------------------------------------- */
+  // Pick media
   const pickMedia = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
-      quality: 1,
-    });
-
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.All, quality: 1 });
     if (!result.canceled) {
       const asset = result.assets[0];
       await addGalleryMedia(asset.uri, asset.type === "video");
     }
   };
 
-  React.useEffect(() => {
+  // Auto scroll d’intro
+  useEffect(() => {
     const id = autoScroll.addListener(({ value }) => {
-      scrollRef.current?.scrollTo({
-        y: value,
-        animated: false,
-      });
+      scrollRef.current?.scrollTo({ y: value, animated: false });
     });
-
-    setTimeout(() => {
+    const t = setTimeout(() => {
       Animated.timing(autoScroll, {
         toValue: CARD_HEIGHT * 0.4,
         duration: 1200,
@@ -147,15 +158,12 @@ export default function ProfilJoueur() {
         useNativeDriver: false,
       }).start();
     }, 300);
-
     return () => {
       autoScroll.removeListener(id);
+      clearTimeout(t);
     };
   }, []);
 
-  /* -----------------------------------------------------
-      🟠 LOADING
-  ----------------------------------------------------- */
   if (loading || !user) {
     return (
       <SafeAreaView className="flex-1 bg-black justify-center items-center">
@@ -164,25 +172,16 @@ export default function ProfilJoueur() {
     );
   }
 
-  /* -----------------------------------------------------
-      🔥 RENDER
-  ----------------------------------------------------- */
   return (
-    <SafeAreaView className="flex-1 bg-[#0E0D0D]">
+    <SafeAreaView key={focusKey} className="flex-1 bg-[#0E0D0D]">
       <Animated.ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
-        contentContainerStyle={{
-          paddingTop: CARD_HEIGHT * 1.3,
-          paddingBottom: 120,
-        }}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
-        )}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
+        contentContainerStyle={{ paddingTop: CARD_HEIGHT * 1.3, paddingBottom: 120 }}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
       >
-        {/* 🔥 CARTE ANIMÉE */}
         <Animated.View
           style={{
             position: "absolute",
@@ -190,43 +189,21 @@ export default function ProfilJoueur() {
             left: 0,
             right: 0,
             alignItems: "center",
-            transform: [
-              { scale },
-              { translateY: Animated.add(translateY, adjustedTranslate) },
-            ],
+            transform: [{ scale }, { translateY: Animated.add(translateY, adjustedTranslate) }],
             opacity,
           }}
         >
-          <ViewShot
-            ref={cardRef}
-            options={{ format: "png", quality: 1 }}
-            style={{ borderRadius: 20, overflow: "hidden" }}
-          >
-            <AvatarSection
-              user={user}
-              stats={stats}
-              rating={rating}
-              onEditAvatar={handleAvatarChange}
-              avatarLoading={avatarLoading}
-            />
+          <ViewShot ref={cardRef} options={{ format: "png", quality: 1 }} style={{ borderRadius: 20, overflow: "hidden" }}>
+            <AvatarSection user={user} stats={stats} rating={rating} onEditAvatar={handleAvatarChange} avatarLoading={avatarLoading} />
           </ViewShot>
 
-          {/* VERSION AVEC UI */}
           <View style={{ position: "absolute" }}>
-            <AvatarSection
-              user={user}
-              stats={stats}
-              rating={rating}
-              onEditAvatar={handleAvatarChange}
-              avatarLoading={avatarLoading}
-            />
+            <AvatarSection user={user} stats={stats} rating={rating} onEditAvatar={handleAvatarChange} avatarLoading={avatarLoading} />
           </View>
         </Animated.View>
 
-        {/* 🔥 BOUTON PARTAGE */}
         <FloatingShareButton cardRef={cardRef} />
 
-        {/* 🔥 BIO */}
         <View className="mt-4">
           <BioSection
             editMode={false}
@@ -236,38 +213,35 @@ export default function ProfilJoueur() {
             setBirthYear={(v) => setEditField("dob", v)}
             height={fields.taille}
             setHeight={(v) => setEditField("taille", v)}
-            onSelectHeight={() => {}}
+            onSelectHeight={() => { }}
             weight={fields.poids}
             setWeight={(v) => setEditField("poids", v)}
-            onSelectWeight={() => {}}
+            onSelectWeight={() => { }}
             position={fields.poste}
             setPosition={(v) => setEditField("poste", v)}
-            onSelectPoste={() => {}}
+            onSelectPoste={() => { }}
             strongHand={fields.main}
             setStrongHand={(v) => setEditField("main", v)}
             departement={fields.departement}
-            onSelectDepartement={() => {}}
+            onSelectDepartement={() => { }}
             club={fields.club}
-            onSelectClub={() => {}}
-            phone={fields.phone} // ✅ FIX
-            setPhone={(v) => setEditField("phone", v)} // ✅ FIX
+            onSelectClub={() => { }}
+            phone={fields.phone}
+            setPhone={(v) => setEditField("phone", v)}
             email={fields.email}
             setEmail={(v) => setEditField("email", v)}
-            level={fields.level} // ✅ FIX
-            onSelectLevel={() => {}}
-            experience={fields.experience} // ✅ FIX
+            level={fields.level}
+            onSelectLevel={() => { }}
+            experience={fields.experience}
             setExperience={(v) => setEditField("experience", v)}
             bio={fields.description}
             setBio={(v) => setEditField("description", v)}
           />
         </View>
 
-        {/* 🔥 GALERIE */}
         <GallerySection
           media={gallery}
-          onAddMedia={(uri, isVideo, file) =>
-            addGalleryMedia(uri, isVideo, file)
-          }
+          onAddMedia={(uri, isVideo, file) => addGalleryMedia(uri, isVideo, file)}
           onDeleteMedia={deleteGalleryMedia}
           onSetAvatar={handleAvatarChange}
         />
@@ -306,26 +280,26 @@ export default function ProfilJoueur() {
         <LogoutButton />
         <DeleteAccountSection />
       </Animated.ScrollView>
-      {
-        /* 🔥 MODAL ÉDITION PROFIL */
-        <EditProfileModal
-          ref={editModalRef}
-          fields={fields}
-          editFields={editFields}
-          setEditField={setEditField}
-          saveProfile={async () => {
-            await saveProfile();
-            closeEditModal();
-          }}
-          // 🔥 IMPORTANTS : tu dois les passer au modal !
-          passwordModalVisible={passwordModalVisible}
-          setPasswordModalVisible={setPasswordModalVisible}
-          passwordForReauth={passwordForReauth}
-          setPasswordForReauth={setPasswordForReauth}
-          tempNewEmail={tempNewEmail}
-          setTempNewEmail={setTempNewEmail}
-        />
-      }
+
+      <EditProfileModal
+        ref={editModalRef}
+        fields={fields}
+        editFields={editFields}
+        setEditField={setEditField}
+        saveProfile={async () => {
+          await saveProfile();
+          // Relecture immédiate
+          if (typeof refetch === "function") await refetch();
+          // remount();
+          closeEditModal();
+        }}
+        passwordModalVisible={passwordModalVisible}
+        setPasswordModalVisible={setPasswordModalVisible}
+        passwordForReauth={passwordForReauth}
+        setPasswordForReauth={setPasswordForReauth}
+        tempNewEmail={tempNewEmail}
+        setTempNewEmail={setTempNewEmail}
+      />
     </SafeAreaView>
   );
 }

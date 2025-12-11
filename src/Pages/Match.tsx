@@ -7,11 +7,15 @@ import {
   ActivityIndicator,
   Alert,
   StatusBar,
+  DeviceEventEmitter,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { auth, db } from "../config/firebaseConfig";
+import { useNavigation } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { MainTabParamListJoueur } from "../types";
 
 type PlayerStats = {
   jersey?: number | null;
@@ -32,7 +36,7 @@ type ApiResponse = {
   teams?: Array<{ name: string; players: PlayerStats[] }>;
 };
 
-const API_URL = "https://b95a86c8b3ef.ngrok-free.app/parse-emarque";
+const API_URL = "https://cb8c69b5e2bd.ngrok-free.app/parse-emarque";
 
 function normalize(s: string) {
   return s
@@ -65,6 +69,8 @@ function Row({ label, value }: { label: string; value: any }) {
 }
 
 export default function Match() {
+  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamListJoueur, "Match">>();
+
   const [profileLoading, setProfileLoading] = useState(true);
   const [fullName, setFullName] = useState<string>("");
   const [pdfName, setPdfName] = useState<string | null>(null);
@@ -97,14 +103,11 @@ export default function Match() {
           }
         }
 
-        // Fallback si le doc ne contient pas encore les champs
         if (!computed && user.displayName) {
           computed = user.displayName.trim();
         }
 
         setFullName(computed);
-        // Debug utile si besoin :
-        // console.log("Fullname from Firestore/auth =", computed);
       } catch (e) {
         console.error(e);
       } finally {
@@ -135,10 +138,7 @@ export default function Match() {
   const handleParse = async () => {
     if (profileLoading) return;
     if (!fullName.trim()) {
-      Alert.alert(
-        "Nom introuvable",
-        "Impossible de déterminer ton Nom Prénom depuis le profil (champs prenom/nom)."
-      );
+      Alert.alert("Nom introuvable", "Impossible de déterminer ton Nom Prénom depuis le profil (champs prenom/nom).");
       return;
     }
     if (!pdfUri) {
@@ -152,11 +152,7 @@ export default function Match() {
 
       const form = new FormData();
       form.append("fullname", fullName);
-      form.append("file", {
-        name: pdfName || "feuille.pdf",
-        type: "application/pdf",
-        uri: pdfUri,
-      } as any);
+      form.append("file", { name: pdfName || "feuille.pdf", type: "application/pdf", uri: pdfUri } as any);
 
       const resp = await fetch(API_URL, { method: "POST", body: form });
       if (!resp.ok) {
@@ -171,17 +167,13 @@ export default function Match() {
       for (const team of json.teams || []) {
         for (const p of team.players) {
           if (p?.name && isSamePlayer(p.name, fullName)) {
-            found = p;
-            break;
+            found = p; break;
           }
         }
         if (found) break;
       }
       if (!found) {
-        Alert.alert(
-          "Introuvable",
-          "Ton nom n’a pas été trouvé dans la feuille. Mets à jour ton profil (prenom / nom) si besoin."
-        );
+        Alert.alert("Introuvable", "Ton nom n’a pas été trouvé dans la feuille. Mets à jour ton profil (prenom / nom) si besoin.");
         return;
       }
       setStats(found);
@@ -194,19 +186,10 @@ export default function Match() {
   };
 
   const handleSave = async () => {
-    if (!stats) {
-      Alert.alert("Aucune stats", "Analyse d’abord un PDF pour récupérer tes stats.");
-      return;
-    }
-    if (!matchNumber) {
-      Alert.alert("Numéro de match manquant", "Le numéro de rencontre n’a pas été détecté.");
-      return;
-    }
+    if (!stats) return Alert.alert("Aucune stats", "Analyse d’abord un PDF pour récupérer tes stats.");
+    if (!matchNumber) return Alert.alert("Numéro de match manquant", "Le numéro de rencontre n’a pas été détecté.");
     const user = auth.currentUser;
-    if (!user?.uid) {
-      Alert.alert("Connexion requise", "Tu dois être connecté pour enregistrer tes stats.");
-      return;
-    }
+    if (!user?.uid) return Alert.alert("Connexion requise", "Tu dois être connecté pour enregistrer tes stats.");
 
     try {
       setSaving(true);
@@ -233,6 +216,10 @@ export default function Match() {
         { merge: true }
       );
 
+      // ✅ Notifie le profil et navigue vers l’onglet Profil
+      DeviceEventEmitter.emit("force-profile-reload");
+      navigation.navigate("Profil");
+
       Alert.alert("Enregistré", "Tes stats ont été sauvegardées pour ce match.");
     } catch (e: any) {
       console.error(e);
@@ -250,28 +237,13 @@ export default function Match() {
           Créer un match (import e-Marque)
         </Text>
 
-        <View
-          style={{
-            marginBottom: 12,
-            padding: 12,
-            borderRadius: 10,
-            borderWidth: 1,
-            borderColor: "#555",
-            backgroundColor: "#151515",
-          }}
-        >
+        <View style={{ marginBottom: 12, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: "#555", backgroundColor: "#151515" }}>
           <Row label="Joueur" value={profileLoading ? "Chargement..." : (fullName || "—")} />
         </View>
 
         <TouchableOpacity
           onPress={pickPdf}
-          style={{
-            backgroundColor: "#2563eb",
-            padding: 14,
-            borderRadius: 12,
-            alignItems: "center",
-            marginBottom: 10,
-          }}
+          style={{ backgroundColor: "#2563eb", padding: 14, borderRadius: 12, alignItems: "center", marginBottom: 10 }}
         >
           <Text style={{ color: "#fff", fontWeight: "700" }}>
             {pdfName ? "Changer de PDF" : "Sélectionner le PDF"}
@@ -282,50 +254,21 @@ export default function Match() {
         <TouchableOpacity
           onPress={handleParse}
           disabled={loading || !canParse}
-          style={{
-            backgroundColor: !canParse ? "#444" : "#16a34a",
-            padding: 14,
-            borderRadius: 12,
-            alignItems: "center",
-          }}
+          style={{ backgroundColor: !canParse ? "#444" : "#16a34a", padding: 14, borderRadius: 12, alignItems: "center" }}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={{ color: "#fff", fontWeight: "700" }}>Analyser le PDF</Text>
-          )}
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700" }}>Analyser le PDF</Text>}
         </TouchableOpacity>
 
         {matchNumber ? (
-          <View
-            style={{
-              marginTop: 14,
-              padding: 12,
-              borderWidth: 1,
-              borderColor: "#444",
-              borderRadius: 12,
-            }}
-          >
-            <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700", marginBottom: 6 }}>
-              Informations rencontre
-            </Text>
+          <View style={{ marginTop: 14, padding: 12, borderWidth: 1, borderColor: "#444", borderRadius: 12 }}>
+            <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700", marginBottom: 6 }}>Informations rencontre</Text>
             <Row label="N° de rencontre" value={matchNumber} />
           </View>
         ) : null}
 
         {stats && (
-          <View
-            style={{
-              marginTop: 20,
-              padding: 12,
-              borderWidth: 1,
-              borderColor: "#444",
-              borderRadius: 12,
-            }}
-          >
-            <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700", marginBottom: 10 }}>
-              Tes stats détectées
-            </Text>
+          <View style={{ marginTop: 20, padding: 12, borderWidth: 1, borderColor: "#444", borderRadius: 12 }}>
+            <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700", marginBottom: 10 }}>Tes stats détectées</Text>
 
             <Row label="Top 5 départ" value={stats.starter ? "Oui" : "Non"} />
             <Row label="Temps de jeu" value={stats.play_time || "-"} />
@@ -340,19 +283,9 @@ export default function Match() {
             <TouchableOpacity
               onPress={handleSave}
               disabled={saving || !matchNumber}
-              style={{
-                marginTop: 12,
-                backgroundColor: matchNumber ? "#22c55e" : "#444",
-                padding: 14,
-                borderRadius: 12,
-                alignItems: "center",
-              }}
+              style={{ marginTop: 12, backgroundColor: matchNumber ? "#22c55e" : "#444", padding: 14, borderRadius: 12, alignItems: "center" }}
             >
-              {saving ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={{ color: "#fff", fontWeight: "700" }}>Valider</Text>
-              )}
+              {saving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700" }}>Valider</Text>}
             </TouchableOpacity>
           </View>
         )}
