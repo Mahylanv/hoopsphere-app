@@ -17,7 +17,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Sharing from "expo-sharing";
 import ViewShot from "react-native-view-shot";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-
+import StatsChartSection from "./components/StatsChartSection";
 import AvatarSection from "./components/AvatarSection";
 import BioSection from "./components/BioSection";
 import GallerySection from "./components/GallerySection";
@@ -238,7 +238,7 @@ export default function ProfilJoueur() {
             setBio={(v) => setEditField("description", v)}
           />
         </View>
-
+        <StatsChartSection playerUid={user?.uid} />
         <GallerySection
           media={gallery}
           onAddMedia={(uri, isVideo, file) => addGalleryMedia(uri, isVideo, file)}

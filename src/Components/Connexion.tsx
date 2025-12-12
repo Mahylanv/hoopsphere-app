@@ -146,7 +146,6 @@ export default function Connexion() {
         </Pressable>
 
         {/* ⚡ Message d'erreur */}
-        {error && <Text className="text-red-500 text-center mb-2">{error}</Text>}
         <Pressable className="items-center mt-2" onPress={() => navigation.goBack()}>
           <Text className="text-white underline">Retour</Text>
         </Pressable>

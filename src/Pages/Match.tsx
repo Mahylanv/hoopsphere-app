@@ -16,6 +16,21 @@ import { auth, db } from "../config/firebaseConfig";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { MainTabParamListJoueur } from "../types";
+function toNum(v: any): number | null {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseMinutesFromPlayTime(s?: string | null): number | null {
+  // play_time au format "MM:SS" (ex: "23:17")
+  if (!s || typeof s !== "string") return null;
+  const m = s.match(/^(\d{1,3}):(\d{2})$/);
+  if (!m) return null;
+  const min = Number(m[1]);
+  const sec = Number(m[2]);
+  if (!Number.isFinite(min) || !Number.isFinite(sec)) return null;
+  return min + sec / 60;
+}
 
 type PlayerStats = {
   jersey?: number | null;
@@ -36,7 +51,7 @@ type ApiResponse = {
   teams?: Array<{ name: string; players: PlayerStats[] }>;
 };
 
-const API_URL = "https://cb8c69b5e2bd.ngrok-free.app/parse-emarque";
+const API_URL = "https://79bb298fd7b0.ngrok-free.app/parse-emarque";
 
 function normalize(s: string) {
   return s
@@ -193,30 +208,56 @@ export default function Match() {
 
     try {
       setSaving(true);
+
+      // Normalisations
+      const normalized = {
+        // Clés attendues par le graphique
+        points: toNum(stats.points),
+        fouls: toNum(stats.fouls_committed),           // <-- mapping: fouls_committed -> fouls
+        minutes: parseMinutesFromPlayTime(stats.play_time),
+
+        // (Optionnel) si un jour tu ajoutes ces champs dans le parser
+        rebounds: null as number | null,
+        assists: null as number | null,
+        steals: null as number | null,
+        blocks: null as number | null,
+        turnovers: null as number | null,
+      };
+
       const ref = doc(db, "joueurs", user.uid, "matches", String(matchNumber));
       await setDoc(
         ref,
         {
+          // Méta obligatoires pour tes règles
           matchNumber: String(matchNumber),
           playerUid: user.uid,
           playerFullname: fullName.trim(),
+
+          // Date du match (à défaut d’info dans le PDF, on timestamp)
+          matchDate: serverTimestamp(),
+
+          // Champs normalisés pour le graphique
+          ...normalized,
+
+          // Tes champs d’origine — conservés (utile pour l’écran détail)
           jersey: stats.jersey ?? null,
           starter: stats.starter ?? null,
           play_time: stats.play_time ?? null,
-          shots_made: stats.shots_made ?? null,
-          points: stats.points ?? null,
-          threes: stats.threes ?? null,
-          two_int: stats.two_int ?? null,
-          two_ext: stats.two_ext ?? null,
-          ft_made: stats.ft_made ?? null,
-          fouls_committed: stats.fouls_committed ?? null,
+          shots_made: toNum(stats.shots_made),
+          threes: toNum(stats.threes),
+          two_int: toNum(stats.two_int),
+          two_ext: toNum(stats.two_ext),
+          ft_made: toNum(stats.ft_made),
+          fouls_committed: toNum(stats.fouls_committed),
+
+          // Trace
           sourcePdfName: pdfName ?? null,
           parsedAt: serverTimestamp(),
         },
         { merge: true }
       );
 
-      // ✅ Notifie le profil et navigue vers l’onglet Profil
+      // Rafraîchir le profil/graphique
       DeviceEventEmitter.emit("force-profile-reload");
       navigation.navigate("Profil");
 
@@ -228,6 +269,7 @@ export default function Match() {
       setSaving(false);
     }
   };
+
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0E0D0D" }}>
