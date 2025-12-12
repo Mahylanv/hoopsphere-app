@@ -45,7 +45,7 @@ export default function DeleteAccountSection() {
   };
 
   return (
-    <View className="mt-10 px-6 mb-10">
+    <View className="px-6 mb-10">
       <TouchableOpacity
         onPress={handleDelete}
         className="py-3 px-6 rounded-lg bg-red-600"

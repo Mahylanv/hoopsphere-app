@@ -28,14 +28,14 @@ export default function LogoutButton() {
   };
 
   return (
-    <View className="items-center mt-10">
+    <View className="mt-10 px-6 mb-10">
       <View
       >
         <TouchableOpacity
           onPress={handleLogout}
-          className="py-4 px-8 rounded-2xl bg-orange-500 shadow-md shadow-black"
+          className="py-3 px-6 rounded-lg bg-orange-500 shadow-md shadow-black"
         >
-          <Text className="text-white text-lg font-bold">Déconnexion</Text>
+          <Text className="text-white text-base font-semibold text-center">Déconnexion</Text>
         </TouchableOpacity>
       </View>
     </View>
