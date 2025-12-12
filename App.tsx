@@ -1,3 +1,5 @@
+// App.tsx
+
 import "./global.css";
 import "nativewind";
 import React from "react";
@@ -14,6 +16,7 @@ import {
   initialWindowMetrics,
 } from "react-native-safe-area-context";
 import { StatusBar, ActivityIndicator, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { RootStackParamList } from "./src/types";
@@ -35,8 +38,10 @@ import JoueurDetail from "./src/Profil/Joueurs/JoueurDetail";
 import EditClubProfile from "./src/Profil/Clubs/EditClubProfile";
 import ClubTeamsList from "./src/Profil/Clubs/ClubTeamsList";
 import ProfilClub from "./src/Profil/Clubs/ProfilClub";
-import FullGalleryScreen from "./src/Profil/Joueurs/screens/FullGalleryScreen";
-import FullVideoScreen from "./src/Profil/Joueurs/screens/FullVideoScreen";
+import FullMediaViewerScreen from "./src/Profil/Joueurs/screens/FullMediaViewerScreen";
+import ManageCandidatures from "./src/Profil/Clubs/Candidatures/ManageCandidatures";
+import ForgotPassword from "./src/Pages/ForgotPassword";
+import VideoFeedScreen from "./src/Home/VideoFeedScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -116,14 +121,13 @@ function RootNavigator() {
         />
 
         <Stack.Screen
-          name="FullGallery"
-          component={FullGalleryScreen}
+          name="ManageCandidatures"
+          component={ManageCandidatures}
           options={{ headerShown: false }}
         />
-
         <Stack.Screen
-          name="FullVideo"
-          component={FullVideoScreen}
+          name="FullMediaViewer"
+          component={FullMediaViewerScreen}
           options={{ headerShown: false }}
         />
 
@@ -144,6 +148,12 @@ function RootNavigator() {
         />
         <Stack.Screen name="ProfilClub" component={ProfilClub} />
         <Stack.Screen name="ClubTeamsList" component={ClubTeamsList} />
+        <Stack.Screen
+          name="ForgotPassword"
+          component={ForgotPassword}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen name="VideoFeed" component={VideoFeedScreen} />
       </Stack.Navigator>
     </SafeAreaView>
   );
@@ -151,18 +161,20 @@ function RootNavigator() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <StatusBar
-          translucent
-          backgroundColor="transparent"
-          barStyle="light-content"
-        />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+          <StatusBar
+            translucent
+            backgroundColor="transparent"
+            barStyle="light-content"
+          />
 
-        <PersistedNavContainer>
-          <RootNavigator />
-        </PersistedNavContainer>
-      </SafeAreaProvider>
-    </AuthProvider>
+          <PersistedNavContainer>
+            <RootNavigator />
+          </PersistedNavContainer>
+        </SafeAreaProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

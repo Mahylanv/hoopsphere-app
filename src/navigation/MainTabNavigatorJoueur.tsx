@@ -1,12 +1,10 @@
 // src/navigation/MainTabNavigator.tsx
-// 🔥 Navigation principale — réservée aux JOUEURS
-
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
+import { DeviceEventEmitter } from "react-native";
 
-// --- Import des écrans destinés aux joueurs ---
-import MainJoueur from "../Profil/Joueurs/MainJoueur";
+import HomeScreen from "../Home/HomeScreen";
 import Chat from "../Pages/Chat";
 import Search from "../Components/Search";
 import ProfilJoueur from "../Profil/Joueurs/ProfilJoueur";
@@ -22,7 +20,7 @@ export default function MainTabNavigatorJoueur() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: "#1f2937", // gris foncé
+          backgroundColor: "#1f2937",
           borderTopColor: "#111827",
           height: 70,
           paddingBottom: 8,
@@ -35,9 +33,8 @@ export default function MainTabNavigatorJoueur() {
         },
         tabBarIcon: ({ color, size }) => {
           let iconName: React.ComponentProps<typeof Ionicons>["name"];
-
           switch (route.name) {
-            case "MainJoueur":
+            case "HomeScreen":
               iconName = "home-outline";
               break;
             case "Match":
@@ -54,46 +51,54 @@ export default function MainTabNavigatorJoueur() {
               break;
             default:
               iconName = "ellipse-outline";
-              break;
           }
-
           return <Ionicons name={iconName} size={size} color={color} />;
         },
       })}
     >
-      {/* 🏠 Accueil joueur */}
       <Tab.Screen
-        name="MainJoueur"
-        component={MainJoueur}
+        name="HomeScreen"
+        component={HomeScreen}
         options={{ tabBarLabel: "Accueil" }}
+        listeners={({ route }) => ({
+          tabPress: () => DeviceEventEmitter.emit("tab-pressed", route.name),
+        })}
       />
 
-      {/* 🏀 Matchs du joueur */}
       <Tab.Screen
         name="Match"
         component={Match}
         options={{ tabBarLabel: "Matchs" }}
+        listeners={({ route }) => ({
+          tabPress: () => DeviceEventEmitter.emit("tab-pressed", route.name),
+        })}
       />
 
-      {/* 💬 Messagerie */}
       <Tab.Screen
         name="Chat"
         component={Chat}
         options={{ tabBarLabel: "Messages" }}
+        listeners={({ route }) => ({
+          tabPress: () => DeviceEventEmitter.emit("tab-pressed", route.name),
+        })}
       />
 
-      {/* 🔍 Recherche joueurs / clubs */}
       <Tab.Screen
         name="Search"
         component={Search}
         options={{ tabBarLabel: "Recherche" }}
+        listeners={({ route }) => ({
+          tabPress: () => DeviceEventEmitter.emit("tab-pressed", route.name),
+        })}
       />
 
-      {/* 👤 Profil joueur */}
       <Tab.Screen
         name="Profil"
         component={ProfilJoueur}
         options={{ tabBarLabel: "Profil" }}
+        listeners={({ route }) => ({
+          tabPress: () => DeviceEventEmitter.emit("tab-pressed", route.name),
+        })}
       />
     </Tab.Navigator>
   );

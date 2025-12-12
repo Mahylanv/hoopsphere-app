@@ -67,11 +67,12 @@ export default function ProfilClub() {
     return uid && club && (club.uid === uid || club.id === uid);
   }, [club]);
 
-  const formatDepartment = (dep: string) => {
-    if (!dep) return "";
-    return dep.split(" - ")[1] || dep;
+  const formatDepartment = (dep: any) => {
+    if (!dep || typeof dep !== "string") return "";
+    if (!dep.includes(" - ")) return dep;
+    return dep.split(" - ")[1];
   };
-
+  
   // Mise à jour du logo (réservé au propriétaire du club)
   const handleChangeLogo = async () => {
     if (!isOwner) return;
@@ -126,18 +127,28 @@ export default function ProfilClub() {
 
   if (!club) {
     return (
-      <View className="flex-1 justify-center items-center bg-black">
-        <Text className="text-white text-lg font-semibold">
+      <View className="flex-1 justify-center items-center bg-black px-6">
+        <Text className="text-white text-lg font-semibold mb-4 text-center">
           Aucun profil club trouvé
         </Text>
+  
+        <Pressable
+          onPress={() => navigation.navigate("Home")}
+          className="bg-orange-500 px-6 py-3 rounded-xl mt-2"
+        >
+          <Text className="text-white font-bold text-base">
+            Retour à l'accueil
+          </Text>
+        </Pressable>
       </View>
     );
   }
+  
 
   // Normalisation pour l’affichage (ton schéma a parfois nom/ville vs name/city)
   const safeClub = {
-    id: club.id ?? club.uid ?? "",
-    uid: club.uid ?? undefined,
+    id: club.id ?? "",
+    uid: club.id ?? "",
     name: club.nom || club.name || "Nom du club",
     logo:
       club.logo ||
@@ -145,7 +156,7 @@ export default function ProfilClub() {
     city: club.ville || club.city || "Ville inconnue",
     teams: club.teams ?? club.equipes ?? "", // string possible en BDD
     categories: Array.isArray(club.categories) ? club.categories : [],
-    department: club.department || "",
+    department: String(club.department ?? ""),
     email: club.email || "",
     description: club.description || "",
   };

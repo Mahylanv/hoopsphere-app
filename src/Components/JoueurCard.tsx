@@ -1,23 +1,40 @@
-import React, { useMemo } from "react";
+// src/Components/JoueurCard.tsx
+
+import React from "react";
 import { View, Text, Image, Dimensions, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Joueur } from "../types";
+import { PlayerAverages } from "../utils/computePlayerStats";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.9;
 
 type Props = {
   joueur: Joueur;
+  stats?: PlayerAverages | null;
+  rating?: number;
   onPressActions?: () => void;
-  showActionsButton?: boolean; // 🔥 permet de cacher le bouton dans la capture
+  showActionsButton?: boolean;
 };
 
 export default function JoueurCard({
   joueur,
+  stats,
   onPressActions,
-  showActionsButton = true, // 🔥 par défaut le bouton est visible
+  rating,
+  showActionsButton = true,
 }: Props) {
-  const note = useMemo(() => Math.floor(Math.random() * 20) + 80, []);
+  // 🔥 Valeurs sécurisées
+  const MJ = stats?.gamesPlayed ?? 0;
+  const twoInt = stats?.twoInt ?? 0;
+  const twoExt = stats?.twoExt ?? 0;
+  const threes = stats?.threes ?? 0;
+  const pts = stats?.pts ?? 0;
+  const lf = stats?.lf ?? 0;
+  const fouls = stats?.fouls ?? 0;
+
+  // ⭐ Total Réussites
+  const TR = twoInt + twoExt + threes;
 
   return (
     <View className="flex-1 items-center pt-4">
@@ -28,7 +45,7 @@ export default function JoueurCard({
           aspectRatio: 0.68,
         }}
       >
-        {/* 🌌 Fond de carte */}
+        {/* 🌌 Fond */}
         <Image
           source={require("../../assets/CARD-NORMAL-FOND.png")}
           className="absolute w-full h-full"
@@ -37,7 +54,7 @@ export default function JoueurCard({
 
         {/* 🟠 NOTE */}
         <View className="absolute top-[12.5%] left-[21%] bg-orange-500/90 w-[58px] h-[58px] rounded-full items-center justify-center">
-          <Text className="text-white text-xl font-bold">{note}</Text>
+          <Text className="text-white text-xl font-bold">{rating ?? "-"}</Text>
         </View>
 
         {/* Poste */}
@@ -52,10 +69,12 @@ export default function JoueurCard({
           <Image
             source={{
               uri:
-                joueur.avatar ||
-                "https://via.placeholder.com/200x200.png?text=Joueur",
+                joueur.avatar && joueur.avatar.trim() !== ""
+                  ? joueur.avatar
+                  : "https://via.placeholder.com/200.png",
             }}
             className="w-full h-full"
+            resizeMode="cover"
           />
         </View>
 
@@ -66,68 +85,93 @@ export default function JoueurCard({
           </Text>
         </View>
 
-        {/* Statistiques */}
+        {/* 📊 STATISTIQUES — NOUVELLE VERSION */}
         <View className="absolute top-[50%] w-[90%] self-center flex-row justify-between">
-          {/* Bloc gauche */}
+
+          {/* Bloc Gauche */}
           <View className="flex-row w-[46%] justify-end">
             <View className="space-y-3.5 items-end pr-3">
-              <Text className="text-white text-[20px] py-1 font-extrabold">
-                90
+
+              {/* MJ */}
+              <Text className="text-white text-[20px] py-2 font-extrabold">
+                {MJ}
               </Text>
-              <Text className="text-white text-[20px] py-1 font-extrabold">
-                300
+
+              {/* TR - Total Réussites */}
+              <Text className="text-white text-[20px] font-extrabold">
+                {TR}
               </Text>
-              <Text className="text-white text-[20px] py-1 font-extrabold">
-                75
+
+              {/* 2EXT */}
+              <Text className="text-white text-[20px] py-2 font-extrabold">
+                {twoExt}
               </Text>
-              <Text className="text-white text-[20px] py-1 font-extrabold">
-                42
+
+              {/* LF */}
+              <Text className="text-white text-[20px] font-extrabold">
+                {lf}
               </Text>
             </View>
 
             <View className="space-y-6 items-start pl-2">
+
               <Text className="text-gray-300 text-[13px] py-2 font-semibold">
                 MJ
               </Text>
+
               <Text className="text-gray-300 text-[13px] py-3 font-semibold">
-                2EXT
-              </Text>
-              <Text className="text-gray-300 text-[13px] py-2 font-semibold">
                 TR
               </Text>
+
               <Text className="text-gray-300 text-[13px] py-2 font-semibold">
-                2INT
+                2EXT
+              </Text>
+
+              <Text className="text-gray-300 text-[13px] py-2 font-semibold">
+                LF
               </Text>
             </View>
           </View>
 
-          {/* Bloc droit */}
+          {/* Bloc Droite */}
           <View className="flex-row w-[46%] justify-start">
             <View className="space-y-3.5 items-end pr-3">
-              <Text className="text-white text-[20px] py-1 font-extrabold">
-                18
+
+              {/* PTS */}
+              <Text className="text-white text-[20px] py-2 font-extrabold">
+                {pts}
               </Text>
-              <Text className="text-white text-[20px] py-1 font-extrabold">
-                9
+
+              {/* 2INT */}
+              <Text className="text-white text-[20px] font-extrabold">
+                {twoInt}
               </Text>
-              <Text className="text-white text-[20px] py-1 font-extrabold">
-                22
+
+              {/* 3PTS */}
+              <Text className="text-white text-[20px] py-2 font-extrabold">
+                {threes}
               </Text>
-              <Text className="text-white text-[20px] py-1 font-extrabold">
-                7
+
+              {/* F */}
+              <Text className="text-white text-[20px] font-extrabold">
+                {fouls}
               </Text>
             </View>
 
-            <View className="space-y-3.5 items-start pl-2">
+            <View className="space-y-6 items-start pl-2">
+
               <Text className="text-gray-300 text-[13px] py-2 font-semibold">
                 PTS
               </Text>
+
               <Text className="text-gray-300 text-[13px] py-3 font-semibold">
+                2INT
+              </Text>
+
+              <Text className="text-gray-300 text-[13px] py-2 font-semibold">
                 3PTS
               </Text>
-              <Text className="text-gray-300 text-[13px] py-2 font-semibold">
-                LF
-              </Text>
+
               <Text className="text-gray-300 text-[13px] py-2 font-semibold">
                 F
               </Text>
@@ -135,24 +179,15 @@ export default function JoueurCard({
           </View>
         </View>
 
-        {/* 🔥 Bouton share — affiché uniquement SI showActionsButton = true */}
+        {/* Share */}
         {showActionsButton && (
           <TouchableOpacity
             onPress={onPressActions}
             className="absolute bottom-[6%] right-[8%]"
-            activeOpacity={0.8}
           >
             <View
               className="w-12 h-12 rounded-full items-center justify-center"
-              style={{
-                backgroundColor: "rgba(255, 102, 0, 0.85)",
-                shadowColor: "#ff6600",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.6,
-                shadowRadius: 8,
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.15)",
-              }}
+              style={{ backgroundColor: "rgba(255, 102, 0, 0.85)" }}
             >
               <Ionicons name="share-social-outline" size={26} color="#fff" />
             </View>

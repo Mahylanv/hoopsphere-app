@@ -49,7 +49,7 @@ export type Message = {
 export type RootStackParamList = {
   Home: undefined;
   Connexion: undefined;
-
+  ForgotPassword: undefined; 
   // --- Inscriptions Joueurs ---
   InscriptionJoueur: undefined;
   InscriptionJoueurStep1: undefined;
@@ -83,15 +83,11 @@ export type RootStackParamList = {
     avatar: string;
   };
 
-  FullGallery: {
-    images: string[];
-    onDeleteImage?: (url: string) => void;
+  FullMediaViewer: {
+    media: MediaItem[];
+    startIndex: number;
   };
-
-  FullVideo: {
-    videos: string[];
-  };
-
+  
   ProfilClub: { club: Club };
 
   Search: undefined;
@@ -105,15 +101,20 @@ export type RootStackParamList = {
   Payment: undefined;
   EditOffer: { offer: Offer }; // nouvelle page de modification
   SearchJoueur: undefined;
-  JoueurDetail: { joueur: Joueur };
-
+  // JoueurDetail: { joueur: Joueur };
+  JoueurDetail: { uid: string };
+  ManageCandidatures: undefined;
   ClubTeamsList: undefined;
+  VideoFeed: {
+    startIndex: number;
+    videos: any[];
+  };
 };
 
 // NAVIGATION — JOUEUR
 
 export type MainTabParamListJoueur = {
-  MainJoueur: undefined;
+  HomeScreen: undefined;
   Match: undefined;
   Chat: undefined;
   Search: undefined;
@@ -124,8 +125,8 @@ export type MainTabParamListJoueur = {
 
 export type MainTabParamListClub = {
   Home: undefined;
-  Annonces: undefined;
-  Chat: undefined;
+  Candidatures: undefined;  
+  // Chat: undefined;
   SearchJoueur: undefined;
   ProfilClub: undefined;
 };
@@ -159,4 +160,9 @@ export type TeamPlayer = {
   id?: string;
   prenom: string;
   nom: string;
+};
+
+export type MediaItem = {
+  url: string;
+  type: "image" | "video";
 };

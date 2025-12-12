@@ -1,4 +1,4 @@
-// src/screens/auth/InscriptionJoueurStep2.tsx
+// src/Inscription/Joueurs/InscriptionJoueurStep2.tsx
 
 import React, { useState } from "react";
 import {
@@ -8,19 +8,15 @@ import {
   Pressable,
   StatusBar,
   TouchableOpacity,
-  Image,
   ScrollView,
   Platform,
   Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  RouteProp,
-  useNavigation,
-  useRoute,
-} from "@react-navigation/native";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { Ionicons } from "@expo/vector-icons";
 import { RootStackParamList } from "../../types";
 
 type Route2Prop = RouteProp<RootStackParamList, "InscriptionJoueurStep2">;
@@ -35,14 +31,15 @@ export default function InscriptionJoueurStep2() {
 
   const [nom, setNom] = useState("");
   const [prenom, setPrenom] = useState("");
-  const [dobDate, setDobDate] = useState<Date>(new Date(2005, 0, 1));
+
+  const [dobDate, setDobDate] = useState(new Date(2005, 0, 1));
   const [dob, setDob] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
+
   const [genre, setGenre] = useState("");
-  const [showGenreModal, setShowGenreModal] = useState(false);
+
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
-  // ✅ Validation
   const isValid = Boolean(nom && prenom && dob && genre);
 
   const formatDate = (date: Date) =>
@@ -52,7 +49,6 @@ export default function InscriptionJoueurStep2() {
 
   const handleContinue = () => {
     if (!isValid) return;
-
     navigation.navigate("InscriptionJoueurStep3", {
       email: params.email,
       password: params.password,
@@ -67,31 +63,64 @@ export default function InscriptionJoueurStep2() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0E0D0D" }}>
       <StatusBar barStyle="light-content" />
 
-      {/* Header */}
-      <View className="flex-row items-center justify-between px-6 mt-10 mb-6">
+      {/* ---------- HEADER ---------- */}
+      <View className="flex-row items-center px-6 mt-6">
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image
-            source={require("../../../assets/arrow-left.png")}
-            className="w-9 h-9"
-          />
+          <Ionicons name="arrow-back" size={26} color="white" />
         </TouchableOpacity>
 
-        <View className="flex-1 items-center ml-9">
-          <Text className="text-white text-3xl font-bold">Tes infos</Text>
-        </View>
-
-        <View style={{ width: 36 }} />
+        <Text className="text-white text-xl ml-4">Inscription joueur</Text>
       </View>
 
-      {/* Form */}
+      {/* ---------- CONTENT SCROLL ---------- */}
       <ScrollView
         contentContainerStyle={{
-          flexGrow: 1,
           justifyContent: "center",
+          flexGrow: 1,
           paddingHorizontal: 24,
         }}
       >
-        {/* Nom */}
+        {/* ---------- GENRE ---------- */}
+        <View className="mb-6">
+          <Text className="text-gray-300 mb-2">Genre</Text>
+
+          <View className="flex-row justify-between">
+            {[
+              { label: "Homme", value: "Équipe masculine" },
+              { label: "Femme", value: "Équipe féminine" },
+            ].map((opt) => {
+              const selected = genre === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  onPress={() => setGenre(opt.value)}
+                  className={`px-4 py-3 rounded-lg border w-[48%]
+                    ${selected ? "border-orange-500 bg-orange-500/20" : "border-gray-600"}
+                  `}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <Text
+                      className={`text-base ${
+                        selected ? "text-orange-400" : "text-gray-300"
+                      }`}
+                    >
+                      {opt.label}
+                    </Text>
+                    {selected && (
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={20}
+                        color="#f97316"
+                      />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ---------- NOM ---------- */}
         <TextInput
           value={nom}
           onChangeText={setNom}
@@ -99,19 +128,15 @@ export default function InscriptionJoueurStep2() {
           placeholderTextColor="#999"
           onFocus={() => setFocusedInput("nom")}
           onBlur={() => setFocusedInput(null)}
+          className="rounded-lg h-14 px-4 text-white text-lg mb-4"
           style={{
             borderWidth: 2,
             borderColor: focusedInput === "nom" ? "#F97316" : "#9CA3AF",
-            borderRadius: 8,
-            height: 56,
-            paddingHorizontal: 16,
-            color: "white",
-            fontSize: 18,
-            marginBottom: 24,
+            backgroundColor: "#111",
           }}
         />
 
-        {/* Prénom */}
+        {/* ---------- PRENOM ---------- */}
         <TextInput
           value={prenom}
           onChangeText={setPrenom}
@@ -119,123 +144,98 @@ export default function InscriptionJoueurStep2() {
           placeholderTextColor="#999"
           onFocus={() => setFocusedInput("prenom")}
           onBlur={() => setFocusedInput(null)}
+          className="rounded-lg h-14 px-4 text-white text-lg mb-4"
           style={{
             borderWidth: 2,
             borderColor: focusedInput === "prenom" ? "#F97316" : "#9CA3AF",
-            borderRadius: 8,
-            height: 56,
-            paddingHorizontal: 16,
-            color: "white",
-            fontSize: 18,
-            marginBottom: 24,
+            backgroundColor: "#111",
           }}
         />
 
-        {/* Date de naissance */}
-        <TouchableOpacity
-          onPress={() => setShowDatePicker(true)}
-          style={{
-            borderWidth: 2,
-            borderColor: "#9CA3AF",
-            borderRadius: 8,
-            height: 56,
-            paddingHorizontal: 16,
-            justifyContent: "center",
-            marginBottom: 24,
-          }}
-        >
-          <Text style={{ fontSize: 18, color: dob ? "white" : "#999" }}>
-            {dob || "Date de naissance (JJ/MM/AAAA)"}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Picker Date */}
-        <Modal visible={showDatePicker} animationType="slide" transparent>
-          <View
+        {/* ---------- DATE DE NAISSANCE ---------- */}
+        {Platform.OS === "web" ? (
+          /* --- WEB : simple champ texte --- */
+          <TextInput
+            value={dob}
+            onChangeText={setDob}
+            placeholder="Date de naissance (JJ/MM/AAAA)"
+            placeholderTextColor="#999"
+            className="h-14 rounded-lg px-4 text-white text-lg mb-6"
             style={{
-              flex: 1,
-              justifyContent: "center",
-              backgroundColor: "#000000aa",
+              borderWidth: 2,
+              borderColor: "#9CA3AF",
+              backgroundColor: "#111",
+            }}
+          />
+        ) : (
+          /* --- MOBILE : bouton ouvrant le DatePicker --- */
+          <TouchableOpacity
+            onPress={() => setShowDatePicker(true)}
+            className="h-14 rounded-lg px-4 justify-center mb-6"
+            style={{
+              borderWidth: 2,
+              borderColor: "#9CA3AF",
+              backgroundColor: "#111",
             }}
           >
-            <View className="bg-[#1E1E1E] rounded-xl mx-6 p-4">
-              <DateTimePicker
-                value={dobDate}
-                mode="date"
-                locale="fr-FR"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                themeVariant="dark"
-                maximumDate={new Date()}
-                onChange={(event, selectedDate) => {
-                  if (selectedDate) {
-                    setDobDate(selectedDate);
-                    setDob(formatDate(selectedDate));
-                  }
-                }}
-              />
-              <TouchableOpacity
-                className="mt-4 bg-orange-500 py-3 rounded-xl items-center"
-                onPress={() => setShowDatePicker(false)}
-              >
-                <Text className="text-white font-semibold text-base">
-                  Valider
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+            <Text className={`text-lg ${dob ? "text-white" : "text-gray-500"}`}>
+              {dob || "Date de naissance (JJ/MM/AAAA)"}
+            </Text>
+          </TouchableOpacity>
+        )}
 
-        {/* Sélecteur Genre */}
-        <TouchableOpacity
-          onPress={() => setShowGenreModal(true)}
-          className="border-2 border-gray-400 rounded-md h-14 px-4 justify-center mb-6 bg-[#1C1C1E]"
-        >
-          <Text className={`text-lg ${genre ? "text-white" : "text-gray-400"}`}>
-            {genre || "Sélectionne ton équipe"}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Modal Genre */}
-        <Modal visible={showGenreModal} transparent animationType="fade">
-          <View className="flex-1 justify-center items-center bg-black/70">
-            <View className="bg-[#1E1E1E] rounded-xl p-6 w-[80%]">
-              <Text className="text-white text-lg font-semibold mb-4 text-center">
-                Choisis ton équipe
-              </Text>
-
-              {["Équipe masculine", "Équipe féminine"].map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  onPress={() => {
-                    setGenre(opt);
-                    setShowGenreModal(false);
+        {/* ---------- DATE PICKER MODAL (iOS / Android seulement) ---------- */}
+        {showDatePicker && Platform.OS !== "web" && (
+          <Modal transparent animationType="fade">
+            <View className="flex-1 justify-center items-center bg-black/60">
+              <View className="bg-[#1E1E1E] rounded-xl p-6 w-[85%]">
+                <DateTimePicker
+                  value={dobDate}
+                  mode="date"
+                  maximumDate={new Date()}
+                  display={Platform.OS === "ios" ? "spinner" : "default"}
+                  onChange={(event, selectedDate) => {
+                    if (selectedDate) {
+                      setDobDate(selectedDate);
+                      setDob(formatDate(selectedDate));
+                    }
+                    if (Platform.OS !== "ios") setShowDatePicker(false);
                   }}
-                  className="bg-gray-700 rounded-lg p-3 mb-3 items-center"
+                />
+
+                {/* Bouton Valider (nécessaire pour iOS) */}
+                <TouchableOpacity
+                  className="bg-orange-500 rounded-xl py-3 mt-4"
+                  onPress={() => setShowDatePicker(false)}
                 >
-                  <Text className="text-white">{opt}</Text>
+                  <Text className="text-center text-white font-bold">
+                    Valider
+                  </Text>
                 </TouchableOpacity>
-              ))}
-
-              <TouchableOpacity
-                onPress={() => setShowGenreModal(false)}
-                className="mt-2 items-center"
-              >
-                <Text className="text-blue-400 text-sm">Annuler</Text>
-              </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </Modal>
+          </Modal>
+        )}
 
-        {/* Bouton Continuer */}
+        {/* ---------- CONTINUE BTN ---------- */}
         <Pressable
           onPress={handleContinue}
           disabled={!isValid}
-          className={`py-4 rounded-2xl items-center ${
-            isValid ? "bg-orange-500" : "bg-gray-600 opacity-60"
+          className={`py-4 rounded-2xl items-center mb-5 ${
+            isValid ? "bg-orange-500" : "bg-gray-600 opacity-50"
           }`}
         >
           <Text className="text-white font-bold text-lg">Continuer</Text>
         </Pressable>
+
+        {/* ---------- STEP INDICATOR ---------- */}
+        <View className="flex-row items-center justify-center">
+          <View className="w-2 h-2 rounded-full bg-gray-600" />
+          <View className="w-6 h-[2px] bg-gray-600 mx-1" />
+          <View className="w-2 h-2 rounded-full bg-orange-500" />
+          <View className="w-6 h-[2px] bg-gray-600 mx-1" />
+          <View className="w-2 h-2 rounded-full bg-gray-600" />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

@@ -5,34 +5,26 @@ import {
   View,
   Text,
   TextInput,
-  Modal,
   StatusBar,
   ScrollView,
   TouchableOpacity,
   Pressable,
   Image,
   Alert,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
-import { Feather } from "@expo/vector-icons";
+import { Ionicons, Feather } from "@expo/vector-icons";
 import clsx from "clsx";
 import * as ImagePicker from "expo-image-picker";
-import { DEPARTEMENTS } from "../../constants/departements";
+
+import DepartmentSelect from "../../Components/DepartmentSelect";
 import { registerPlayer } from "../../services/authService";
 
-// 👉 Données statiques (clubs + options)
-import paris from "../../../assets/paris.png";
-import monaco from "../../../assets/monaco.png";
-import csp from "../../../assets/csp.png";
-
-const CLUBS = [
-  { name: "Paris Basket - U18 Féminin (Régional 3)", logo: paris },
-  { name: "Monaco - U20 Masculin (National 2)", logo: monaco },
-  { name: "CSP Limoges - Seniors (Élite)", logo: csp },
-];
+import { auth } from "../../config/firebaseConfig";
 
 const tailles = Array.from({ length: 71 }, (_, i) => `${150 + i} cm`);
 const poidsOptions = Array.from({ length: 101 }, (_, i) => `${40 + i} kg`);
@@ -47,7 +39,7 @@ export default function InscriptionJoueurStep3() {
   const navigation = useNavigation<Nav3Prop>();
   const route = useRoute<any>();
 
-  // ✅ Données Step1 & Step2
+  // Récupération Step 1 & 2
   const { email, password, nom, prenom, dob, genre } = route.params || {};
 
   if (!email || !password) {
@@ -56,26 +48,26 @@ export default function InscriptionJoueurStep3() {
     return null;
   }
 
-  // ✅ States locaux
+  // -----------------------------
+  // STATES
+  // -----------------------------
   const [taille, setTaille] = useState("");
   const [poids, setPoids] = useState("");
   const [main, setMain] = useState("");
   const [poste, setPoste] = useState("");
-  const [departement, setDepartement] = useState("");
+  const [departement, setDepartement] = useState<string[]>([]);
   const [club, setClub] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null);
 
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
-  const [showDepartementModal, setShowDepartementModal] = useState(false);
-  const [searchDepartement, setSearchDepartement] = useState("");
-  const [showClubModal, setShowClubModal] = useState(false);
-  const [searchClub, setSearchClub] = useState("");
   const [loading, setLoading] = useState(false);
 
   const isValid =
-    taille && poids && main && poste && departement && club ? true : false;
+    taille && poids && main && poste && departement.length === 1;
 
-  // ✅ Sélection d’image (galerie)
+  // -----------------------------
+  // PICK AVATAR
+  // -----------------------------
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -89,7 +81,9 @@ export default function InscriptionJoueurStep3() {
     }
   };
 
-  // ✅ Création compte via authService
+  // -----------------------------
+  // REGISTER
+  // -----------------------------
   const handleRegister = async () => {
     if (!isValid) {
       Alert.alert("Champs requis", "Merci de remplir tous les champs.");
@@ -105,225 +99,115 @@ export default function InscriptionJoueurStep3() {
         prenom,
         dob,
         genre,
-        taille,
-        poids,
+        taille: parseInt(taille),   // convertit "178 cm" → 178
+        poids: parseInt(poids),
         main,
         poste,
-        departement,
-        club,
+        departement: departement[0], // 🔥 SINGLE VALUE
+        club: club || null,
         avatar,
       });
 
-      Alert.alert("Succès", "Compte joueur créé avec succès ✅");
+      Alert.alert("Succès", "Compte joueur créé avec succès !");
       navigation.reset({
         index: 0,
-        routes: [{ name: "MainTabs" }],
+        routes: [
+          {
+            name: "MainTabs",
+            params: {
+              screen: "ProfilJoueur",   // ← l’onglet exact dans ton MainTabs joueur
+              params: { uid: auth.currentUser?.uid },
+            },
+          },
+        ],
       });
     } catch (error: any) {
-      console.error("❌ Erreur création compte :", error);
       Alert.alert("Erreur", error.message || "Impossible de créer le compte.");
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Modales génériques
-  const renderModal = (
-    title: string,
-    options: string[],
-    onSelect: (val: string) => void,
-    showSearch?: boolean,
-    searchValue?: string,
-    setSearchValue?: (val: string) => void
-  ) => (
-    <Modal visible transparent animationType="slide">
-      <View className="flex-1 justify-center bg-black/70">
-        <View className="bg-zinc-900 mx-5 rounded-xl p-4">
-          <Text className="text-white text-lg font-bold mb-3">{title}</Text>
-          {showSearch && setSearchValue && (
-            <TextInput
-              placeholder="Rechercher..."
-              placeholderTextColor="#999"
-              value={searchValue}
-              onChangeText={setSearchValue}
-              className="bg-zinc-800 text-white px-4 py-2 rounded-lg mb-3"
-            />
-          )}
-          <ScrollView className="max-h-80">
-            {options
-              .filter((val) =>
-                !showSearch || !searchValue
-                  ? true
-                  : val.toLowerCase().includes(searchValue.toLowerCase())
-              )
-              .map((val) => (
-                <TouchableOpacity
-                  key={val}
-                  onPress={() => {
-                    onSelect(val);
-                    if (setSearchValue) setSearchValue("");
-                    setFocusedInput(null);
-                    setShowDepartementModal(false);
-                    setShowClubModal(false);
-                  }}
-                  className="py-3"
-                >
-                  <Text className="text-white">{val}</Text>
-                </TouchableOpacity>
-              ))}
-          </ScrollView>
-          <TouchableOpacity
-            onPress={() => {
-              if (setSearchValue) setSearchValue("");
-              setFocusedInput(null);
-              setShowDepartementModal(false);
-              setShowClubModal(false);
-            }}
-            className="mt-4 bg-gray-700 rounded-lg py-3 items-center"
-          >
-            <Text className="text-white">Annuler</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-
-  // ✅ Modal clubs
-  const renderClubModal = () => (
-    <Modal visible transparent animationType="slide">
-      <View className="flex-1 justify-center bg-black/70">
-        <View className="bg-zinc-900 mx-5 rounded-xl p-4">
-          <Text className="text-white text-lg font-bold mb-3">
-            Sélectionne ton club
-          </Text>
-          <TextInput
-            placeholder="Rechercher..."
-            placeholderTextColor="#999"
-            value={searchClub}
-            onChangeText={setSearchClub}
-            className="bg-zinc-800 text-white px-4 py-2 rounded-lg mb-3"
-          />
-          <ScrollView className="max-h-80">
-            {CLUBS.filter((c) =>
-              c.name.toLowerCase().includes(searchClub.toLowerCase())
-            ).map((clubItem) => (
-              <TouchableOpacity
-                key={clubItem.name}
-                onPress={() => {
-                  setClub(clubItem.name);
-                  setSearchClub("");
-                  setShowClubModal(false);
-                }}
-                className="flex-row items-center py-2"
-              >
-                <Image
-                  source={clubItem.logo}
-                  className="w-8 h-8 rounded-full mr-3"
-                />
-                <Text className="text-white text-base">{clubItem.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <TouchableOpacity
-            onPress={() => {
-              setSearchClub("");
-              setShowClubModal(false);
-            }}
-            className="mt-4 bg-gray-700 rounded-lg py-3 items-center"
-          >
-            <Text className="text-white">Annuler</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-
   return (
     <SafeAreaView className="flex-1 bg-[#0E0D0D]">
       <StatusBar barStyle="light-content" />
 
-      {/* Header */}
-      <View className="flex-row justify-between items-center px-6 mt-6">
-        <Pressable
-          onPress={() => navigation.goBack()}
-          className="flex-row items-center space-x-3"
-        >
-          <Image
-            source={require("../../../assets/arrow-left.png")}
-            className="w-9 h-9"
-          />
-          <Text className="text-white text-xl ml-3">Inscription joueur</Text>
-        </Pressable>
-        <TouchableOpacity onPress={() => navigation.navigate("MainTabs")}>
-          <Text className="text-white">Plus tard</Text>
+      {/* -------------------------------- HEADER -------------------------------- */}
+      <View className="flex-row items-center px-6 mt-6">
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color="white" />
         </TouchableOpacity>
-      </View>
 
-      {/* Avatar */}
+        <Text className="text-white text-xl ml-4">Inscription joueur</Text>
+      </View>
+      {/* -------------------------------- AVATAR -------------------------------- */}
       <View className="items-center my-8">
-        <View className="relative w-28 h-28">
-          {/* Image pressable */}
-          <Pressable onPress={pickImage}>
-            <View className="rounded-full bg-zinc-600 items-center justify-center w-28 h-28 overflow-hidden">
-              {avatar ? (
-                <Image
-                  source={{ uri: avatar }}
-                  className="w-28 h-28 rounded-full"
-                />
-              ) : (
-                <Feather name="user" size={56} color="#aaa" />
-              )}
-            </View>
-          </Pressable>
+        <Pressable onPress={pickImage} className="relative">
+          <View className="rounded-full bg-zinc-700 w-28 h-28 items-center justify-center overflow-hidden">
+            {avatar ? (
+              <Image
+                source={{ uri: avatar }}
+                className="w-28 h-28 rounded-full"
+              />
+            ) : (
+              <Feather name="user" size={56} color="#aaa" />
+            )}
+          </View>
 
-          {/* Crayon au-dessus */}
-          <Pressable
-            onPress={pickImage}
-            className="absolute bottom-0 right-0 bg-blue-500 p-2 rounded-full z-50"
-            style={{ elevation: 10 }}
-          >
+          <View className="absolute bottom-0 right-0 bg-orange-500 p-2 rounded-full">
             <Feather name="edit-2" size={16} color="white" />
-          </Pressable>
-        </View>
+          </View>
+        </Pressable>
       </View>
 
-
-      {/* Formulaire */}
+      {/* -------------------------------- FORM -------------------------------- */}
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 60 }}
-        className="px-6 pt-10"
+        className="px-6"
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {/* Sélecteurs */}
+        {/* TAILLE */}
         <TouchableOpacity
           onPress={() => setFocusedInput("taille")}
-          className="border-2 rounded-lg h-14 px-4 justify-center mb-5 border-white"
+          className="border-2 border-white rounded-lg h-14 px-4 justify-center mb-5"
         >
-          <Text className={clsx("text-base", taille ? "text-white" : "text-gray-400")}>
+          <Text
+            className={clsx(
+              "text-base",
+              taille ? "text-white" : "text-gray-400"
+            )}
+          >
             {taille || "Sélectionne ta taille"}
           </Text>
         </TouchableOpacity>
 
+        {/* POIDS */}
         <TouchableOpacity
           onPress={() => setFocusedInput("poids")}
-          className="border-2 rounded-lg h-14 px-4 justify-center mb-5 border-white"
+          className="border-2 border-white rounded-lg h-14 px-4 justify-center mb-5"
         >
-          <Text className={clsx("text-base", poids ? "text-white" : "text-gray-400")}>
+          <Text
+            className={clsx(
+              "text-base",
+              poids ? "text-white" : "text-gray-400"
+            )}
+          >
             {poids || "Sélectionne ton poids"}
           </Text>
         </TouchableOpacity>
 
+        {/* MAIN FORTE */}
         <Text className="text-white text-base mb-2">Main forte</Text>
-        <View className="flex-row justify-between mb-5">
-          {["Gauche", "Droite"].map((opt) => (
+        <View className="flex-row justify-between mb-6">
+          {["Gauche", "Droite", "Ambidextre"].map((opt, index) => (
             <TouchableOpacity
               key={opt}
               onPress={() => setMain(opt)}
               className={clsx(
-                "rounded-lg py-3 px-5 flex-1",
+                "rounded-lg py-2 px-2 flex-1",
                 main === opt
                   ? "border-2 border-orange-500"
                   : "border-2 border-white",
-                opt === "Gauche" ? "mr-2" : ""
+                index !== 2 ? "mr-2" : "" // marge seulement entre les 3 boutons
               )}
             >
               <Text className="text-white text-center text-base">{opt}</Text>
@@ -331,70 +215,124 @@ export default function InscriptionJoueurStep3() {
           ))}
         </View>
 
+        {/* POSTE */}
         <TouchableOpacity
           onPress={() => setFocusedInput("poste")}
-          className="border-2 rounded-lg h-14 px-4 justify-center mb-5 border-white"
-        >
-          <Text className={clsx("text-base", poste ? "text-white" : "text-gray-400")}>
-            {poste || "Sélectionne ton poste"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => setShowDepartementModal(true)}
-          className="border-2 rounded-lg h-14 px-4 justify-center mb-5 border-white"
+          className="border-2 border-white rounded-lg h-14 px-4 justify-center mb-5"
         >
           <Text
             className={clsx(
               "text-base",
-              departement ? "text-white" : "text-gray-400"
+              poste ? "text-white" : "text-gray-400"
             )}
           >
-            {departement || "Sélectionne ton département"}
+            {poste || "Sélectionne ton poste"}
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => setShowClubModal(true)}
-          className="border-2 rounded-lg h-14 px-4 justify-center mb-5 border-white"
-        >
-          <Text className={clsx("text-base", club ? "text-white" : "text-gray-400")}>
-            {club || "Sélectionne ton club"}
-          </Text>
-        </TouchableOpacity>
+        {/* DÉPARTEMENT */}
+        <DepartmentSelect
+          single
+          value={departement}
+          placeholder="Sélectionne ton département"
+          onSelect={(values) => setDepartement(values)}
+        />
 
-        {/* Bouton final */}
+        {/* CLUB (INPUT MANUEL) */}
+        <TextInput
+          value={club}
+          onChangeText={setClub}
+          placeholder="Nom de ton club"
+          placeholderTextColor="#999"
+          className="rounded-lg h-14 px-4 text-white text-lg mt-5 bg-[#111] border-2 border-gray-600"
+        />
+
+        {/* BOUTON FINAL */}
         <Pressable
           disabled={!isValid || loading}
           onPress={handleRegister}
           className={clsx(
-            "py-4 rounded-2xl items-center",
+            "py-4 rounded-2xl items-center mt-8",
             isValid ? "bg-orange-500" : "bg-gray-600 opacity-60"
           )}
         >
           <Text className="text-white font-bold text-lg">
-            {loading ? "Création..." : "Continuer"}
+            {loading ? "Création..." : "Créer mon compte"}
           </Text>
         </Pressable>
+        {/* STEP INDICATOR */}
+        <View className="flex-row justify-center items-center mt-5">
+          <View className="w-2 h-2 rounded-full bg-gray-600" />
+          <View className="w-6 h-[2px] bg-gray-600 mx-1" />
+          <View className="w-2 h-2 rounded-full bg-gray-600" />
+          <View className="w-6 h-[2px] bg-gray-600 mx-1" />
+          <View className="w-2 h-2 rounded-full bg-orange-500" />
+        </View>
       </ScrollView>
 
-      {/* Modales */}
+      {/* -------------------------------- MODALES -------------------------------- */}
       {focusedInput === "taille" &&
-        renderModal("Sélectionne ta taille", tailles, setTaille)}
-      {focusedInput === "poids" &&
-        renderModal("Sélectionne ton poids", poidsOptions, setPoids)}
-      {focusedInput === "poste" &&
-        renderModal("Sélectionne ton poste", postes, setPoste)}
-      {showDepartementModal &&
-        renderModal(
-          "Sélectionne ton département",
-          DEPARTEMENTS,
-          setDepartement,
-          true,
-          searchDepartement,
-          setSearchDepartement
+        renderPickerModal(
+          "Sélectionne ta taille",
+          tailles,
+          setTaille,
+          setFocusedInput
         )}
-      {showClubModal && renderClubModal()}
+
+      {focusedInput === "poids" &&
+        renderPickerModal(
+          "Sélectionne ton poids",
+          poidsOptions,
+          setPoids,
+          setFocusedInput
+        )}
+
+      {focusedInput === "poste" &&
+        renderPickerModal(
+          "Sélectionne ton poste",
+          postes,
+          setPoste,
+          setFocusedInput
+        )}
     </SafeAreaView>
+  );
+}
+
+/* --------------------------- MODALE SIMPLE (TAILLE / POIDS / POSTE) --------------------------- */
+function renderPickerModal(
+  title: string,
+  list: string[],
+  onSelect: (v: string) => void,
+  close: (arg: any) => void
+) {
+  return (
+    <Modal transparent animationType="fade">
+      <View className="flex-1 justify-center items-center bg-black/70">
+        <View className="bg-zinc-900 rounded-xl w-[80%] max-h-[70%] p-5">
+          <Text className="text-white text-lg font-bold mb-4">{title}</Text>
+          <ScrollView className="mb-4">
+            {list.map((item) => (
+              <TouchableOpacity
+                key={item}
+                onPress={() => {
+                  onSelect(item);
+                  close(null);
+                }}
+                className="py-3 border-b border-gray-700"
+              >
+                <Text className="text-white">{item}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <TouchableOpacity
+            onPress={() => close(null)}
+            className="bg-gray-700 py-3 rounded-xl mt-2"
+          >
+            <Text className="text-center text-white">Annuler</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   );
 }

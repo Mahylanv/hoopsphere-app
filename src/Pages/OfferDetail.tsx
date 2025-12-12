@@ -1,12 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    View, Text, StatusBar, Pressable, Alert, ScrollView,
-    ActivityIndicator, TextInput, Image
+    View,
+    Text,
+    StatusBar,
+    Pressable,
+    Alert,
+    ScrollView,
+    ActivityIndicator,
+    TextInput,
+    Image,
+    Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
+import * as MailComposer from "expo-mail-composer";
 
 import { RootStackParamList, Offer as OfferType } from "../types";
 import { auth, db } from "../config/firebaseConfig";
@@ -15,8 +24,28 @@ import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/fires
 type RouteProps = RouteProp<RootStackParamList, "OfferDetail">;
 type NavProps = NativeStackNavigationProp<RootStackParamList, "OfferDetail">;
 
-// On étend localement l'offre pour inclure id/clubUid si absent du type global
 type LocalOffer = OfferType & { id?: string; clubUid?: string };
+
+function displayDepartment(dep: unknown): string {
+    if (typeof dep === "string") {
+        const parts = dep.split(" - ");
+        return (parts[1] || parts[0]).trim();
+    }
+    if (typeof dep === "number") return String(dep);
+    if (Array.isArray(dep)) {
+        return dep
+            .map((d) =>
+                typeof d === "string" ? (d.split(" - ")[1] || d) : String(d ?? "")
+            )
+            .filter(Boolean)
+            .join(", ");
+    }
+    if (dep && typeof dep === "object") {
+        const anyDep = dep as any;
+        return anyDep.name || anyDep.label || anyDep.code || "";
+    }
+    return "";
+}
 
 export default function OfferDetail() {
     const navigation = useNavigation<NavProps>();
@@ -26,35 +55,26 @@ export default function OfferDetail() {
     const [sending, setSending] = useState(false);
     const [motivation, setMotivation] = useState("");
 
-    // --- Infos club (logo, nom, ville)
+    // --- Infos club (logo, nom, ville, email, etc.)
     const [clubLoading, setClubLoading] = useState(true);
     const [club, setClub] = useState<null | {
         uid: string;
         name?: string;
-        nom?: string;   
+        nom?: string;
         logo?: string;
         city?: string;
-        ville?: string;   
-        department?: string;
+        ville?: string;
+        department?: unknown;
+        email?: string;
     }>(null);
 
     const isLogged = !!auth.currentUser;
     const isClubOwner =
         !!auth.currentUser?.uid && !!offer.clubUid && auth.currentUser!.uid === offer.clubUid;
 
-    // Nom + ville formatés proprement
-    const clubName = useMemo(
-        () => club?.nom || club?.name || "Club",
-        [club]
-    );
-    const clubCity = useMemo(
-        () => club?.ville || club?.city || "",
-        [club]
-    );
-    const clubDept = useMemo(() => {
-        if (!club?.department) return "";
-        return club.department.split(" - ")[1] || club.department;
-    }, [club]);
+    const clubName = useMemo(() => club?.nom || club?.name || "Club", [club]);
+    const clubCity = useMemo(() => club?.ville || club?.city || "", [club]);
+    const clubDept = useMemo(() => displayDepartment(club?.department), [club]);
 
     // Chargement du club
     useEffect(() => {
@@ -78,8 +98,44 @@ export default function OfferDetail() {
             }
         };
         run();
-        return () => { mounted = false; };
+        return () => {
+            mounted = false;
+        };
     }, [offer.clubUid]);
+
+    type MailStatus = "sent" | "cancelled" | "saved" | "unavailable" | "opened-external" | "error";
+
+    const composeEmailToClub = async (
+        clubEmail: string,
+        subject: string,
+        body: string
+    ): Promise<MailStatus> => {
+        try {
+            const available = await MailComposer.isAvailableAsync();
+            if (available) {
+                const result = await MailComposer.composeAsync({
+                    recipients: [clubEmail],
+                    subject,
+                    body,
+                });
+                if (result.status === "sent") return "sent";
+                if (result.status === "saved") return "saved";
+                return "cancelled";
+            } else {
+                // Fallback mailto: on ne peut PAS savoir s’il a été envoyé ensuite
+                const url = `mailto:${encodeURIComponent(clubEmail)}?subject=${encodeURIComponent(
+                    subject
+                )}&body=${encodeURIComponent(body)}`;
+                await Linking.openURL(url);
+                return "opened-external";
+            }
+        } catch (e) {
+            console.error("composeEmailToClub failed", e);
+            return "error";
+        }
+    };
+
+
 
     const handleApply = async () => {
         if (!isLogged) {
@@ -92,27 +148,81 @@ export default function OfferDetail() {
             Alert.alert("Erreur", "Informations d’offre incomplètes.");
             return;
         }
+
         try {
             setSending(true);
-            await addDoc(
-                collection(db, "clubs", offer.clubUid, "offres", offer.id, "candidatures"),
-                {
-                    applicantUid: auth.currentUser?.uid,
-                    applicantEmail: auth.currentUser?.email || null,
-                    message: motivation || "",
-                    createdAt: serverTimestamp(),
-                    status: "pending",
-                }
-            );
-            Alert.alert("Candidature envoyée ✅", "Le club a bien reçu ta candidature.");
-            navigation.goBack();
+
+            // 1) Tenter l’email d’abord
+            const to = club?.email?.trim();
+            if (!to) {
+                Alert.alert("Impossible d’envoyer l’email", "Ce club n’a pas d’adresse e-mail renseignée.");
+                return;
+            }
+
+            const subject = `Candidature – ${offer.title || "Offre"} – ${auth.currentUser?.email ?? "Joueur"}`;
+            const body = [
+                `Bonjour ${clubName},`,
+                "",
+                `Je souhaite postuler à l’offre : ${offer.title || "Sans titre"}.`,
+                offer.location ? `Localisation : ${offer.location}` : "",
+                "",
+                "Message :",
+                motivation || "(aucun message renseigné)",
+                "",
+                "Cordialement,",
+                auth.currentUser?.email ?? "",
+            ]
+                .filter(Boolean)
+                .join("\n");
+
+            const emailStatus = await composeEmailToClub(to, subject, body);
+
+            // 2) Si ET SEULEMENT SI l’email a été envoyé, on enregistre la candidature côté club
+            if (emailStatus === "sent") {
+                await addDoc(
+                    collection(db, "clubs", offer.clubUid, "offres", offer.id, "candidatures"),
+                    {
+                        applicantUid: auth.currentUser?.uid,
+                        applicantEmail: auth.currentUser?.email || null,
+                        message: motivation || "",
+                        createdAt: serverTimestamp(),
+                        status: "pending",
+                        clubUid: offer.clubUid,
+                        offerId: offer.id,
+                        offerTitle: offer.title || "",
+                        offerLocation: offer.location || "",
+                    }
+                );
+                Alert.alert("Candidature envoyée ✅", "Ton email a bien été envoyé au club.");
+                navigation.goBack();
+                return;
+            }
+
+            if (emailStatus === "saved") {
+                Alert.alert("Brouillon enregistré", "Ton brouillon d’email est prêt. Envoie-le pour finaliser la candidature.");
+            } else if (emailStatus === "cancelled") {
+                Alert.alert("Envoi annulé", "L’email n’a pas été envoyé. Aucune candidature n’a été enregistrée.");
+            } else if (emailStatus === "opened-external") {
+                Alert.alert(
+                    "Vérifie ton envoi",
+                    "Ton application mail s’est ouverte. La candidature ne sera enregistrée côté club que si tu envoies l’email."
+                );
+            } else if (emailStatus === "unavailable") {
+                Alert.alert(
+                    "Email indisponible",
+                    "L’envoi d’email n’est pas disponible sur cet appareil. Aucune candidature n’a été enregistrée."
+                );
+            } else {
+                Alert.alert("Erreur", "Une erreur est survenue lors de l’ouverture de l’email. Aucune candidature n’a été enregistrée.");
+            }
         } catch (e) {
             console.error(e);
-            Alert.alert("Erreur", "Impossible d’envoyer la candidature.");
+            Alert.alert("Erreur", "Impossible d’initier la candidature.");
         } finally {
             setSending(false);
         }
     };
+
 
     const goToClub = () => {
         if (!club) return;
@@ -125,12 +235,12 @@ export default function OfferDetail() {
                 teams: 0,
                 categories: [],
                 uid: club.uid as any,
-                department: club.department as any,
+                department: displayDepartment(club.department) as any,
+                email: club.email || "",
             } as any,
         });
     };
 
-    // petit composant badge
     const Badge = ({ label }: { label?: string }) =>
         label ? (
             <View className="bg-gray-700 px-3 py-1 rounded-full mr-2 mb-2">
@@ -171,15 +281,15 @@ export default function OfferDetail() {
                             <View className="flex-1">
                                 <Text className="text-white font-semibold">{clubName}</Text>
                                 <Text className="text-gray-400 text-xs">
-                                    {(clubCity || clubDept) ? `${clubCity}${clubDept ? " • " + clubDept : ""}` : "—"}
+                                    {clubCity || clubDept ? `${clubCity}${clubDept ? " • " + clubDept : ""}` : "—"}
                                 </Text>
+                                {!!club?.email && (
+                                    <Text className="text-gray-500 text-xs mt-1">{club.email}</Text>
+                                )}
                             </View>
 
                             {club && (
-                                <Pressable
-                                    onPress={goToClub}
-                                    className="px-3 py-2 bg-orange-600 rounded-xl"
-                                >
+                                <Pressable onPress={goToClub} className="px-3 py-2 bg-orange-600 rounded-xl">
                                     <Text className="text-white text-sm font-semibold">Voir le club</Text>
                                 </Pressable>
                             )}
@@ -196,24 +306,11 @@ export default function OfferDetail() {
 
                     {/* Métadonnées */}
                     <View className="mb-3">
-                        {offer.location ? (
-                            <Text className="text-gray-300">📍 {offer.location}</Text>
-                        ) : null}
+                        {offer.location ? <Text className="text-gray-300">📍 {offer.location}</Text> : null}
                         {offer.publishedAt ? (
-                            <Text className="text-gray-400 text-xs mt-1">
-                                Publiée le {offer.publishedAt}
-                            </Text>
+                            <Text className="text-gray-400 text-xs mt-1">Publiée le {offer.publishedAt}</Text>
                         ) : null}
                     </View>
-
-                    {/* Badges d’infos structurées */}
-                    {/* <View className="flex-row flex-wrap mb-4">
-                        <Badge label={offer.position} />
-                        <Badge label={offer.gender} />
-                        <Badge label={offer.team} />
-                        <Badge label={offer.category} />
-                        <Badge label={offer.ageRange} />
-                    </View> */}
 
                     {/* Description */}
                     {!!offer.description && (
@@ -223,7 +320,7 @@ export default function OfferDetail() {
                         </>
                     )}
 
-                    {/* (Optionnel) récap total compact */}
+                    {/* Récap compact */}
                     <View className="bg-[#0e1320] border border-gray-700 rounded-xl p-3 mb-6">
                         <Row label="Poste recherché" value={offer.position || "—"} />
                         <Row label="Équipe / Niveau" value={offer.team || offer.category || "—"} />
@@ -249,7 +346,8 @@ export default function OfferDetail() {
                             <Pressable
                                 onPress={handleApply}
                                 disabled={sending}
-                                className={`py-4 rounded-xl items-center ${sending ? "bg-gray-600" : "bg-orange-600"}`}
+                                className={`py-4 rounded-xl items-center ${sending ? "bg-gray-600" : "bg-orange-600"
+                                    }`}
                             >
                                 {sending ? (
                                     <ActivityIndicator color="#fff" />

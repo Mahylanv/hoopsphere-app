@@ -1,165 +1,224 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from "react";
 import {
-    View,
-    Text,
-    TextInput,
-    Pressable,
-    StatusBar,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    TouchableWithoutFeedback,
-    Keyboard,
-    TouchableOpacity,
-    ImageBackground,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types';
-import { Feather } from '@expo/vector-icons';
-import { TextInput as RNTextInput } from 'react-native';
-// Firebase
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../config/firebaseConfig'; 
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StatusBar,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons, Feather } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../types";
+import { TextInput as RNTextInput } from "react-native";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../config/firebaseConfig";
 
-type InscriptionClubNavProp = NativeStackNavigationProp<
-    RootStackParamList,
-    'InscriptionClub'
->;
+type NavProp = NativeStackNavigationProp<RootStackParamList, "InscriptionClub">;
 
 export default function InscriptionClub() {
-    const navigation = useNavigation<InscriptionClubNavProp>();
+  const navigation = useNavigation<NavProp>();
 
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [emailFocused, setEmailFocused] = useState(false);
-    const [passwordFocused, setPasswordFocused] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [err, setErr] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-    const passwordInputRef = useRef<RNTextInput>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-    const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-    const isValidPassword = (value: string) => /^(?=.*[A-Z])(?=.*\d).{6,}$/.test(value);
+  const passwordRef = useRef<RNTextInput>(null);
 
-    const trimmedEmail = email.trim().toLowerCase();
-    const formValid = isValidEmail(trimmedEmail) && isValidPassword(password);
+  // VALIDATION
+  const isValidEmail = (v: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
-    const handleContinue = async () => {
-        if (!formValid || loading) return;
-        setErr(null);
-        setLoading(true);
-        try {
-            const cred = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
+  const isValidPassword = (v: string) =>
+    v.length >= 8 && /[A-Z]/.test(v) && /\d/.test(v);
 
-            navigation.navigate('InscriptionClubStep2', {
-                uid: cred.user.uid,
-                email: cred.user.email ?? trimmedEmail,
-            });
-        } catch (e: any) {
-            const code = e?.code || '';
-            if (code === 'auth/email-already-in-use') setErr("Cet e-mail est déjà utilisé.");
-            else if (code === 'auth/invalid-email') setErr("E-mail invalide.");
-            else if (code === 'auth/weak-password') setErr("Mot de passe trop faible.");
-            else if (code === 'auth/operation-not-allowed') setErr("Méthode d'auth désactivée dans Firebase.");
-            else setErr("Erreur d'inscription. Réessaie.");
-        } finally {
-            setLoading(false);
-        }
-    };
+  const formValid = isValidEmail(email) && isValidPassword(password);
 
-    return (
-        <ImageBackground
-            source={require('../../../assets/background2.jpg')}
-            resizeMode="cover"
-            className="flex-1"
-            imageStyle={{ opacity: 1 }}
+  // CONTINUE
+  const handleContinue = async () => {
+    setSubmitted(true);
+
+    if (!formValid || loading) return;
+
+    try {
+      setErr(null);
+      setLoading(true);
+
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        email.trim().toLowerCase(),
+        password
+      );
+
+      navigation.navigate("InscriptionClubStep2", {
+        uid: cred.user.uid,
+        email: cred.user.email ?? email.trim().toLowerCase(),
+      });
+    } catch (e: any) {
+      const code = e?.code || "";
+      if (code === "auth/email-already-in-use")
+        setErr("Cet e-mail est déjà utilisé.");
+      else if (code === "auth/invalid-email") setErr("E-mail invalide.");
+      else if (code === "auth/weak-password")
+        setErr("Mot de passe trop faible.");
+      else setErr("Erreur. Réessaie.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#0E0D0D" }}>
+      <StatusBar barStyle="light-content" />
+
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <KeyboardAvoidingView
+          className="flex-1 px-6"
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-            <SafeAreaView className="flex-1 bg-black/50">
-                <StatusBar barStyle="light-content" />
-                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                        className="flex-1 px-6"
-                    >
-                        {/* Header */}
-                        <View className="flex-row items-center mt-4 mb-8">
-                            <Pressable onPress={() => navigation.goBack()}>
-                                <Image
-                                    source={require('../../../assets/arrow-left.png')}
-                                    className="w-9 h-9"
-                                    resizeMode="contain"
-                                />
-                            </Pressable>
-                            <Text className="text-white text-xl ml-3">Inscription club</Text>
-                        </View>
+          {/* HEADER */}
+          <View className="flex-row items-center mt-6 mb-4">
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={28} color="white" />
+            </TouchableOpacity>
 
-                        {/* Formulaire */}
-                        <View className="flex-1 justify-center items-center px-4">
-                            <View className="w-full max-w-md space-y-6">
-                                <TextInput
-                                    placeholder="E-mail"
-                                    placeholderTextColor="#ccc"
-                                    value={email}
-                                    onChangeText={setEmail}
-                                    onFocus={() => setEmailFocused(true)}
-                                    onBlur={() => setEmailFocused(false)}
-                                    keyboardType="email-address"
-                                    autoCapitalize="none"
-                                    className={`w-full px-4 py-0 rounded-lg h-14 text-white text-lg border-2 mb-2 ${emailFocused ? 'border-orange-500' : 'border-gray-500'
-                                        }`}
-                                />
+            <Text className="text-white text-xl ml-4">Inscription club</Text>
+          </View>
 
-                                <View
-                                    className={`w-full flex-row items-center border-2 rounded-lg px-4 py-3 ${passwordFocused ? 'border-orange-500' : 'border-gray-500'
-                                        }`}
-                                >
-                                    <TextInput
-                                        ref={passwordInputRef}
-                                        placeholder="Mot de passe"
-                                        placeholderTextColor="#ccc"
-                                        value={password}
-                                        onChangeText={setPassword}
-                                        secureTextEntry={!showPassword}
-                                        autoCapitalize="none"
-                                        className="flex-1 text-white py-0 text-lg"
-                                        onFocus={() => setPasswordFocused(true)}
-                                        onBlur={() => setPasswordFocused(false)}
-                                    />
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            setShowPassword((prev) => !prev);
-                                            setTimeout(() => passwordInputRef.current?.focus(), 0);
-                                        }}
-                                        className="ml-2"
-                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                        disabled={loading}
-                                    >
-                                        <Feather name={showPassword ? 'eye-off' : 'eye'} size={20} color="#ccc" />
-                                    </TouchableOpacity>
-                                </View>
+          {/* CONTENU */}
+          <View className="flex-1 justify-center items-center">
+            <Text className="text-white text-3xl font-bold text-center mb-4">
+              Crée ton espace club
+            </Text>
 
-                                {err ? <Text className="text-red-400 mt-2">{err}</Text> : null}
-                            </View>
+            <Text className="text-gray-400 text-center mb-8">
+              Étape 1 — Identifiants du compte
+            </Text>
 
-                            <View className="w-full max-w-md mt-6">
-                                <Pressable
-                                    disabled={!formValid || loading}
-                                    onPress={handleContinue}
-                                    className={`py-4 rounded-xl items-center w-full ${formValid ? 'bg-orange-500' : 'bg-gray-600'
-                                        } ${loading ? 'opacity-70' : ''}`}
-                                >
-                                    <Text className="text-white font-bold text-base">
-                                        {loading ? '...' : 'Continuer'}
-                                    </Text>
-                                </Pressable>
-                            </View>
-                        </View>
-                    </KeyboardAvoidingView>
-                </TouchableWithoutFeedback>
-            </SafeAreaView>
-        </ImageBackground>
-    );
+            {/* FORMULAIRE */}
+            <View className="w-full max-w-md">
+              {/* Email */}
+              <TextInput
+                placeholder="E-mail"
+                placeholderTextColor="#ccc"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                className="border border-gray-600 rounded-xl h-14 px-4 text-white text-lg bg-[#111]"
+              />
+              {submitted && !isValidEmail(email) && (
+                <Text className="text-red-500 text-sm mt-1">
+                  Email invalide
+                </Text>
+              )}
+
+              {/* Mot de passe */}
+              <View className="relative mt-6">
+                <TextInput
+                  ref={passwordRef}
+                  placeholder="Mot de passe"
+                  placeholderTextColor="#ccc"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  className="border border-gray-600 rounded-xl h-14 px-4 pr-10 text-white text-lg bg-[#111]"
+                />
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowPassword(!showPassword);
+                    setTimeout(() => passwordRef.current?.focus(), 60);
+                  }}
+                  className="absolute right-4 top-4"
+                >
+                  <Feather
+                    name={showPassword ? "eye-off" : "eye"}
+                    size={22}
+                    color="#ccc"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Validation live */}
+              {password.length > 0 && (
+                <View className="mt-2">
+                  <Text
+                    className={`text-sm ${
+                      password.length >= 8 ? "text-green-400" : "text-red-500"
+                    }`}
+                  >
+                    • 8 caractères minimum
+                  </Text>
+
+                  <Text
+                    className={`text-sm ${
+                      /[A-Z]/.test(password) ? "text-green-400" : "text-red-500"
+                    }`}
+                  >
+                    • 1 majuscule
+                  </Text>
+
+                  <Text
+                    className={`text-sm ${
+                      /\d/.test(password) ? "text-green-400" : "text-red-500"
+                    }`}
+                  >
+                    • 1 chiffre
+                  </Text>
+                </View>
+              )}
+
+              {/* Erreur Firebase */}
+              {err && <Text className="text-red-400 text-sm mt-2">{err}</Text>}
+            </View>
+
+            {/* BOUTON */}
+            <Pressable
+              disabled={!formValid}
+              onPress={handleContinue}
+              className={`w-full max-w-md py-4 rounded-2xl items-center mt-10 ${
+                formValid ? "bg-orange-500" : "bg-gray-600 opacity-60"
+              }`}
+            >
+              <Text className="text-white font-bold text-lg">Continuer</Text>
+            </Pressable>
+
+            {/* LIEN CONNEXION */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Connexion")}
+              className="mt-6"
+            >
+              <Text className="text-gray-300">
+                Déjà un compte ?{" "}
+                <Text className="text-orange-400 font-semibold">
+                  Se connecter
+                </Text>
+              </Text>
+            </TouchableOpacity>
+
+            {/* STEPPER */}
+            <View className="flex-row justify-center items-center mt-8 mb-6">
+              <View className="w-2 h-2 rounded-full bg-orange-500" />
+              <View className="w-6 h-[2px] bg-gray-600 mx-1" />
+              <View className="w-2 h-2 rounded-full bg-gray-600" />
+              <View className="w-6 h-[2px] bg-gray-600 mx-1" />
+              <View className="w-2 h-2 rounded-full bg-gray-600" />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
+    </SafeAreaView>
+  );
 }
