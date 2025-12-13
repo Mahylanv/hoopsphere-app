@@ -1,3 +1,5 @@
+// src/Components/Connexion.tsx
+
 import React, { useState } from "react";
 import {
   View,
@@ -10,6 +12,8 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
+
 import { RootStackParamList } from "../types";
 import clsx from "clsx";
 
@@ -27,6 +31,7 @@ export default function Connexion() {
   const navigation = useNavigation<ConnexionNavProp>();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +42,15 @@ export default function Connexion() {
     setError(null);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log("Email tapé:", email);
+      console.log("Email normalisé:", email.trim().toLowerCase());
+      const cleanEmail = email.trim().toLowerCase();
+
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        cleanEmail,
+        password
+      );
       const uid = userCredential.user.uid;
 
       const joueurDoc = await getDoc(doc(db, "joueurs", uid));
@@ -103,22 +116,33 @@ export default function Connexion() {
           )}
         />
 
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Mot de passe"
-          placeholderTextColor="#999"
-          secureTextEntry
-          onFocus={() => setFocusedInput("password")}
-          onBlur={() => setFocusedInput(null)}
-          className={clsx(
-            "border-2 rounded-lg h-14 px-4 text-white text-base mb-5",
-            focusedInput === "password" ? "border-orange-500" : "border-white"
-          )}
-        />
+        <View className="flex-row items-center px-4 mb-5 bg-[#1A1A1A] rounded-lg h-14">
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Mot de passe"
+            placeholderTextColor="#999"
+            secureTextEntry={!showPassword}
+            onFocus={() => setFocusedInput("password")}
+            onBlur={() => setFocusedInput(null)}
+            underlineColorAndroid="transparent" // ✅ SUPPRIME le border Android
+            selectionColor="#F97316" // (optionnel) couleur du curseur
+            className="flex-1 text-white text-base"
+          />
+
+          <Pressable onPress={() => setShowPassword((prev) => !prev)}>
+            <Ionicons
+              name={showPassword ? "eye" : "eye-off"}
+              size={22}
+              color="#fff"
+            />
+          </Pressable>
+        </View>
 
         {/* ⚡ Message d'erreur */}
-        {error && <Text className="text-red-500 text-center mb-2">{error}</Text>}
+        {error && (
+          <Text className="text-red-500 text-center mb-2">{error}</Text>
+        )}
 
         <Pressable
           onPress={handleLogin}
@@ -140,7 +164,10 @@ export default function Connexion() {
           onPress={() => navigation.navigate("ForgotPassword")}
           className="items-center -mt-2 mb-4"
         >
-          <Text className="mt-8 underline font-semibold" style={{ color: "#F97316" }}>
+          <Text
+            className="mt-8 underline font-semibold"
+            style={{ color: "#F97316" }}
+          >
             Mot de passe oublié ?
           </Text>
         </Pressable>

@@ -140,7 +140,7 @@ export type Offer = {
   id?: string; // <-- ici optionnel
   title: string;
   description: string;
-  position: string;
+  position: string[];
   team: string;
   publishedAt: string;
   gender: "Homme" | "Femme" | "Mixte";
