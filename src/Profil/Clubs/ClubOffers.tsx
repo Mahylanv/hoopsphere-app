@@ -243,11 +243,13 @@ export default function ClubOffers() {
                 )}
 
                 <View className="flex-row flex-wrap gap-2">
-                  {!!item.position && (
+                  {Array.isArray(item.position) && item.position.length > 0 && (
                     <View className="bg-orange-600/80 px-3 py-1 rounded-full flex-row items-center">
                       <Ionicons name="person-outline" size={12} color="white" />
                       <Text className="text-white text-xs ml-1">
-                        {item.position.join(" • ")}
+                        {Array.isArray(item.position)
+                          ? item.position.join(" • ")
+                          : "Non précisé"}
                       </Text>
                     </View>
                   )}
@@ -373,9 +375,7 @@ export default function ClubOffers() {
                         className="text-white text-[15px]"
                         numberOfLines={1}
                       >
-                        {positions.length > 0
-                          ? positions.join(", ")
-                          : "Postes"}
+                        {positions.length > 0 ? positions.join(", ") : "Postes"}
                       </Text>
                     </Pressable>
                   </View>

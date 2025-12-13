@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from "react";
 import {
-  getAuth,
+  // getAuth,
   updateProfile,
   deleteUser,
   EmailAuthProvider,
   reauthenticateWithCredential,
   updateEmail,
+  User,
 } from "firebase/auth";
-import { Platform } from "react-native";
+
 import {
   doc,
   getDoc,
@@ -20,6 +21,7 @@ import {
   getDocs,
   serverTimestamp,
 } from "firebase/firestore";
+
 import {
   ref,
   uploadBytes,
@@ -27,25 +29,33 @@ import {
   deleteObject,
 } from "firebase/storage";
 
-import { db, storage } from "../../../config/firebaseConfig";
+import { Platform } from "react-native";
+
+import { db, storage, auth } from "../../../config/firebaseConfig";
+
 import {
   computePlayerStats,
   PlayerAverages,
 } from "../../../utils/computePlayerStats";
+
 import { computePlayerRating } from "../../../utils/computePlayerRating";
 
+/* ============================================================
+   TYPES
+============================================================ */
 export type MediaItem = {
   url: string;
   type: "image" | "video";
 };
 
+/* ============================================================
+   HOOK PRINCIPAL
+============================================================ */
 export default function usePlayerProfile() {
-  const auth = getAuth();
   const currentUser = auth.currentUser;
-
-  /* -----------------------------------------------------
-      STATES
-  ----------------------------------------------------- */
+  /* ---------------------------------------------------------
+        STATES
+  --------------------------------------------------------- */
   const [loading, setLoading] = useState(true);
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [galleryLoading, setGalleryLoading] = useState(false);
@@ -62,7 +72,6 @@ export default function usePlayerProfile() {
   const [tempNewEmail, setTempNewEmail] = useState("");
   const [passwordForReauth, setPasswordForReauth] = useState("");
 
-  /** Champs affichés dans l'app */
   const [fields, setFields] = useState({
     prenom: "",
     nom: "",
@@ -81,31 +90,27 @@ export default function usePlayerProfile() {
     avatar: "",
   });
 
-  /** Champs modifiables → sauvegardés uniquement quand on clique sur Enregistrer */
   const [editFields, setEditFields] = useState(fields);
 
   const setEditField = (k: string, v: string) => {
     setEditFields((prev) => ({ ...prev, [k]: v }));
   };
 
+  /* ============================================================
+        NORMALISATION
+  ============================================================ */
   const normalizePoste = (poste: string) => {
     if (!poste) return "";
-  
     const map: Record<string, string> = {
-      "Pivot": "PIV",
-      "Ailier": "AI",
+      Pivot: "PIV",
+      Ailier: "AI",
       "Ailier Fort": "AF",
-      "Meneur": "M",
-      "Arrière": "ARR",
+      Meneur: "M",
+      Arrière: "ARR",
     };
-  
-    return map[poste] ?? poste; // si déjà un code => pas modifié
+    return map[poste] ?? poste;
   };
-  
 
-  /* -----------------------------------------------------
-      🔥 CHARGEMENT PROFIL + GALERIE
-  ----------------------------------------------------- */
   useEffect(() => {
     const fetchData = async () => {
       if (!currentUser) return;
@@ -147,9 +152,9 @@ export default function usePlayerProfile() {
     fetchData();
   }, []);
 
-  /* -----------------------------------------------------
-      🔥 RECHARGE STATS + RATING
-  ----------------------------------------------------- */
+  /* ============================================================
+       CHARGEMENT DES STATS
+  ============================================================ */
   useEffect(() => {
     const loadStats = async () => {
       if (!user?.uid) return;
@@ -169,9 +174,9 @@ export default function usePlayerProfile() {
     loadStats();
   }, [user]);
 
-  /* -----------------------------------------------------
-      🔥 GALERIE
-  ----------------------------------------------------- */
+  /* ============================================================
+       GALERIE
+  ============================================================ */
   const loadGallery = async () => {
     if (!currentUser) return;
     setGalleryLoading(true);
@@ -193,38 +198,22 @@ export default function usePlayerProfile() {
     setGalleryLoading(false);
   };
 
-  /* -----------------------------------------------------
-   🔥 PUBLIE UNE VIDÉO DANS LA COLLECTION GLOBALE
------------------------------------------------------ */
-  const publishVideoToGlobalGallery = async (url: string) => {
-    if (!currentUser) return;
-
-    try {
-      await addDoc(collection(db, "gallery"), {
-        url,
-        type: "video",
-        playerUid: currentUser.uid,
-        createdAt: serverTimestamp(),
-      });
-    } catch (e) {
-      console.log("🔥 ERREUR publishVideoToGlobalGallery:", e);
-    }
-  };
-
-  /* -----------------------------------------------------
-   🔥 AJOUT MEDIA DANS LA GALERIE + GLOBALE SI VIDEO
------------------------------------------------------ */
+  /* ============================================================
+       AJOUT MEDIA
+  ============================================================ */
   const addGalleryMedia = async (
     uri: string,
     isVideo: boolean,
     file?: File
   ) => {
-    if (!currentUser) return;
+    const current = auth.currentUser;
+    if (!current) return;
+
     setGalleryLoading(true);
 
     const ext = isVideo ? "mp4" : "jpg";
     const filename = `${Date.now()}.${ext}`;
-    const storagePath = `gallery/${currentUser.uid}/${filename}`;
+    const storagePath = `gallery/${current.uid}/${filename}`;
     const storageRef = ref(storage, storagePath);
 
     try {
@@ -234,19 +223,25 @@ export default function usePlayerProfile() {
       await uploadBytes(storageRef, blob);
       const url = await getDownloadURL(storageRef);
 
-      // 🟧 Ajout dans la galerie privée du joueur
-      await addDoc(collection(db, "joueurs", currentUser.uid, "gallery"), {
+      await addDoc(collection(db, "joueurs", current.uid, "gallery"), {
         url,
         type: isVideo ? "video" : "image",
         createdAt: serverTimestamp(),
       });
 
-      // 🔥 Ajout global (pour TikTok)
       if (isVideo) {
-        await publishVideoToGlobalGallery(url);
+        await addDoc(collection(db, "gallery"), {
+          url,
+          type: "video",
+          playerUid: current.uid,
+          createdAt: serverTimestamp(),
+        });
       }
 
-      setGallery((p) => [...p, { url, type: isVideo ? "video" : "image" }]);
+      setGallery((prev) => [
+        ...prev,
+        { url, type: isVideo ? "video" : "image" },
+      ]);
     } catch (e) {
       console.log("🔥 ERREUR addGalleryMedia:", e);
     }
@@ -254,14 +249,18 @@ export default function usePlayerProfile() {
     setGalleryLoading(false);
   };
 
+  /* ============================================================
+       SUPPRESSION MEDIA
+  ============================================================ */
   const deleteGalleryMedia = async (url: string) => {
-    if (!currentUser) return;
+    const current = auth.currentUser;
+    if (!current) return;
 
     try {
       const storagePath = decodeURIComponent(url.split("/o/")[1].split("?")[0]);
       await deleteObject(ref(storage, storagePath));
 
-      const fsRef = collection(db, "joueurs", currentUser.uid, "gallery");
+      const fsRef = collection(db, "joueurs", current.uid, "gallery");
       const snaps = await getDocs(fsRef);
 
       snaps.forEach(async (docSnap) => {
@@ -270,47 +269,51 @@ export default function usePlayerProfile() {
         }
       });
 
-      setGallery((p) => p.filter((m) => m.url !== url));
+      setGallery((prev) => prev.filter((m) => m.url !== url));
     } catch (e) {
       console.log("🔥 ERREUR deleteGalleryMedia:", e);
     }
   };
 
-  /* -----------------------------------------------------
-      🔥 AVATAR (mise à jour immédiate dans UI & BDD)
-  ----------------------------------------------------- */
+  /* ============================================================
+       AVATAR
+  ============================================================ */
   const handleAvatarChange = async (imageUri: string) => {
-    if (!currentUser) return;
+    const current = auth.currentUser;
+    if (!current) return;
 
     try {
       setAvatarLoading(true);
 
       const blob = await (await fetch(imageUri)).blob();
-      const storageRef = ref(storage, `avatars/${currentUser.uid}/avatar.jpg`);
+      const storageRef = ref(storage, `avatars/${current.uid}/avatar.jpg`);
 
       await uploadBytes(storageRef, blob);
       const url = await getDownloadURL(storageRef);
 
-      await updateProfile(currentUser, { photoURL: url });
-      await updateDoc(doc(db, "joueurs", currentUser.uid), { avatar: url });
+      await updateProfile(current, { photoURL: url });
+      await updateDoc(doc(db, "joueurs", current.uid), { avatar: url });
 
-      // UI : avatar visible immédiatement
-      setFields((p) => ({ ...p, avatar: url }));
-      setEditFields((p) => ({ ...p, avatar: url }));
-      setUser((p: any) => ({ ...p, avatar: url }));
+      setFields((prev) => ({ ...prev, avatar: url }));
+      setEditFields((prev) => ({ ...prev, avatar: url }));
+      setUser((prev: any) => ({ ...prev, avatar: url }));
     } catch (e) {
       console.log("🔥 ERREUR avatar:", e);
-    } finally {
-      setAvatarLoading(false);
     }
+
+    setAvatarLoading(false);
   };
 
+  /* ============================================================
+       REAUTHENTIFICATION
+  ============================================================ */
   const reauthenticate = async (password: string) => {
-    if (!currentUser || !currentUser.email) return false;
+    const current = auth.currentUser;
+    if (!current || !current.email) return false;
 
     try {
-      const cred = EmailAuthProvider.credential(currentUser.email, password);
-      await reauthenticateWithCredential(currentUser, cred);
+      const cred = EmailAuthProvider.credential(current.email, password);
+      await reauthenticateWithCredential(current, cred);
       return true;
     } catch (e) {
       console.log("❌ ERREUR RE-AUTH :", e);
@@ -318,19 +321,41 @@ export default function usePlayerProfile() {
     }
   };
 
-  /* -----------------------------------------------------
-      🔥 SAUVEGARDE (BDD uniquement quand on clique)
-  ----------------------------------------------------- */
-  const saveProfile = async () => {
-    console.log("🔥 saveProfile CALLED");
-    if (!currentUser) {
-      console.log("❌ currentUser absent");
-      return;
-    }
+  /* ============================================================
+   🔥 ENREGISTRE UNE VISITE DE PROFIL
+============================================================ */
+  const saveProfileView = async (targetUid: string) => {
+    const viewer = auth.currentUser;
+    if (!viewer) return;
 
-    /* -----------------------------------------------------
-        VALIDATION EMAIL + TÉLÉPHONE
-    ----------------------------------------------------- */
+    try {
+      console.log("📌 Tentative d'enregistrement d'une visite...");
+      console.log("👤 viewerUid =", viewer.uid, "| target =", targetUid);
+
+      const ref = collection(db, "joueurs", targetUid, "views");
+
+      await addDoc(ref, {
+        viewerUid: viewer.uid,
+        viewerType: "joueur",
+        viewedAt: serverTimestamp(),
+        seen: false, // ou true selon ton besoin
+      });
+
+      console.log("✅ Visite enregistrée !");
+    } catch (e) {
+      console.log("❌ ERREUR saveProfileView :", e);
+    }
+  };
+
+  /* ============================================================
+       SAUVEGARDE DU PROFIL
+  ============================================================ */
+  const saveProfile = async () => {
+    const current = auth.currentUser;
+    if (!current) return;
+
+    console.log("🔥 saveProfile CALLED");
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const cleanedPhone = (editFields.phone ?? "").replace(/\s/g, "");
 
@@ -339,60 +364,34 @@ export default function usePlayerProfile() {
       return;
     }
 
-    // Autoriser vide + numéro valide
     if (cleanedPhone !== "" && !/^(\+33|0)[67]\d{8}$/.test(cleanedPhone)) {
       setPhoneError("Numéro invalide");
       return;
     }
 
-    /* -----------------------------------------------------
-        CAS 1 : L’EMAIL A CHANGÉ → demander mot de passe
-    ----------------------------------------------------- */
     const emailChanged = editFields.email !== fields.email;
 
-    if (emailChanged) {
-      setTempNewEmail(editFields.email); // ⭐ sauvegarde l’email à appliquer
-    }
-
     if (emailChanged && !passwordForReauth) {
-      // 👉 Affiche la modal dans EditProfileModal
+      setTempNewEmail(editFields.email);
       setPasswordModalVisible(true);
-      return; // On stoppe ici : pas de sauvegarde tant que mdp non fourni
+      return;
     }
 
     try {
-      /* -----------------------------------------------------
-          1️⃣ Mise à jour Firestore (tous les champs sauf email pour l'instant)
-      ----------------------------------------------------- */
-      const refUser = doc(db, "joueurs", currentUser.uid);
+      const refUser = doc(db, "joueurs", current.uid);
       await updateDoc(refUser, { ...editFields, email: fields.email });
-      // ⚠️ on garde l'ancien email tant que reauth pas faite
 
-      /* -----------------------------------------------------
-          2️⃣ SI L’EMAIL DOIT ÊTRE MODIFIÉ → réauth + update Auth
-      ----------------------------------------------------- */
       if (emailChanged) {
-        console.log("📩 Tentative de mise à jour email...");
-
-        // Réauth
         const ok = await reauthenticate(passwordForReauth);
         if (!ok) {
           alert("❌ Mot de passe incorrect.");
           return;
         }
 
-        // Mise à jour Firebase Auth
-        await updateEmail(currentUser, editFields.email);
-
-        // Mise à jour Firestore
+        await updateEmail(current, editFields.email);
         await updateDoc(refUser, { email: editFields.email });
-
-        console.log("✅ Email mis à jour !");
       }
 
-      /* -----------------------------------------------------
-          3️⃣ Mise à jour de l’UI
-      ----------------------------------------------------- */
       setFields(editFields);
       setUser((prev: any) => ({
         ...prev,
@@ -400,41 +399,39 @@ export default function usePlayerProfile() {
         email: editFields.email,
       }));
 
-      // On reset le password
       setPasswordForReauth("");
       setPasswordModalVisible(false);
-
-      console.log("Firestore email:", fields.email);
-      console.log("Auth email:", currentUser.email);
     } catch (e) {
       console.log("🔥 ERREUR saveProfile:", e);
       alert("Impossible de sauvegarder les modifications.");
     }
   };
 
-  /* -----------------------------------------------------
-      ❌ SUPPRESSION COMPTE
-  ----------------------------------------------------- */
+  /* ============================================================
+       SUPPRESSION DU COMPTE
+  ============================================================ */
   const deleteAccount = async () => {
-    if (!currentUser) return false;
+    const current = auth.currentUser;
+    if (!current) return false;
+
     try {
-      await deleteUser(currentUser);
+      await deleteUser(current);
       return true;
     } catch {
       return false;
     }
   };
 
-  /* -----------------------------------------------------
-      EXPORTS
-  ----------------------------------------------------- */
+  /* ============================================================
+       EXPORTS
+  ============================================================ */
   return {
     user,
     loading,
     avatarLoading,
     galleryLoading,
-
     gallery,
+
     fields,
     editFields,
     setEditField,
@@ -448,6 +445,7 @@ export default function usePlayerProfile() {
 
     stats,
     rating,
+
     emailError,
     setEmailError,
     phoneError,
@@ -459,5 +457,6 @@ export default function usePlayerProfile() {
     setPasswordForReauth,
     tempNewEmail,
     setTempNewEmail,
+    saveProfileView,
   };
 }

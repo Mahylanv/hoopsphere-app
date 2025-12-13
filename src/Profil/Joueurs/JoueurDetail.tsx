@@ -46,6 +46,7 @@ export default function JoueurDetail() {
   const route = useRoute<RouteProps>();
 
   const { uid } = route.params;
+  const { saveProfileView } = usePlayerProfile();
 
   const [joueur, setJoueur] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -85,73 +86,72 @@ export default function JoueurDetail() {
         });
 
         /* -----------------------------------------------------
-         👀 ENREGISTRER UNE VISITE (1 fois / jour)
-      ----------------------------------------------------- */
-        const auth = getAuth();
-        const viewerUid = auth.currentUser?.uid;
+   👀 ENREGISTRER UNE VISITE (1 fois / jour)
+----------------------------------------------------- */
+        // const auth = getAuth();
+        // const viewerUid = auth.currentUser?.uid;
 
-        console.log("👤 viewerUid =", viewerUid, " | target =", uid);
+        // console.log("👤 viewerUid =", viewerUid, " | target =", uid);
+
+        // if (viewerUid && viewerUid !== uid) {
+        //   console.log("--------------------------------------------------");
+        //   console.log("📌 Tentative d'enregistrement d'une visite...");
+        //   console.log("👤 viewerUid =", viewerUid);
+        //   console.log("🎯 profil visité =", uid);
+        //   console.log("📂 Chemin Firestore =", `joueurs/${uid}/views`);
+        //   console.log("--------------------------------------------------");
+
+        //   try {
+        //     const today = new Date();
+        //     today.setHours(0, 0, 0, 0);
+
+        //     const viewsRef = collection(db, "joueurs", uid, "views");
+        //     const snaps = await getDocs(viewsRef);
+
+        //     let alreadyVisitedToday = false;
+
+        //     snaps.forEach((docSnap) => {
+        //       const data = docSnap.data();
+        //       console.log("🔎 Doc existant dans views :", data);
+
+        //       if (data.viewerUid === viewerUid && data.viewedAt?.toDate) {
+        //         const visitDate = data.viewedAt.toDate();
+        //         visitDate.setHours(0, 0, 0, 0);
+
+        //         if (visitDate.getTime() === today.getTime()) {
+        //           alreadyVisitedToday = true;
+        //         }
+        //       }
+        //     });
+
+        //     if (!alreadyVisitedToday) {
+        //       console.log(
+        //         "🆕 Nouvelle visite → tentative d'écriture Firestore..."
+        //       );
+
+        //       await addDoc(viewsRef, {
+        //         viewerUid,
+        //         viewerType: "joueur",
+        //         viewedAt: serverTimestamp(),
+        //         seen: true, // IMPORTANT
+        //       });
+
+        //       console.log("✅ VISITE ENREGISTRÉE !");
+        //     } else {
+        //       console.log("⏳ Visite déjà enregistrée aujourd'hui");
+        //     }
+        //   } catch (e) {
+        //     console.log("❌ ERREUR GLOBALE ENREGISTREMENT VISITE :", e);
+        //   }
+        // }
+
+        // 👀 ENREGISTREMENT VISITE (simple)
+        const authInstance = getAuth();
+        const viewerUid = authInstance.currentUser?.uid;
+
         if (viewerUid && viewerUid !== uid) {
-          console.log("--------------------------------------------------");
-          console.log("📌 Tentative d'enregistrement d'une visite...");
-          console.log("👤 viewerUid =", viewerUid);
-          console.log("🎯 profil visité =", uid);
-          console.log("📂 Chemin Firestore =", `joueurs/${uid}/views`);
-          console.log("--------------------------------------------------");
-
-          try {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            const viewsRef = collection(db, "joueurs", uid, "views");
-            const snaps = await getDocs(viewsRef);
-
-            let alreadyVisitedToday = false;
-
-            snaps.forEach((docSnap) => {
-              const data = docSnap.data();
-
-              // Log pour vérifier les données existantes
-              console.log("🔎 Doc existant dans views :", data);
-
-              if (data.viewerUid === viewerUid && data.viewedAt?.toDate) {
-                const visitDate = data.viewedAt.toDate();
-                visitDate.setHours(0, 0, 0, 0);
-
-                if (visitDate.getTime() === today.getTime()) {
-                  alreadyVisitedToday = true;
-                }
-              }
-            });
-
-            const testWrite = await addDoc(
-              collection(db, "joueurs", uid, "views_test_debug"),
-              { viewerUid, createdAt: new Date() }
-            );
-            console.log("DEBUG WRITE OK:", testWrite.id);
-
-            if (!alreadyVisitedToday) {
-              console.log(
-                "🆕 Nouvelle visite → tentative d'écriture Firestore..."
-              );
-
-              try {
-                await addDoc(viewsRef, {
-                  viewerUid: viewerUid,
-                  viewerType: "joueur",
-                  viewedAt: serverTimestamp(),
-                });
-
-                console.log("✅ VISITE ENREGISTRÉE !");
-              } catch (writeErr) {
-                console.log("❌ FIRESTORE ADDDOC ERROR =", writeErr);
-              }
-            } else {
-              console.log("⏳ Visite déjà enregistrée aujourd'hui");
-            }
-          } catch (e) {
-            console.log("❌ ERREUR GLOBALE ENREGISTREMENT VISITE :", e);
-          }
+          console.log("🔥 Appel saveProfileView depuis JoueurDetail");
+          saveProfileView(uid);
         }
 
         /* -----------------------------------------------------
