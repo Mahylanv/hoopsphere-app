@@ -250,7 +250,7 @@ export default function GallerySection({
       {/* ADD BUTTON */}
       <TouchableOpacity
         onPress={onAddMediaPress}
-        className="mt-5 bg-orange-500 py-3 rounded-2xl flex-row items-center justify-center"
+        className="mt-5 bg-orange-500 py-3 rounded-lg flex-row items-center justify-center"
       >
         <Ionicons name="add-circle-outline" size={22} color="white" />
         <Text className="text-white text-base font-semibold ml-2">

@@ -128,26 +128,33 @@ export default function StatsChartSection({
     const { yDomain, yTicks } = useMemo(() => {
         const ys = chartData.map((p) => p.y);
         const max = Math.max(0, ...ys);
-        const paddedMax = niceCeil(max);
-        const step = niceStep(paddedMax);
+
+        // 👉 marge auto plus large : +1 si petit, sinon +15%
+        const targetMax = addHeadroom(max, 0.15);
+
+        const step = niceStep(targetMax);
+        const top = ceilToStep(targetMax, step);
+
         const ticks: number[] = [];
-        for (let t = 0; t <= paddedMax; t += step) ticks.push(t);
-        if (ticks[ticks.length - 1] !== paddedMax) ticks.push(paddedMax);
-        return { yDomain: [0, Math.max(1, paddedMax)] as [number, number], yTicks: ticks };
+        for (let t = 0; t <= top; t += step) ticks.push(t);
+        if (ticks[ticks.length - 1] !== top) ticks.push(top);
+
+        return { yDomain: [0, Math.max(1, top)] as [number, number], yTicks: ticks };
     }, [chartData]);
+
     const xTicks = useMemo(() => rows.map((_, i) => i + 1), [rows]);
 
     const [containerW, setContainerW] = useState<number>(0);
-    const PX_PER_POINT = 40;
+    const PX_PER_POINT = 28;
     const PAD_LEFT = 24, PAD_RIGHT = 24;
     const chartWidth = useMemo(() => {
         const content = xTicks.length * PX_PER_POINT + PAD_LEFT + PAD_RIGHT;
         return Math.max(containerW || 0, content || 0);
     }, [containerW, xTicks]);
-    function addHeadroom(maxVal: number): number {
-        if (maxVal <= 0) return 1;     // au moins 0→1
+    function addHeadroom(maxVal: number, ratio = 0.15): number {
+        if (maxVal <= 0) return 1;      // au moins 0→1
         if (maxVal <= 5) return maxVal + 1; // petits compteurs: +1
-        return maxVal * 1.10;          // sinon +10%
+        return maxVal * (1 + ratio);    // sinon +15% par défaut
     }
 
     function niceStep(maxY: number): number {
@@ -161,6 +168,7 @@ export default function StatsChartSection({
     function ceilToStep(v: number, step: number): number {
         return Math.ceil(v / step) * step;
     }
+
 
     return (
         <View className="mt-8 px-5">
@@ -222,7 +230,7 @@ export default function StatsChartSection({
                                         padding={{ top: 24, bottom: 50, left: PAD_LEFT, right: PAD_RIGHT }}
                                         theme={VictoryTheme.material}
                                         domain={{ x: [1, Math.max(1, xTicks.length)], y: yDomain }}
-                                        domainPadding={{ x: 12, y: 12 }}
+                                        domainPadding={{ x: 8, y: 12 }}
                                     >
                                         <VictoryAxis
                                             dependentAxis
