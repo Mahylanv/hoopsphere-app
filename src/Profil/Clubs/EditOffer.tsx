@@ -1,3 +1,5 @@
+// src/Profil/Clubs/EditOffer.tsx
+
 import React, { useState } from "react";
 import {
   View,
@@ -7,6 +9,7 @@ import {
   ScrollView,
   Alert,
   StatusBar,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
@@ -26,13 +29,27 @@ export default function EditOffer() {
 
   const [title, setTitle] = useState(offer.title);
   const [description, setDescription] = useState(offer.description);
-  const [position, setPosition] = useState(offer.position);
+  const [positions, setPositions] = useState<string[]>(offer.position || []);
+  const [gender, setGender] = useState<"Homme" | "Femme" | "Mixte">(
+    offer.gender
+  );
   const [team, setTeam] = useState(offer.team);
-  const [gender, setGender] = useState(offer.gender);
   const [ageRange, setAgeRange] = useState(offer.ageRange);
   const [category, setCategory] = useState(offer.category);
   const [location, setLocation] = useState(offer.location);
   const [saving, setSaving] = useState(false);
+
+  const POSTES = ["Meneur", "Arrière", "Ailier", "Ailier fort", "Pivot"];
+  const GENRES: ("Homme" | "Femme" | "Mixte")[] = ["Homme", "Femme", "Mixte"];
+
+  const togglePoste = (poste: string) => {
+    setPositions((prev) =>
+      prev.includes(poste) ? prev.filter((p) => p !== poste) : [...prev, poste]
+    );
+  };
+
+  const [showPosteSelect, setShowPosteSelect] = useState(false);
+  const [showGenreSelect, setShowGenreSelect] = useState(false);
 
   const handleUpdateOffer = async () => {
     try {
@@ -44,7 +61,7 @@ export default function EditOffer() {
       await updateDoc(ref, {
         title,
         description,
-        position,
+        position: positions,
         team,
         gender,
         ageRange,
@@ -74,11 +91,9 @@ export default function EditOffer() {
         >
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-
         <Text className="text-white text-lg font-semibold">
           Modifier l’offre
         </Text>
-
         <View style={{ width: 40 }} /> {/* équilibre visuel */}
       </View>
 
@@ -101,54 +116,27 @@ export default function EditOffer() {
 
         {/* Ligne Poste + Genre */}
         <View className="flex-row gap-3 mb-4">
-          {/* Poste */}
+          {/* Postes */}
           <View className="flex-1">
-            <Text className="text-gray-400 mb-2 text-[15px]">
-              Poste recherché
-            </Text>
+            <Text className="text-gray-400 mb-2 text-[15px]">Postes</Text>
             <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() =>
-                Alert.alert("Choisir un poste", "", [
-                  { text: "Meneur", onPress: () => setPosition("Meneur") },
-                  { text: "Arrière", onPress: () => setPosition("Arrière") },
-                  { text: "Ailier", onPress: () => setPosition("Ailier") },
-                  {
-                    text: "Ailier fort",
-                    onPress: () => setPosition("Ailier fort"),
-                  },
-                  { text: "Pivot", onPress: () => setPosition("Pivot") },
-                  { text: "Annuler", style: "cancel" },
-                ])
-              }
-              className="bg-[#0e1320] border border-gray-700 rounded-2xl px-4 py-3 flex-row justify-between items-center"
+              onPress={() => setShowPosteSelect(true)}
+              className="bg-[#0e1320] border border-gray-700 rounded-2xl px-4 py-3"
             >
-              <Text className="text-white text-[15px]">
-                {position || "Sélectionner"}
+              <Text className="text-white text-[15px]" numberOfLines={1}>
+                {positions.length > 0 ? positions.join(", ") : "Choisir"}
               </Text>
-              <Ionicons name="chevron-down" size={18} color="#F97316" />
             </TouchableOpacity>
           </View>
 
-          {/* Genre */}
+          {/* Genres */}
           <View className="flex-1">
-            <Text className="text-gray-400 mb-2 text-[15px]">Genre</Text>
+            <Text className="text-gray-400 mb-2 text-[15px]">Genres</Text>
             <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() =>
-                Alert.alert("Sélection du genre", "", [
-                  { text: "Homme", onPress: () => setGender("Homme") },
-                  { text: "Femme", onPress: () => setGender("Femme") },
-                  { text: "Mixte", onPress: () => setGender("Mixte") },
-                  { text: "Annuler", style: "cancel" },
-                ])
-              }
-              className="bg-[#0e1320] border border-gray-700 rounded-2xl px-4 py-3 flex-row justify-between items-center"
+              onPress={() => setShowGenreSelect(true)}
+              className="bg-[#0e1320] border border-gray-700 rounded-2xl px-4 py-3"
             >
-              <Text className="text-white text-[15px]">
-                {gender || "Sélectionner"}
-              </Text>
-              <Ionicons name="chevron-down" size={18} color="#F97316" />
+              <Text className="text-white text-[15px]">{gender}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -228,6 +216,68 @@ export default function EditOffer() {
             {saving ? "Sauvegarde..." : "Enregistrer les modifications"}
           </Text>
         </TouchableOpacity>
+        {/* ===== MODAL POSTES ===== */}
+        <Modal visible={showPosteSelect} transparent animationType="fade">
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => setShowPosteSelect(false)}
+            className="flex-1 bg-black/60 justify-center px-6"
+          >
+            <View className="bg-[#1b1f2a] rounded-3xl p-6">
+              <Text className="text-white text-xl font-bold mb-4">Postes</Text>
+
+              {POSTES.map((poste) => {
+                const selected = positions.includes(poste);
+                return (
+                  <TouchableOpacity
+                    key={poste}
+                    onPress={() => togglePoste(poste)}
+                    className={`py-3 px-4 rounded-xl mb-2 ${
+                      selected ? "bg-orange-600" : "bg-[#0e1320]"
+                    }`}
+                  >
+                    <Text className="text-white">{poste}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+
+              <TouchableOpacity
+                onPress={() => setShowPosteSelect(false)}
+                className="mt-4 py-3 bg-gray-700 rounded-xl items-center"
+              >
+                <Text className="text-white font-semibold">Valider</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
+        {/* ===== MODAL GENRES ===== */}
+        <Modal visible={showGenreSelect} transparent animationType="fade">
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => setShowGenreSelect(false)}
+            className="flex-1 bg-black/60 justify-center px-6"
+          >
+            <View className="bg-[#1b1f2a] rounded-3xl p-6">
+              <Text className="text-white text-xl font-bold mb-4">Genres</Text>
+
+              {GENRES.map((g) => (
+                <TouchableOpacity
+                  key={g}
+                  onPress={() => {
+                    setGender(g);
+                    setShowGenreSelect(false);
+                  }}
+                  className={`py-3 px-4 rounded-xl mb-2 ${
+                    gender === g ? "bg-orange-600" : "bg-[#0e1320]"
+                  }`}
+                >
+                  <Text className="text-white">{g}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );

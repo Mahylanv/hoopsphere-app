@@ -21,14 +21,19 @@ import * as Sharing from "expo-sharing";
 
 import usePlayerProfile from "./hooks/usePlayerProfile"; // adapte le path exactement
 import { computePlayerStats } from "../../utils/computePlayerStats";
-import { collection, getDocs } from "firebase/firestore";
 import { computePlayerRating } from "../../utils/computePlayerRating";
-
 import { RootStackParamList } from "../../types";
+import JoueurCard from "../../Components/JoueurCard";
+
+import {
+  collection,
+  getDocs,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { db } from "../../config/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
-
-import JoueurCard from "../../Components/JoueurCard";
+import { getAuth } from "firebase/auth";
 
 const CARD_WIDTH = Dimensions.get("window").width * 0.9;
 const CARD_HEIGHT = CARD_WIDTH * 0.68;
@@ -41,6 +46,7 @@ export default function JoueurDetail() {
   const route = useRoute<RouteProps>();
 
   const { uid } = route.params;
+  const { saveProfileView } = usePlayerProfile();
 
   const [joueur, setJoueur] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -53,6 +59,9 @@ export default function JoueurDetail() {
   useEffect(() => {
     const loadPlayer = async () => {
       try {
+        /* -----------------------------------------------------
+         📌 FETCH DU JOUEUR
+      ----------------------------------------------------- */
         const ref = doc(db, "joueurs", uid);
         const snap = await getDoc(ref);
 
@@ -61,6 +70,7 @@ export default function JoueurDetail() {
           navigation.goBack();
           return;
         }
+
         const raw = snap.data();
 
         setJoueur({
@@ -75,7 +85,78 @@ export default function JoueurDetail() {
           main: raw.main ?? "-",
         });
 
-        // 🔥 Charger les statistiques
+        /* -----------------------------------------------------
+   👀 ENREGISTRER UNE VISITE (1 fois / jour)
+----------------------------------------------------- */
+        // const auth = getAuth();
+        // const viewerUid = auth.currentUser?.uid;
+
+        // console.log("👤 viewerUid =", viewerUid, " | target =", uid);
+
+        // if (viewerUid && viewerUid !== uid) {
+        //   console.log("--------------------------------------------------");
+        //   console.log("📌 Tentative d'enregistrement d'une visite...");
+        //   console.log("👤 viewerUid =", viewerUid);
+        //   console.log("🎯 profil visité =", uid);
+        //   console.log("📂 Chemin Firestore =", `joueurs/${uid}/views`);
+        //   console.log("--------------------------------------------------");
+
+        //   try {
+        //     const today = new Date();
+        //     today.setHours(0, 0, 0, 0);
+
+        //     const viewsRef = collection(db, "joueurs", uid, "views");
+        //     const snaps = await getDocs(viewsRef);
+
+        //     let alreadyVisitedToday = false;
+
+        //     snaps.forEach((docSnap) => {
+        //       const data = docSnap.data();
+        //       console.log("🔎 Doc existant dans views :", data);
+
+        //       if (data.viewerUid === viewerUid && data.viewedAt?.toDate) {
+        //         const visitDate = data.viewedAt.toDate();
+        //         visitDate.setHours(0, 0, 0, 0);
+
+        //         if (visitDate.getTime() === today.getTime()) {
+        //           alreadyVisitedToday = true;
+        //         }
+        //       }
+        //     });
+
+        //     if (!alreadyVisitedToday) {
+        //       console.log(
+        //         "🆕 Nouvelle visite → tentative d'écriture Firestore..."
+        //       );
+
+        //       await addDoc(viewsRef, {
+        //         viewerUid,
+        //         viewerType: "joueur",
+        //         viewedAt: serverTimestamp(),
+        //         seen: true, // IMPORTANT
+        //       });
+
+        //       console.log("✅ VISITE ENREGISTRÉE !");
+        //     } else {
+        //       console.log("⏳ Visite déjà enregistrée aujourd'hui");
+        //     }
+        //   } catch (e) {
+        //     console.log("❌ ERREUR GLOBALE ENREGISTREMENT VISITE :", e);
+        //   }
+        // }
+
+        // 👀 ENREGISTREMENT VISITE (simple)
+        const authInstance = getAuth();
+        const viewerUid = authInstance.currentUser?.uid;
+
+        if (viewerUid && viewerUid !== uid) {
+          console.log("🔥 Appel saveProfileView depuis JoueurDetail");
+          saveProfileView(uid);
+        }
+
+        /* -----------------------------------------------------
+         📊 STATS JOUEUR
+      ----------------------------------------------------- */
         const matchSnap = await getDocs(
           collection(db, "joueurs", uid, "matches")
         );
@@ -84,7 +165,6 @@ export default function JoueurDetail() {
         const averages = computePlayerStats(matches);
         setStats(averages);
 
-        // Calcul du rating
         const finalRating = computePlayerRating(averages, raw.poste);
         setRating(finalRating);
       } catch (e) {
@@ -256,7 +336,11 @@ export default function JoueurDetail() {
             options={{ format: "png", quality: 1 }}
             style={{ borderRadius: 20, overflow: "hidden" }}
           >
-            <JoueurCard joueur={joueur} showActionsButton={false} rating={rating ?? undefined} />
+            <JoueurCard
+              joueur={joueur}
+              showActionsButton={false}
+              rating={rating ?? undefined}
+            />
           </ViewShot>
 
           <View style={{ position: "absolute" }}>

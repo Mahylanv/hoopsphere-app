@@ -42,6 +42,8 @@ import FullMediaViewerScreen from "./src/Profil/Joueurs/screens/FullMediaViewerS
 import ManageCandidatures from "./src/Profil/Clubs/Candidatures/ManageCandidatures";
 import ForgotPassword from "./src/Pages/ForgotPassword";
 import VideoFeedScreen from "./src/Home/VideoFeedScreen";
+import VisitorsScreen from "./src/Profil/Joueurs/screens/VisitorsScreen";
+import TestPrenium from "./src/Pages/TestPrenium";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -131,12 +133,19 @@ function RootNavigator() {
           options={{ headerShown: false }}
         />
 
+        <Stack.Screen
+          name="Visitors"
+          component={VisitorsScreen} // on le créera à l'étape suivante
+          options={{ title: "Visiteurs du Profil" }}
+        />
+
         {/* Navigation principale */}
         <Stack.Screen name="MainTabs" component={MainTabNavigatorJoueur} />
         <Stack.Screen name="MainTabsClub" component={MainTabNavigatorClub} />
 
         {/* Pages */}
-        <Stack.Screen name="ChatDetail" component={ChatDetail} />
+        {/* <Stack.Screen name="ChatDetail" component={ChatDetail} /> */}
+        <Stack.Screen name="TestPrenium" component={TestPrenium} />
         <Stack.Screen name="OfferDetail" component={OfferDetail} />
         <Stack.Screen name="Payment" component={Payment} />
         <Stack.Screen name="EditOffer" component={EditOffer} />

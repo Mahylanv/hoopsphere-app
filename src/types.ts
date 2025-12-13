@@ -109,6 +109,8 @@ export type RootStackParamList = {
     startIndex: number;
     videos: any[];
   };
+  Visitors: undefined;
+  TestPrenium: undefined;
 };
 
 // NAVIGATION — JOUEUR
@@ -116,7 +118,8 @@ export type RootStackParamList = {
 export type MainTabParamListJoueur = {
   HomeScreen: undefined;
   Match: undefined;
-  Chat: undefined;
+  // Chat: undefined;
+  TestPrenium: undefined;
   Search: undefined;
   Profil: undefined;
 };
@@ -137,7 +140,7 @@ export type Offer = {
   id?: string; // <-- ici optionnel
   title: string;
   description: string;
-  position: string;
+  position: string[];
   team: string;
   publishedAt: string;
   gender: "Homme" | "Femme" | "Mixte";
