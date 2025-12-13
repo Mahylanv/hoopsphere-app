@@ -58,6 +58,9 @@ export default function JoueurDetail() {
   useEffect(() => {
     const loadPlayer = async () => {
       try {
+        /* -----------------------------------------------------
+         📌 FETCH DU JOUEUR
+      ----------------------------------------------------- */
         const ref = doc(db, "joueurs", uid);
         const snap = await getDoc(ref);
 
@@ -66,6 +69,7 @@ export default function JoueurDetail() {
           navigation.goBack();
           return;
         }
+
         const raw = snap.data();
 
         setJoueur({
@@ -80,23 +84,79 @@ export default function JoueurDetail() {
           main: raw.main ?? "-",
         });
 
+        /* -----------------------------------------------------
+         👀 ENREGISTRER UNE VISITE (1 fois / jour)
+      ----------------------------------------------------- */
         const auth = getAuth();
-        const currentUid = auth.currentUser?.uid;
+        const viewerUid = auth.currentUser?.uid;
 
-        if (currentUid && currentUid !== uid) {
+        console.log("👤 viewerUid =", viewerUid, " | target =", uid);
+        if (viewerUid && viewerUid !== uid) {
+          console.log("--------------------------------------------------");
+          console.log("📌 Tentative d'enregistrement d'une visite...");
+          console.log("👤 viewerUid =", viewerUid);
+          console.log("🎯 profil visité =", uid);
+          console.log("📂 Chemin Firestore =", `joueurs/${uid}/views`);
+          console.log("--------------------------------------------------");
+
           try {
-            await addDoc(collection(db, "joueurs", uid, "views"), {
-              viewerUid: currentUid,
-              viewerType: "joueur", // plus tard : "club"
-              viewedAt: serverTimestamp(),
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const viewsRef = collection(db, "joueurs", uid, "views");
+            const snaps = await getDocs(viewsRef);
+
+            let alreadyVisitedToday = false;
+
+            snaps.forEach((docSnap) => {
+              const data = docSnap.data();
+
+              // Log pour vérifier les données existantes
+              console.log("🔎 Doc existant dans views :", data);
+
+              if (data.viewerUid === viewerUid && data.viewedAt?.toDate) {
+                const visitDate = data.viewedAt.toDate();
+                visitDate.setHours(0, 0, 0, 0);
+
+                if (visitDate.getTime() === today.getTime()) {
+                  alreadyVisitedToday = true;
+                }
+              }
             });
-            console.log("👀 Visite enregistrée !");
+
+            const testWrite = await addDoc(
+              collection(db, "joueurs", uid, "views_test_debug"),
+              { viewerUid, createdAt: new Date() }
+            );
+            console.log("DEBUG WRITE OK:", testWrite.id);
+
+            if (!alreadyVisitedToday) {
+              console.log(
+                "🆕 Nouvelle visite → tentative d'écriture Firestore..."
+              );
+
+              try {
+                await addDoc(viewsRef, {
+                  viewerUid: viewerUid,
+                  viewerType: "joueur",
+                  viewedAt: serverTimestamp(),
+                });
+
+                console.log("✅ VISITE ENREGISTRÉE !");
+              } catch (writeErr) {
+                console.log("❌ FIRESTORE ADDDOC ERROR =", writeErr);
+              }
+            } else {
+              console.log("⏳ Visite déjà enregistrée aujourd'hui");
+            }
           } catch (e) {
-            console.log("Erreur enregistrement visite :", e);
+            console.log("❌ ERREUR GLOBALE ENREGISTREMENT VISITE :", e);
           }
         }
 
-        // 🔥 Charger les statistiques
+        /* -----------------------------------------------------
+         📊 STATS JOUEUR
+      ----------------------------------------------------- */
         const matchSnap = await getDocs(
           collection(db, "joueurs", uid, "matches")
         );
@@ -105,7 +165,6 @@ export default function JoueurDetail() {
         const averages = computePlayerStats(matches);
         setStats(averages);
 
-        // Calcul du rating
         const finalRating = computePlayerRating(averages, raw.poste);
         setRating(finalRating);
       } catch (e) {

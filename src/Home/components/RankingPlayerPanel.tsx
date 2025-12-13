@@ -1,7 +1,13 @@
 // src/Home/components/RankingPlayerPanel.tsx
 
 import React, { useEffect } from "react";
-import { Dimensions, Text, TouchableOpacity, Pressable } from "react-native";
+import {
+  Dimensions,
+  Text,
+  TouchableOpacity,
+  Pressable,
+  View,
+} from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -20,12 +26,13 @@ import { BlurView } from "expo-blur";
 import JoueurCard from "../../Components/JoueurCard";
 import { RankingPlayer } from "../../hooks/usePlayerRanking";
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 
 const { height } = Dimensions.get("window");
 
 // ⭐ CONFIG MODIFIABLES PAR TOI
-const PANEL_HEIGHT = 0.88;        // 88% d'écran → modifie pour changer la hauteur
-const PANEL_TOP = height * 0.1;   // Position d’ouverture → 10% du haut
+const PANEL_HEIGHT = 0.88; // 88% d'écran → modifie pour changer la hauteur
+const PANEL_TOP = height * 0.1; // Position d’ouverture → 10% du haut
 const CLOSE_THRESHOLD = height * 0.22; // Distance pour fermer le panel en glissant
 
 export default function RankingPlayerPanel({
@@ -55,10 +62,10 @@ export default function RankingPlayerPanel({
   useEffect(() => {
     if (visible) {
       backdropOpacity.value = withTiming(1, { duration: 200 });
-      translateY.value = withTiming(
-        PANEL_TOP,
-        { duration: 280, easing: Easing.out(Easing.exp) }
-      );
+      translateY.value = withTiming(PANEL_TOP, {
+        duration: 280,
+        easing: Easing.out(Easing.exp),
+      });
       contentOpacity.value = withTiming(1, { duration: 250 });
       contentScale.value = withTiming(1, { duration: 250 });
     } else {
@@ -99,10 +106,10 @@ export default function RankingPlayerPanel({
       runOnJS(onClose)();
     } else {
       // Revenir en place
-      translateY.value = withTiming(
-        PANEL_TOP,
-        { duration: 250, easing: Easing.out(Easing.exp) }
-      );
+      translateY.value = withTiming(PANEL_TOP, {
+        duration: 250,
+        easing: Easing.out(Easing.exp),
+      });
     }
     dragY.value = 0;
   };
@@ -148,7 +155,6 @@ export default function RankingPlayerPanel({
 
   return (
     <GestureHandlerRootView className="absolute inset-0 z-[9999]">
-
       {/* -------------------------------------------------- */}
       {/* ⭐ BACKDROP (clic extérieur = ferme le panel) */}
       {/* -------------------------------------------------- */}
@@ -172,9 +178,34 @@ export default function RankingPlayerPanel({
             className="self-center mt-1 mb-3 w-12 h-1.5 bg-gray-400/70 rounded-full"
           />
 
-          <Text className="text-white text-xl font-bold text-center mb-4">
+          {/*  AVANT le TEST Partie correct  */}
+          {/* <Text className="text-white text-xl font-bold text-center mb-4">
             Profil du Joueur
-          </Text>
+          </Text> */}
+
+          {/* APRES POUR TEST VERSION WEB */}
+
+          <View className="flex-row items-center justify-between mb-4 px-2">
+            <View className="flex-1" />
+
+            <Text className="text-white text-xl font-bold text-center flex-1">
+              Profil du Joueur
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => {
+                onClose();
+                setTimeout(() => {
+                  (navigation as any).navigate("JoueurDetail", {
+                    uid: player.uid,
+                  });
+                }, 200);
+              }}
+              className="flex-1 items-end"
+            >
+              <Ionicons name="open-outline" size={22} color="#F97316" />
+            </TouchableOpacity>
+          </View>
 
           {/* ⭐ CONTENU ANIMÉ */}
           <Animated.View style={contentStyle} className="flex-1">

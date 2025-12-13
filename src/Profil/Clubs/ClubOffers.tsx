@@ -1,7 +1,18 @@
+// src/Profil/Clubs/ClubOffers.tsx
+
 import React, { useEffect, useState } from "react";
 import {
-  View, Text, FlatList, Pressable, StatusBar, Modal, TextInput,
-  TouchableOpacity, ActivityIndicator, Alert, ScrollView
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  StatusBar,
+  Modal,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
 } from "react-native";
 import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
 import { BlurView } from "expo-blur";
@@ -10,7 +21,13 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList, Club as ClubType } from "../../types";
 
 import { auth, db } from "../../config/firebaseConfig";
-import { collection, onSnapshot, addDoc, deleteDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  addDoc,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "ProfilClub">;
 type ProfileRoute = RouteProp<RootStackParamList, "ProfilClub">;
@@ -19,20 +36,22 @@ type Offer = {
   id?: string;
   title: string;
   description: string;
-  position: string;
+  position: string[]; // ✅ multi-postes
   team: string;
   publishedAt: string;
   gender: "Homme" | "Femme" | "Mixte";
   ageRange: string;
   category: string;
   location: string;
-  clubUid?: string; 
+  clubUid?: string;
 };
 
 export default function ClubOffers() {
   const navigation = useNavigation<NavProp>();
   const { params } = useRoute<ProfileRoute>();
-  const clubParam = params?.club as unknown as Partial<ClubType> & { uid?: string };
+  const clubParam = params?.club as unknown as Partial<ClubType> & {
+    uid?: string;
+  };
 
   // UID du club affiché (priorité au param)
   const clubUid = clubParam?.uid || clubParam?.id || auth.currentUser?.uid;
@@ -45,12 +64,24 @@ export default function ClubOffers() {
   // Champs formulaire
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [position, setPosition] = useState("Meneur");
-  const [team, setTeam] = useState("");
+  const [positions, setPositions] = useState<string[]>([]);
   const [gender, setGender] = useState<"Homme" | "Femme" | "Mixte">("Mixte");
+  const [team, setTeam] = useState("");
   const [ageRange, setAgeRange] = useState("");
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
+
+  const [showPosteSelect, setShowPosteSelect] = useState(false);
+  const [showGenreSelect, setShowGenreSelect] = useState(false);
+
+  const POSTES = ["Meneur", "Arrière", "Ailier", "Ailier fort", "Pivot"];
+  const GENRES: ("Homme" | "Femme" | "Mixte")[] = ["Homme", "Femme", "Mixte"];
+
+  const togglePoste = (poste: string) => {
+    setPositions((prev) =>
+      prev.includes(poste) ? prev.filter((p) => p !== poste) : [...prev, poste]
+    );
+  };
 
   useEffect(() => {
     if (!clubUid) {
@@ -61,7 +92,10 @@ export default function ClubOffers() {
     const unsub = onSnapshot(
       ref,
       (snap) => {
-        const data = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Offer) }));
+        const data = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Offer),
+        }));
         setOffers(data);
         setLoading(false);
       },
@@ -85,19 +119,23 @@ export default function ClubOffers() {
       const newOffer: Offer = {
         title,
         description,
-        position,
+        position: positions, // array
         team,
         gender,
         ageRange,
         category,
         location,
         publishedAt: new Date().toISOString().split("T")[0],
-        clubUid, 
+        clubUid,
       };
       await addDoc(ref, newOffer);
       setModalVisible(false);
-      setTitle(""); setDescription(""); setTeam(""); setAgeRange("");
-      setCategory(""); setLocation("");
+      setTitle("");
+      setDescription("");
+      setTeam("");
+      setAgeRange("");
+      setCategory("");
+      setLocation("");
     } catch (e) {
       console.error(e);
       Alert.alert("Erreur", "Impossible d’ajouter l’offre.");
@@ -169,7 +207,10 @@ export default function ClubOffers() {
               >
                 {/*  CONTENU DE LA CARTE (de nouveau visible) */}
                 <View className="flex-row justify-between items-center mb-2">
-                  <Text className="text-white font-bold text-lg flex-1" numberOfLines={1}>
+                  <Text
+                    className="text-white font-bold text-lg flex-1"
+                    numberOfLines={1}
+                  >
                     {item.title || "Sans titre"}
                   </Text>
                   {item.publishedAt ? (
@@ -181,7 +222,11 @@ export default function ClubOffers() {
 
                 {item.location ? (
                   <View className="flex-row items-center mb-3">
-                    <Ionicons name="location-outline" size={14} color="#9ca3af" />
+                    <Ionicons
+                      name="location-outline"
+                      size={14}
+                      color="#9ca3af"
+                    />
                     <Text className="text-gray-400 text-sm ml-1">
                       {item.location}
                     </Text>
@@ -189,7 +234,10 @@ export default function ClubOffers() {
                 ) : null}
 
                 {!!item.description && (
-                  <Text className="text-gray-300 text-[14px] mb-4" numberOfLines={3}>
+                  <Text
+                    className="text-gray-300 text-[14px] mb-4"
+                    numberOfLines={3}
+                  >
                     {item.description}
                   </Text>
                 )}
@@ -198,31 +246,49 @@ export default function ClubOffers() {
                   {!!item.position && (
                     <View className="bg-orange-600/80 px-3 py-1 rounded-full flex-row items-center">
                       <Ionicons name="person-outline" size={12} color="white" />
-                      <Text className="text-white text-xs ml-1">{item.position}</Text>
+                      <Text className="text-white text-xs ml-1">
+                        {item.position.join(" • ")}
+                      </Text>
                     </View>
                   )}
                   {!!item.gender && (
                     <View className="bg-purple-600/80 px-3 py-1 rounded-full flex-row items-center">
-                      <Ionicons name="male-female-outline" size={12} color="white" />
-                      <Text className="text-white text-xs ml-1">{item.gender}</Text>
+                      <Ionicons
+                        name="male-female-outline"
+                        size={12}
+                        color="white"
+                      />
+                      <Text className="text-white text-xs ml-1">
+                        {item.gender}
+                      </Text>
                     </View>
                   )}
                   {!!item.team && (
                     <View className="bg-green-600/80 px-3 py-1 rounded-full flex-row items-center">
                       <Ionicons name="people-outline" size={12} color="white" />
-                      <Text className="text-white text-xs ml-1">{item.team}</Text>
+                      <Text className="text-white text-xs ml-1">
+                        {item.team}
+                      </Text>
                     </View>
                   )}
                   {!!item.category && (
                     <View className="bg-blue-600/80 px-3 py-1 rounded-full flex-row items-center">
                       <Ionicons name="trophy-outline" size={12} color="white" />
-                      <Text className="text-white text-xs ml-1">{item.category}</Text>
+                      <Text className="text-white text-xs ml-1">
+                        {item.category}
+                      </Text>
                     </View>
                   )}
                   {!!item.ageRange && (
                     <View className="bg-gray-700 px-3 py-1 rounded-full flex-row items-center">
-                      <Ionicons name="hourglass-outline" size={12} color="white" />
-                      <Text className="text-white text-xs ml-1">{item.ageRange}</Text>
+                      <Ionicons
+                        name="hourglass-outline"
+                        size={12}
+                        color="white"
+                      />
+                      <Text className="text-white text-xs ml-1">
+                        {item.ageRange}
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -236,8 +302,14 @@ export default function ClubOffers() {
                         onPress={() => deleteOffer(item.id)}
                         className="flex-row items-center gap-1 px-4 py-2 bg-red-600 rounded-xl active:bg-red-700"
                       >
-                        <Ionicons name="trash-outline" size={16} color="white" />
-                        <Text className="text-white font-semibold text-sm">Supprimer</Text>
+                        <Ionicons
+                          name="trash-outline"
+                          size={16}
+                          color="white"
+                        />
+                        <Text className="text-white font-semibold text-sm">
+                          Supprimer
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   </>
@@ -254,14 +326,26 @@ export default function ClubOffers() {
           <BlurView
             intensity={45}
             tint="dark"
-            style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 16 }}
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              paddingHorizontal: 16,
+            }}
           >
             <ScrollView
-              contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", width: "100%" }}
+              contentContainerStyle={{
+                flexGrow: 1,
+                justifyContent: "center",
+                alignItems: "center",
+                width: "100%",
+              }}
               style={{ width: "100%" }}
             >
               <View className="bg-[#1b1f2a] w-[90%] rounded-3xl p-6 border border-gray-800 shadow-2xl">
-                <Text className="text-white text-2xl font-bold text-center mb-6">Nouvelle offre</Text>
+                <Text className="text-white text-2xl font-bold text-center mb-6">
+                  Nouvelle offre
+                </Text>
 
                 <View className="mb-4">
                   <Text className="text-gray-400 mb-2 text-[15px]">Titre</Text>
@@ -274,31 +358,52 @@ export default function ClubOffers() {
                   />
                 </View>
 
-                <View className="flex-row gap-3 mb-4">
+                <View className="flex-row gap-3 mb-5">
+                  {/* ===== SELECT POSTES (MULTI) ===== */}
                   <View className="flex-1">
-                    <Text className="text-gray-400 mb-2 text-[15px]">Poste recherché</Text>
-                    <TextInput
-                      placeholder="Meneur / Ailier / Pivot…"
-                      placeholderTextColor="#6b7280"
-                      value={position}
-                      onChangeText={setPosition}
-                      className="bg-[#0e1320] text-white rounded-2xl px-4 py-3 text-[15px] border border-gray-700"
-                    />
+                    <Text className="text-gray-400 mb-2 text-[15px]">
+                      Postes
+                    </Text>
+
+                    <Pressable
+                      onPress={() => setShowPosteSelect(true)}
+                      className="bg-[#0e1320] border border-gray-700 rounded-2xl px-4 py-3"
+                    >
+                      <Text
+                        className="text-white text-[15px]"
+                        numberOfLines={1}
+                      >
+                        {positions.length > 0
+                          ? positions.join(", ")
+                          : "Postes"}
+                      </Text>
+                    </Pressable>
                   </View>
+
+                  {/* ===== SELECT GENRES (SIMPLE) ===== */}
                   <View className="flex-1">
-                    <Text className="text-gray-400 mb-2 text-[15px]">Genre</Text>
-                    <TextInput
-                      placeholder="Homme / Femme / Mixte"
-                      placeholderTextColor="#6b7280"
-                      value={gender}
-                      onChangeText={(t) => setGender((t as any) || "Mixte")}
-                      className="bg-[#0e1320] text-white rounded-2xl px-4 py-3 text-[15px] border border-gray-700"
-                    />
+                    <Text className="text-gray-400 mb-2 text-[15px]">
+                      Genres
+                    </Text>
+
+                    <Pressable
+                      onPress={() => setShowGenreSelect(true)}
+                      className="bg-[#0e1320] border border-gray-700 rounded-2xl px-4 py-3"
+                    >
+                      <Text
+                        className="text-white text-[15px]"
+                        numberOfLines={1}
+                      >
+                        {gender || "Genre"}
+                      </Text>
+                    </Pressable>
                   </View>
                 </View>
 
                 <View className="mb-4">
-                  <Text className="text-gray-400 mb-2 text-[15px]">Description</Text>
+                  <Text className="text-gray-400 mb-2 text-[15px]">
+                    Description
+                  </Text>
                   <TextInput
                     placeholder="Décris ton offre…"
                     placeholderTextColor="#6b7280"
@@ -311,7 +416,9 @@ export default function ClubOffers() {
 
                 <View className="flex-row gap-3 mb-4">
                   <View className="flex-1">
-                    <Text className="text-gray-400 mb-2 text-[15px]">Équipe</Text>
+                    <Text className="text-gray-400 mb-2 text-[15px]">
+                      Équipe
+                    </Text>
                     <TextInput
                       placeholder="Ex: U18"
                       placeholderTextColor="#6b7280"
@@ -321,7 +428,9 @@ export default function ClubOffers() {
                     />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-gray-400 mb-2 text-[15px]">Tranche d’âge</Text>
+                    <Text className="text-gray-400 mb-2 text-[15px]">
+                      Tranche d’âge
+                    </Text>
                     <TextInput
                       placeholder="Ex: 18–22 ans"
                       placeholderTextColor="#6b7280"
@@ -334,7 +443,9 @@ export default function ClubOffers() {
 
                 <View className="flex-row gap-3 mb-6">
                   <View className="flex-1">
-                    <Text className="text-gray-400 mb-2 text-[15px]">Catégorie</Text>
+                    <Text className="text-gray-400 mb-2 text-[15px]">
+                      Catégorie
+                    </Text>
                     <TextInput
                       placeholder="Ex: Régional 2"
                       placeholderTextColor="#6b7280"
@@ -356,10 +467,17 @@ export default function ClubOffers() {
                 </View>
 
                 <View className="flex-row justify-end gap-3">
-                  <TouchableOpacity onPress={() => setModalVisible(false)} className="px-5 py-2.5 bg-gray-700 rounded-xl">
+                  <TouchableOpacity
+                    onPress={() => setModalVisible(false)}
+                    className="px-5 py-2.5 bg-gray-700 rounded-xl"
+                  >
                     <Text className="text-white text-[15px]">Annuler</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity disabled={!title || saving} onPress={addOffer} className="px-5 py-2.5 bg-orange-600 rounded-xl">
+                  <TouchableOpacity
+                    disabled={!title || saving}
+                    onPress={addOffer}
+                    className="px-5 py-2.5 bg-orange-600 rounded-xl"
+                  >
                     <Text className="text-white font-semibold text-[15px]">
                       {saving ? "Création..." : "Créer"}
                     </Text>
@@ -368,6 +486,69 @@ export default function ClubOffers() {
               </View>
             </ScrollView>
           </BlurView>
+
+          {/* ===== MODAL SELECT POSTES ===== */}
+          <Modal visible={showPosteSelect} transparent animationType="fade">
+            <Pressable
+              className="flex-1 bg-black/60 justify-center items-center px-6"
+              onPress={() => setShowPosteSelect(false)}
+            >
+              <View className="bg-[#1b1f2a] w-full rounded-3xl p-6">
+                <Text className="text-white text-xl font-bold mb-4">
+                  Postes recherchés
+                </Text>
+
+                {POSTES.map((poste) => {
+                  const selected = positions.includes(poste);
+                  return (
+                    <Pressable
+                      key={poste}
+                      onPress={() => togglePoste(poste)}
+                      className={`py-3 px-4 rounded-xl mb-2 ${
+                        selected ? "bg-orange-600" : "bg-[#0e1320]"
+                      }`}
+                    >
+                      <Text className="text-white">{poste}</Text>
+                    </Pressable>
+                  );
+                })}
+
+                <Pressable
+                  onPress={() => setShowPosteSelect(false)}
+                  className="mt-4 py-3 bg-gray-700 rounded-xl items-center"
+                >
+                  <Text className="text-white font-semibold">Valider</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          </Modal>
+
+          {/* ===== MODAL SELECT GENRE ===== */}
+          <Modal visible={showGenreSelect} transparent animationType="fade">
+            <Pressable
+              className="flex-1 bg-black/60 justify-center items-center px-6"
+              onPress={() => setShowGenreSelect(false)}
+            >
+              <View className="bg-[#1b1f2a] w-full rounded-3xl p-6">
+                <Text className="text-white text-xl font-bold mb-4">Genre</Text>
+
+                {GENRES.map((g) => (
+                  <Pressable
+                    key={g}
+                    onPress={() => {
+                      setGender(g);
+                      setShowGenreSelect(false);
+                    }}
+                    className={`py-3 px-4 rounded-xl mb-2 ${
+                      gender === g ? "bg-orange-600" : "bg-[#0e1320]"
+                    }`}
+                  >
+                    <Text className="text-white">{g}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </Pressable>
+          </Modal>
         </Modal>
       )}
     </View>

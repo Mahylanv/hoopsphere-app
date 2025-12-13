@@ -1,17 +1,26 @@
 // src/config/firebaseConfig.ts
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, initializeAuth } from 'firebase/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
+import { initializeApp, getApps, getApp } from "firebase/app";
+
+import {
+  getAuth,
+  initializeAuth,
+} from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import {
   initializeFirestore,
   memoryLocalCache,
+  persistentLocalCache,
   setLogLevel,
-} from 'firebase/firestore';
+} from "firebase/firestore";
 
 import { getStorage } from "firebase/storage";
 
+/* ===========================================================
+   🔥 CONFIG FIREBASE (.env)
+=========================================================== */
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -22,39 +31,50 @@ const firebaseConfig = {
   measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
+/* ===========================================================
+   🔥 INITIALISATION FIREBASE
+=========================================================== */
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-function initAuthNative() {
-  let getReactNativePersistence: any | undefined;
-  try {
-    ({ getReactNativePersistence } = require('firebase/auth/react-native'));
-  } catch {
+/* ===========================================================
+   🔥 AUTH COMPATIBLE EXPO
+=========================================================== */
+function initAuth() {
+  if (Platform.OS !== "web") {
     try {
-      ({ getReactNativePersistence } = require('@firebase/auth/dist/rn/index.js'));
-    } catch {
-      throw new Error(
-        "Impossible de charger 'getReactNativePersistence'. Vérifie 'firebase@^12' et relance avec 'expo start --clear'."
-      );
+      const { getReactNativePersistence } = require("firebase/auth/react-native");
+      return initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage),
+      });
+    } catch (err) {
+      console.warn("⚠️ Auth fallback:", err);
+      return getAuth(app);
     }
   }
 
-  try {
-    return initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage),
-    });
-  } catch {
-    return getAuth(app); 
-  }
+  // Web
+  return getAuth(app);
 }
 
-export const auth = Platform.OS === 'web' ? getAuth(app) : initAuthNative();
-export const storage = getStorage(app);
+export const auth = initAuth();
 
-setLogLevel('error');
+/* ===========================================================
+   🔥 FIRESTORE (fix pour Expo)
+=========================================================== */
+
+setLogLevel("error"); // moins de bruit
 
 export const db = initializeFirestore(app, {
-  localCache: memoryLocalCache(),
+  localCache:
+    Platform.OS === "web"
+      ? persistentLocalCache() // ✅ Web version simplifiée (OK pour Expo Web)
+      : memoryLocalCache(), // ✅ Mobile
   experimentalAutoDetectLongPolling: true,
 });
+
+/* ===========================================================
+   🔥 STORAGE
+=========================================================== */
+export const storage = getStorage(app);
 
 export default app;
