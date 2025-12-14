@@ -44,6 +44,8 @@ import ForgotPassword from "./src/Pages/ForgotPassword";
 import VideoFeedScreen from "./src/Home/VideoFeedScreen";
 import VisitorsScreen from "./src/Profil/Joueurs/screens/VisitorsScreen";
 import TestPrenium from "./src/Pages/TestPrenium";
+import CreatePostScreen from "./src/Profil/Joueurs/screens/Post/CreatePostScreen";
+import EditPostScreen from "./src/Profil/Joueurs/screens/Post/EditPostScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -163,6 +165,12 @@ function RootNavigator() {
           options={{ headerShown: false }}
         />
         <Stack.Screen name="VideoFeed" component={VideoFeedScreen} />
+        <Stack.Screen name="CreatePost" component={CreatePostScreen} />
+        <Stack.Screen
+          name="EditPost"
+          component={EditPostScreen}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </SafeAreaView>
   );

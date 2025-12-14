@@ -111,6 +111,8 @@ export type RootStackParamList = {
   };
   Visitors: undefined;
   TestPrenium: undefined;
+  CreatePost: undefined;
+  EditPost: undefined;
 };
 
 // NAVIGATION — JOUEUR

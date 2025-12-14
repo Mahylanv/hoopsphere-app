@@ -27,7 +27,9 @@ import FloatingShareButton from "./components/FloatingShareButton";
 import usePlayerProfile from "./hooks/usePlayerProfile";
 import EditProfileModal from "./components/EditProfileModal/EditProfileModal";
 import { Modalize } from "react-native-modalize";
-import { updateUserProfile } from "../../services/userService"; // adapte le chemin si nécessaire
+import { updateUserProfile } from "../../services/userService";
+import PostGridSection from "./components/PostGridSection";
+import usePlayerPosts from "./hooks/usePlayerPosts";
 
 const CARD_WIDTH = Dimensions.get("window").width * 0.9;
 const CARD_HEIGHT = CARD_WIDTH * 1.3;
@@ -61,7 +63,9 @@ export default function ProfilJoueur() {
     refetch,
   } = usePlayerProfile() as any;
 
-  const navigation = useNavigation();
+  const { posts, loading: postsLoading } = usePlayerPosts(user?.uid);
+
+  const navigation = useNavigation<any>();
 
   // ————————— Remontage forcé (si ton hook n'a pas refetch)
   const [focusKey, setFocusKey] = useState(0);
@@ -74,7 +78,7 @@ export default function ProfilJoueur() {
       if (typeof refetch === "function") refetch();
       // option B : sinon, dé-commente la ligne suivante pour remonter le composant
       // remount();
-      return () => { };
+      return () => {};
     }, [refetch, remount])
   );
 
@@ -106,10 +110,26 @@ export default function ProfilJoueur() {
   const autoScroll = useRef(new Animated.Value(0)).current;
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const scale = scrollY.interpolate({ inputRange: [0, 170], outputRange: [1, 0.6], extrapolate: "clamp" });
-  const translateY = scrollY.interpolate({ inputRange: [0, 260], outputRange: [0, -40], extrapolate: "clamp" });
-  const adjustedTranslate = scrollY.interpolate({ inputRange: [0, 170], outputRange: [0, CARD_HEIGHT * 0.55], extrapolate: "clamp" });
-  const opacity = scrollY.interpolate({ inputRange: [0, 300], outputRange: [1, 0], extrapolate: "clamp" });
+  const scale = scrollY.interpolate({
+    inputRange: [0, 170],
+    outputRange: [1, 0.6],
+    extrapolate: "clamp",
+  });
+  const translateY = scrollY.interpolate({
+    inputRange: [0, 260],
+    outputRange: [0, -40],
+    extrapolate: "clamp",
+  });
+  const adjustedTranslate = scrollY.interpolate({
+    inputRange: [0, 170],
+    outputRange: [0, CARD_HEIGHT * 0.55],
+    extrapolate: "clamp",
+  });
+  const opacity = scrollY.interpolate({
+    inputRange: [0, 300],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
 
   // Pull-to-refresh
   const [refreshing, setRefreshing] = useState(false);
@@ -135,16 +155,6 @@ export default function ProfilJoueur() {
     if (!uri) return Alert.alert("Erreur", "Impossible de capturer la carte.");
     await Sharing.shareAsync(uri);
   };
-
-  // Pick media
-  const pickMedia = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.All, quality: 1 });
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      await addGalleryMedia(asset.uri, asset.type === "video");
-    }
-  };
-
   // Auto scroll d’intro
   useEffect(() => {
     const id = autoScroll.addListener(({ value }) => {
@@ -172,15 +182,31 @@ export default function ProfilJoueur() {
     );
   }
 
+  const goToCreatePost = () => {
+    navigation.navigate("CreatePost");
+  };
+
   return (
     <SafeAreaView key={focusKey} className="flex-1 bg-[#0E0D0D]">
       <Animated.ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
-        contentContainerStyle={{ paddingTop: CARD_HEIGHT * 1.3, paddingBottom: 120 }}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#fff"
+          />
+        }
+        contentContainerStyle={{
+          paddingTop: CARD_HEIGHT * 1.3,
+          paddingBottom: 120,
+        }}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
       >
         <Animated.View
           style={{
@@ -189,16 +215,35 @@ export default function ProfilJoueur() {
             left: 0,
             right: 0,
             alignItems: "center",
-            transform: [{ scale }, { translateY: Animated.add(translateY, adjustedTranslate) }],
+            transform: [
+              { scale },
+              { translateY: Animated.add(translateY, adjustedTranslate) },
+            ],
             opacity,
           }}
         >
-          <ViewShot ref={cardRef} options={{ format: "png", quality: 1 }} style={{ borderRadius: 20, overflow: "hidden" }}>
-            <AvatarSection user={user} stats={stats} rating={rating} onEditAvatar={handleAvatarChange} avatarLoading={avatarLoading} />
+          <ViewShot
+            ref={cardRef}
+            options={{ format: "png", quality: 1 }}
+            style={{ borderRadius: 20, overflow: "hidden" }}
+          >
+            <AvatarSection
+              user={user}
+              stats={stats}
+              rating={rating}
+              onEditAvatar={handleAvatarChange}
+              avatarLoading={avatarLoading}
+            />
           </ViewShot>
 
           <View style={{ position: "absolute" }}>
-            <AvatarSection user={user} stats={stats} rating={rating} onEditAvatar={handleAvatarChange} avatarLoading={avatarLoading} />
+            <AvatarSection
+              user={user}
+              stats={stats}
+              rating={rating}
+              onEditAvatar={handleAvatarChange}
+              avatarLoading={avatarLoading}
+            />
           </View>
         </Animated.View>
 
@@ -213,25 +258,25 @@ export default function ProfilJoueur() {
             setBirthYear={(v) => setEditField("dob", v)}
             height={fields.taille}
             setHeight={(v) => setEditField("taille", v)}
-            onSelectHeight={() => { }}
+            onSelectHeight={() => {}}
             weight={fields.poids}
             setWeight={(v) => setEditField("poids", v)}
-            onSelectWeight={() => { }}
+            onSelectWeight={() => {}}
             position={fields.poste}
             setPosition={(v) => setEditField("poste", v)}
-            onSelectPoste={() => { }}
+            onSelectPoste={() => {}}
             strongHand={fields.main}
             setStrongHand={(v) => setEditField("main", v)}
             departement={fields.departement}
-            onSelectDepartement={() => { }}
+            onSelectDepartement={() => {}}
             club={fields.club}
-            onSelectClub={() => { }}
+            onSelectClub={() => {}}
             phone={fields.phone}
             setPhone={(v) => setEditField("phone", v)}
             email={fields.email}
             setEmail={(v) => setEditField("email", v)}
             level={fields.level}
-            onSelectLevel={() => { }}
+            onSelectLevel={() => {}}
             experience={fields.experience}
             setExperience={(v) => setEditField("experience", v)}
             bio={fields.description}
@@ -239,11 +284,21 @@ export default function ProfilJoueur() {
           />
         </View>
         <StatsChartSection playerUid={user?.uid} />
-        <GallerySection
+        {/* <GallerySection
           media={gallery}
-          onAddMedia={(uri, isVideo, file) => addGalleryMedia(uri, isVideo, file)}
+          onAddMedia={goToCreatePost}
           onDeleteMedia={deleteGalleryMedia}
           onSetAvatar={handleAvatarChange}
+        /> */}
+
+        <PostGridSection
+          posts={posts}
+          onOpenPost={(post) =>
+            navigation.navigate("EditPost", {
+              post,
+            })
+          }
+          onCreatePost={() => navigation.navigate("CreatePost")}
         />
 
         {/* 🔥 TOGGLE PREMIUM POUR TESTS DEV */}

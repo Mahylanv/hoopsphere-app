@@ -17,8 +17,6 @@ import ImageViewer from "react-native-image-zoom-viewer";
 import { useNavigation } from "@react-navigation/native";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
-import * as ImagePicker from "expo-image-picker";
-
 import ActionSheetMenu from "./ActionSheetMenu";
 
 type MediaItem = {
@@ -28,7 +26,7 @@ type MediaItem = {
 
 type Props = {
   media: MediaItem[];
-  onAddMedia: (uri: string, isVideo: boolean, file?: File) => void;
+  onAddMedia: () => void; // 👉 navigation seulement
   onDeleteMedia?: (url: string) => void;
   onSetAvatar?: (url: string) => void;
 };
@@ -51,53 +49,6 @@ export default function GallerySection({
   const cleanMedia = media.filter(
     (m) => m.url && m.url !== "" && m.url.startsWith("http")
   );
-
-  /* ---------------------------------------
-      ⭐ AJOUT IMAGE / VIDÉO
-  --------------------------------------- */
-  const onAddMediaPress = async () => {
-    // 📌 PATCH WEB
-    if (Platform.OS === "web") {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*,video/*"; // autorise images + vidéos
-  
-      input.onchange = async () => {
-        if (!input.files || input.files.length === 0) return;
-  
-        const file = input.files[0];
-        const isVideo = file.type.startsWith("video");
-  
-        // Convertir en blob URL
-        const uri = URL.createObjectURL(file);
-  
-        // On passe le fichier réel au backend
-        onAddMedia(uri, isVideo, file); // 🎥📸 Nouveau param : le File réel
-      };
-  
-      input.click();
-      return;
-    }
-  
-    // 📱 iOS / Android (Expo ImagePicker)
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      alert("Permission refusée");
-      return;
-    }
-  
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
-      allowsEditing: false,
-      quality: 1,
-    });
-  
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      const isVideo = asset.type === "video";
-      onAddMedia(asset.uri, isVideo, undefined);
-    }
-  };  
 
   /* ---------------------------------------
       ⭐ FULLSCREEN IMAGE
@@ -162,12 +113,8 @@ export default function GallerySection({
 
         {cleanMedia.length > 0 && (
           <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("FullMediaViewer", {
-                media: cleanMedia,
-                onDeleteMedia,
-              })
-            }
+            onPress={onAddMedia}
+            className="mt-5 bg-orange-500 py-3 rounded-lg flex-row items-center justify-center"
           >
             <Text className="text-orange-400 font-semibold">Voir tout</Text>
           </TouchableOpacity>
@@ -191,13 +138,13 @@ export default function GallerySection({
                 onPress={() =>
                   item.type === "video"
                     ? navigation.navigate("FullMediaViewer", {
-                      media: [{ url: item.url, type: "video" }],
-                      startIndex: 0,
-                    })
+                        media: [{ url: item.url, type: "video" }],
+                        startIndex: 0,
+                      })
                     : navigation.navigate("FullMediaViewer", {
-                      media: cleanMedia,
-                      startIndex: index,
-                    })
+                        media: cleanMedia,
+                        startIndex: index,
+                      })
                 }
                 onLongPress={() => openMenu(item)}
               >
@@ -249,7 +196,7 @@ export default function GallerySection({
 
       {/* ADD BUTTON */}
       <TouchableOpacity
-        onPress={onAddMediaPress}
+        onPress={onAddMedia}
         className="mt-5 bg-orange-500 py-3 rounded-lg flex-row items-center justify-center"
       >
         <Ionicons name="add-circle-outline" size={22} color="white" />
