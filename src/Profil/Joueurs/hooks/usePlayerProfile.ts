@@ -255,25 +255,42 @@ export default function usePlayerProfile() {
   const deleteGalleryMedia = async (url: string) => {
     const current = auth.currentUser;
     if (!current) return;
-
+  
     try {
+      // 1️⃣ Suppression Storage
       const storagePath = decodeURIComponent(url.split("/o/")[1].split("?")[0]);
       await deleteObject(ref(storage, storagePath));
-
+  
+      // 2️⃣ Suppression galerie joueur
       const fsRef = collection(db, "joueurs", current.uid, "gallery");
       const snaps = await getDocs(fsRef);
-
+  
       snaps.forEach(async (docSnap) => {
         if (docSnap.data().url === url) {
           await deleteDoc(docSnap.ref);
         }
       });
-
+  
+      // 3️⃣ 🔥 Suppression galerie globale
+      const globalRef = collection(db, "gallery");
+      const globalSnaps = await getDocs(globalRef);
+  
+      globalSnaps.forEach(async (docSnap) => {
+        if (
+          docSnap.data().url === url &&
+          docSnap.data().playerUid === current.uid
+        ) {
+          await deleteDoc(docSnap.ref);
+        }
+      });
+  
+      // 4️⃣ Update front
       setGallery((prev) => prev.filter((m) => m.url !== url));
     } catch (e) {
       console.log("🔥 ERREUR deleteGalleryMedia:", e);
     }
   };
+  
 
   /* ============================================================
        AVATAR
