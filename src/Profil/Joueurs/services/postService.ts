@@ -1,5 +1,3 @@
-// src/Profil/services/postService.ts
-
 import { auth, db, storage } from "../../../config/firebaseConfig";
 import {
   collection,
@@ -13,6 +11,7 @@ import {
   ref,
   uploadBytes,
   getDownloadURL,
+  deleteObject,
 } from "firebase/storage";
 
 /* ============================================================
@@ -28,45 +27,36 @@ export type CreatePostPayload = {
   visibility: "public" | "private";
 };
 
+export type UpdatePostPayload = {
+  description: string;
+  location?: string;
+  postType: "highlight" | "match" | "training";
+  skills: string[];
+  visibility: "public" | "private";
+};
+
 /* ============================================================
    CREATE POST
 ============================================================ */
 export const createPost = async (payload: CreatePostPayload) => {
-  console.log("🟡 createPost() called");
-  console.log("📦 Payload reçu :", payload);
-
   const user = auth.currentUser;
-  if (!user) {
-    console.error("❌ Aucun utilisateur connecté");
-    throw new Error("Utilisateur non authentifié");
-  }
+  if (!user) throw new Error("Utilisateur non authentifié");
 
   try {
-    /* -------------------------------
-       1️⃣ Upload média
-    -------------------------------- */
-    console.log("⬆️ Upload média en cours...");
-
+    /* ---------- UPLOAD MEDIA ---------- */
     const response = await fetch(payload.mediaUri);
     const blob = await response.blob();
-
-    console.log("📦 Blob size :", blob.size);
 
     const ext = payload.mediaType === "video" ? "mp4" : "jpg";
     const filename = `${Date.now()}.${ext}`;
     const storagePath = `posts/${user.uid}/${filename}`;
 
-    console.log("📂 Storage path :", storagePath);
-
     const storageRef = ref(storage, storagePath);
     await uploadBytes(storageRef, blob);
 
     const mediaUrl = await getDownloadURL(storageRef);
-    console.log("🔗 mediaUrl :", mediaUrl);
 
-    /* -------------------------------
-       2️⃣ Firestore document (ID unique)
-    -------------------------------- */
+    /* ---------- FIRESTORE DOC ---------- */
     const postRef = doc(collection(db, "posts"));
 
     const postDoc = {
@@ -76,11 +66,11 @@ export const createPost = async (payload: CreatePostPayload) => {
       mediaUrl,
       mediaType: payload.mediaType,
 
-      description: payload.description || "",
+      description: payload.description,
       location: payload.location || null,
 
       postType: payload.postType,
-      skills: payload.skills || [],
+      skills: payload.skills,
       visibility: payload.visibility,
 
       likesCount: 0,
@@ -89,62 +79,61 @@ export const createPost = async (payload: CreatePostPayload) => {
       createdAt: serverTimestamp(),
     };
 
-    console.log("📝 Post Firestore :", postDoc);
-
-    // 🌍 COLLECTION GLOBALE
     await setDoc(postRef, postDoc);
-    console.log("✅ Post créé dans /posts :", postRef.id);
-
-    // 👤 COLLECTION PROFIL JOUEUR (MÊME ID)
     await setDoc(
       doc(db, "joueurs", user.uid, "posts", postRef.id),
       postDoc
     );
-    console.log("✅ Post créé dans /joueurs/{uid}/posts :", postRef.id);
 
     return postRef.id;
-  } catch (error) {
-    console.error("❌ ERREUR createPost :", error);
-    throw error;
+  } catch (e) {
+    console.error("❌ createPost error:", e);
+    throw e;
   }
 };
 
 /* ============================================================
-   UPDATE POST
+   UPDATE POST ✅ (CORRIGÉ)
 ============================================================ */
 export const updatePost = async (
   postId: string,
-  updates: {
-    description: string;
-    location?: string;
-  }
+  updates: UpdatePostPayload
 ) => {
   console.log("🟡 updatePost()", postId, updates);
 
   const user = auth.currentUser;
   if (!user) throw new Error("Utilisateur non authentifié");
 
-  try {
-    // 🌍 Global
-    await updateDoc(doc(db, "posts", postId), updates);
+  const cleanUpdates = {
+    description: updates.description,
+    location: updates.location || null,
+    postType: updates.postType,
+    skills: updates.skills,
+    visibility: updates.visibility,
+    updatedAt: serverTimestamp(),
+  };
 
-    // 👤 Profil joueur
+  try {
+    // 🌍 GLOBAL FEED
+    await updateDoc(doc(db, "posts", postId), cleanUpdates);
+
+    // 👤 PROFIL JOUEUR
     await updateDoc(
       doc(db, "joueurs", user.uid, "posts", postId),
-      updates
+      cleanUpdates
     );
 
     console.log("✅ Post mis à jour :", postId);
-  } catch (error) {
-    console.error("❌ ERREUR updatePost :", error);
-    throw error;
+  } catch (e) {
+    console.error("❌ updatePost error:", e);
+    throw e;
   }
 };
 
 /* ============================================================
    DELETE POST
 ============================================================ */
-export const deletePost = async (postId: string) => {
+export const deletePost = async (postId: string, mediaUrl?: string) => {
   console.log("🟡 deletePost()", postId);
 
   const user = auth.currentUser;
@@ -155,9 +144,15 @@ export const deletePost = async (postId: string) => {
     await deleteDoc(doc(db, "posts", postId));
     await deleteDoc(doc(db, "joueurs", user.uid, "posts", postId));
 
+    // 🗑️ Storage (optionnel mais propre)
+    if (mediaUrl) {
+      const mediaRef = ref(storage, mediaUrl);
+      await deleteObject(mediaRef);
+    }
+
     console.log("🗑️ Post supprimé :", postId);
-  } catch (error) {
-    console.error("❌ ERREUR deletePost :", error);
-    throw error;
+  } catch (e) {
+    console.error("❌ deletePost error:", e);
+    throw e;
   }
 };

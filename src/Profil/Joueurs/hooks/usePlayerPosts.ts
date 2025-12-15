@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import {
   collection,
   query,
-  where,
   orderBy,
   onSnapshot,
 } from "firebase/firestore";
@@ -42,11 +41,10 @@ export default function usePlayerPosts(playerUid?: string) {
       return;
     }
 
-    console.log("📥 Chargement des posts pour :", playerUid);
+    console.log("📥 Chargement des posts PROFIL joueur :", playerUid);
 
     const q = query(
-      collection(db, "posts"),
-      where("playerUid", "==", playerUid),
+      collection(db, "joueurs", playerUid, "posts"),
       orderBy("createdAt", "desc")
     );
 
@@ -58,12 +56,12 @@ export default function usePlayerPosts(playerUid?: string) {
           ...(doc.data() as Omit<PlayerPost, "id">),
         }));
 
-        console.log("✅ Posts reçus :", data.length);
+        console.log("✅ Posts profil reçus :", data.length);
         setPosts(data);
         setLoading(false);
       },
       (error) => {
-        console.error("❌ Erreur récupération posts :", error);
+        console.error("❌ Erreur récupération posts profil :", error);
         setLoading(false);
       }
     );

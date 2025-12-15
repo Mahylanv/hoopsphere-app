@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { updatePost } from "../../services/postService";
 
 const { width, height } = Dimensions.get("window");
 
@@ -33,13 +34,18 @@ type PostItem = {
   visibility: "public" | "private";
 };
 
+const POST_TYPES: PostItem["postType"][] = [
+  "highlight",
+  "match",
+  "training",
+];
+
 /* ============================================================
    SCREEN
 ============================================================ */
 export default function EditPostScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-
   const { post } = route.params as { post: PostItem };
 
   /* -------------------------------
@@ -47,33 +53,52 @@ export default function EditPostScreen() {
   -------------------------------- */
   const [description, setDescription] = useState(post.description);
   const [location, setLocation] = useState(post.location || "");
+  const [postType, setPostType] = useState(post.postType);
+  const [visibility, setVisibility] = useState(post.visibility);
+  const [skills, setSkills] = useState<string[]>(post.skills || []);
+  const [newSkill, setNewSkill] = useState("");
+
   const [fullscreen, setFullscreen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   /* ============================================================
-     SAVE (placeholder)
+     ACTIONS
   ============================================================ */
+  const addSkill = () => {
+    if (!newSkill.trim()) return;
+    if (skills.includes(newSkill)) return;
+    setSkills([...skills, newSkill.trim()]);
+    setNewSkill("");
+  };
+
+  const removeSkill = (skill: string) => {
+    setSkills(skills.filter((s) => s !== skill));
+  };
+
   const handleSave = async () => {
     try {
       setIsSaving(true);
-
-      console.log("💾 Enregistrement publication :", {
-        id: post.id,
+  
+      const payload = {
         description,
-        location,
-      });
-
-      // 🔜 Étape suivante : update Firestore ici
-
-      setTimeout(() => {
-        setIsSaving(false);
-        navigation.goBack();
-      }, 500);
+        location: location || undefined,
+        postType,
+        skills,
+        visibility,
+      };
+  
+      console.log("💾 updatePost payload :", payload);
+  
+      await updatePost(post.id, payload);
+  
+      navigation.goBack();
     } catch (e) {
       console.log("❌ Erreur sauvegarde :", e);
+    } finally {
       setIsSaving(false);
     }
   };
+  
 
   /* ============================================================
      RENDER
@@ -90,10 +115,7 @@ export default function EditPostScreen() {
           Modifier la publication
         </Text>
 
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={isSaving}
-        >
+        <TouchableOpacity onPress={handleSave} disabled={isSaving}>
           {isSaving ? (
             <ActivityIndicator size="small" color="#F97316" />
           ) : (
@@ -104,7 +126,7 @@ export default function EditPostScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 50 }}>
         {/* MEDIA */}
         <TouchableOpacity
           activeOpacity={0.9}
@@ -138,17 +160,33 @@ export default function EditPostScreen() {
           )}
         </TouchableOpacity>
 
-        {/* INFOS */}
         <View className="mt-6 px-4">
           {/* POST TYPE */}
-          <View className="flex-row items-center mb-4">
-            <Ionicons name="pricetag-outline" size={18} color="#aaa" />
-            <Text className="text-gray-300 ml-2">
-              Type :{" "}
-              <Text className="text-white font-semibold">
-                {post.postType.toUpperCase()}
-              </Text>
-            </Text>
+          <Text className="text-white mb-2 font-semibold">
+            Type de publication
+          </Text>
+          <View className="flex-row gap-3 mb-5">
+            {POST_TYPES.map((type) => (
+              <TouchableOpacity
+                key={type}
+                onPress={() => setPostType(type)}
+                className={`px-4 py-2 rounded-full border ${
+                  postType === type
+                    ? "bg-orange-500 border-orange-500"
+                    : "border-gray-700"
+                }`}
+              >
+                <Text
+                  className={`font-semibold ${
+                    postType === type
+                      ? "text-white"
+                      : "text-gray-400"
+                  }`}
+                >
+                  {type.toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
           {/* DESCRIPTION */}
@@ -159,16 +197,14 @@ export default function EditPostScreen() {
             value={description}
             onChangeText={setDescription}
             multiline
-            placeholder="Description de la publication"
+            placeholder="Description"
             placeholderTextColor="#666"
             className="bg-[#1A1A1A] text-white p-4 rounded-xl min-h-[100px]"
           />
 
           {/* LOCATION */}
           <View className="mt-4">
-            <Text className="text-white mb-2 font-semibold">
-              Lieu
-            </Text>
+            <Text className="text-white mb-2 font-semibold">Lieu</Text>
             <View className="flex-row items-center bg-[#1A1A1A] rounded-xl px-4 py-3">
               <Ionicons name="location-outline" size={18} color="#aaa" />
               <TextInput
@@ -186,33 +222,63 @@ export default function EditPostScreen() {
             <Text className="text-white mb-2 font-semibold">
               Skills
             </Text>
-            <View className="flex-row flex-wrap gap-2">
-              {post.skills.map((skill, index) => (
-                <View
-                  key={index}
+
+            <View className="flex-row flex-wrap gap-2 mb-3">
+              {skills.map((skill) => (
+                <TouchableOpacity
+                  key={skill}
+                  onPress={() => removeSkill(skill)}
                   className="bg-orange-500/20 border border-orange-500 px-3 py-1 rounded-full"
                 >
                   <Text className="text-orange-400 text-sm font-semibold">
-                    {skill}
+                    {skill} ✕
                   </Text>
-                </View>
+                </TouchableOpacity>
               ))}
+            </View>
+
+            <View className="flex-row items-center bg-[#1A1A1A] rounded-xl px-4 py-2">
+              <TextInput
+                value={newSkill}
+                onChangeText={setNewSkill}
+                placeholder="Ajouter un skill"
+                placeholderTextColor="#666"
+                className="text-white flex-1"
+              />
+              <TouchableOpacity onPress={addSkill}>
+                <Ionicons name="add-circle" size={26} color="#F97316" />
+              </TouchableOpacity>
             </View>
           </View>
 
           {/* VISIBILITY */}
-          <View className="mt-5 flex-row items-center">
-            <Ionicons
-              name={post.visibility === "public" ? "earth" : "lock-closed"}
-              size={18}
-              color="#aaa"
-            />
-            <Text className="text-gray-300 ml-2">
-              Visibilité :{" "}
-              <Text className="text-white font-semibold">
-                {post.visibility === "public" ? "Publique" : "Privée"}
-              </Text>
+          <View className="mt-6">
+            <Text className="text-white mb-2 font-semibold">
+              Visibilité
             </Text>
+            <View className="flex-row gap-3">
+              {(["public", "private"] as const).map((v) => (
+                <TouchableOpacity
+                  key={v}
+                  onPress={() => setVisibility(v)}
+                  className={`px-4 py-2 rounded-full border ${
+                    visibility === v
+                      ? "bg-orange-500 border-orange-500"
+                      : "border-gray-700"
+                  }`}
+                >
+                  <Text
+                    className={`font-semibold ${
+                      visibility === v
+                        ? "text-white"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {v === "public" ? "Publique" : "Privée"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
       </ScrollView>
