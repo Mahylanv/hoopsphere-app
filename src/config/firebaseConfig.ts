@@ -1,15 +1,8 @@
-// src/config/firebaseConfig.ts
-
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, initializeAuth } from 'firebase/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
-import {
-  initializeFirestore,
-  memoryLocalCache,
-  setLogLevel,
-} from 'firebase/firestore';
-
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth, initializeAuth } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
+import { getFirestore, setLogLevel } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -24,18 +17,15 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
+/* ============================
+   AUTH
+============================ */
 function initAuthNative() {
-  let getReactNativePersistence: any | undefined;
+  let getReactNativePersistence: any;
   try {
-    ({ getReactNativePersistence } = require('firebase/auth/react-native'));
+    ({ getReactNativePersistence } = require("firebase/auth/react-native"));
   } catch {
-    try {
-      ({ getReactNativePersistence } = require('@firebase/auth/dist/rn/index.js'));
-    } catch {
-      throw new Error(
-        "Impossible de charger 'getReactNativePersistence'. Vérifie 'firebase@^12' et relance avec 'expo start --clear'."
-      );
-    }
+    ({ getReactNativePersistence } = require("@firebase/auth/dist/rn/index.js"));
   }
 
   try {
@@ -43,18 +33,23 @@ function initAuthNative() {
       persistence: getReactNativePersistence(AsyncStorage),
     });
   } catch {
-    return getAuth(app); 
+    return getAuth(app);
   }
 }
 
-export const auth = Platform.OS === 'web' ? getAuth(app) : initAuthNative();
+export const auth =
+  Platform.OS === "web" ? getAuth(app) : initAuthNative();
+
+/* ============================
+   FIRESTORE (SINGLE INSTANCE)
+============================ */
+export const db = getFirestore(app);
+
+/* ============================
+   STORAGE
+============================ */
 export const storage = getStorage(app);
 
-setLogLevel('error');
-
-export const db = initializeFirestore(app, {
-  localCache: memoryLocalCache(),
-  experimentalAutoDetectLongPolling: true,
-});
+setLogLevel("error");
 
 export default app;

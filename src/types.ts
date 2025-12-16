@@ -111,6 +111,8 @@ export type RootStackParamList = {
   };
   Visitors: undefined;
   TestPrenium: undefined;
+  CreatePost: undefined;
+  EditPost: undefined;
 };
 
 // NAVIGATION — JOUEUR
@@ -132,6 +134,7 @@ export type MainTabParamListClub = {
   // Chat: undefined;
   SearchJoueur: undefined;
   ProfilClub: undefined;
+  SearchJoueurTabs: undefined;
 };
 
 // AUTRES TYPES (optionnels)

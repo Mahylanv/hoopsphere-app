@@ -8,9 +8,9 @@ import { Ionicons } from "@expo/vector-icons";
 // --- Import des pages du club ---
 import Home from "../Pages/Home";
 import ManageCandidatures from "../Profil/Clubs/Candidatures/ManageCandidatures";
-// import Chat from "../Pages/Chat";
 import SearchJoueur from "../Components/SearchJoueur";
 import ProfilClub from "../Profil/Clubs/ProfilClub";
+import SearchJoueurTabs from "../screens/SearchJoueurTabs";
 
 import { MainTabParamListClub } from "../types";
 
@@ -41,11 +41,8 @@ export default function MainTabNavigatorClub() {
               iconName = "home-outline";
               break;
             case "Candidatures":
-              iconName = "document-text-outline"; // 📄 icône pour candidatures
+              iconName = "document-text-outline";
               break;
-            // case "Chat":
-            //   iconName = "chatbubble-outline";
-            //   break;
             case "SearchJoueur":
               iconName = "search-outline";
               break;
@@ -61,40 +58,35 @@ export default function MainTabNavigatorClub() {
         },
       })}
     >
-      {/* 🏠 Accueil club */}
-      <Tab.Screen
-        name="Home"
-        component={Home}
-        options={{ tabBarLabel: "Accueil" }}
-      />
+      <>
+        {/* 🏠 Accueil club */}
+        <Tab.Screen
+          name="Home"
+          component={Home}
+          options={{ tabBarLabel: "Accueil" }}
+        />
 
-      {/* 📄 Candidatures */}
-      <Tab.Screen
-        name="Candidatures"
-        component={ManageCandidatures}
-        options={{ tabBarLabel: "Candidatures" }}
-      />
+        {/* 📄 Candidatures */}
+        <Tab.Screen
+          name="Candidatures"
+          component={ManageCandidatures}
+          options={{ tabBarLabel: "Candidatures" }}
+        />
 
-      {/* 💬 Messagerie club
-      <Tab.Screen
-        name="Chat"
-        component={Chat}
-        options={{ tabBarLabel: "Messages" }}
-      /> */}
+        {/* 🔍 Recherche de joueurs */}
+        <Tab.Screen
+          name="SearchJoueurTabs"
+          component={SearchJoueurTabs}
+          options={{ tabBarLabel: "Joueurs" }}
+        />
 
-      {/* 🔍 Recherche de joueurs */}
-      <Tab.Screen
-        name="SearchJoueur"
-        component={SearchJoueur}
-        options={{ tabBarLabel: "Joueurs" }}
-      />
-
-      {/* 🏢 Profil du club */}
-      <Tab.Screen
-        name="ProfilClub"
-        component={ProfilClub}
-        options={{ tabBarLabel: "Profil" }}
-      />
+        {/* 🏢 Profil du club */}
+        <Tab.Screen
+          name="ProfilClub"
+          component={ProfilClub}
+          options={{ tabBarLabel: "Profil" }}
+        />
+      </>
     </Tab.Navigator>
   );
 }
