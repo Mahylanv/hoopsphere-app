@@ -19,6 +19,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import JoueurFilter, { JoueurFiltre } from "./JoueurFilter";
+import { useFavoritePlayers } from "../hooks/search/useFavoritePlayers";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "SearchJoueur">;
 
@@ -34,6 +35,9 @@ const parsePoids = (p?: string) => {
 
 export default function SearchJoueur() {
   const navigation = useNavigation<NavProp>();
+
+  const { favoritePlayerIds, isFavorite, toggleFavorite } =
+    useFavoritePlayers();
 
   const [search, setSearch] = useState("");
   const [joueurs, setJoueurs] = useState<Joueur[]>([]);
@@ -206,9 +210,23 @@ export default function SearchJoueur() {
               onPress={() =>
                 navigation.navigate("JoueurDetail", { uid: item.uid })
               }
-              activeOpacity={0.8}
-              className="flex-row items-center bg-[#1a1b1f] rounded-2xl p-4 mb-4 border border-gray-800"
+              activeOpacity={0.85}
+              className="relative flex-row items-center bg-[#1a1b1f] rounded-2xl p-4 mb-4 border border-gray-800"
             >
+              {/* ⭐ FAVORI — coin haut droit */}
+              <TouchableOpacity
+                onPress={() => toggleFavorite(item.uid)}
+                hitSlop={10}
+                className="absolute top-2 right-2 z-10"
+              >
+                <Ionicons
+                  name={isFavorite(item.uid) ? "star" : "star-outline"}
+                  size={22}
+                  color={isFavorite(item.uid) ? "#FACC15" : "#9ca3af"}
+                />
+              </TouchableOpacity>
+
+              {/* AVATAR */}
               <Image
                 source={{
                   uri: item.avatar || "https://i.pravatar.cc/150?img=3",
@@ -216,6 +234,7 @@ export default function SearchJoueur() {
                 className="w-20 h-20 rounded-full mr-4 border border-gray-700"
               />
 
+              {/* INFOS JOUEUR */}
               <View className="flex-1">
                 <Text className="text-white font-bold text-lg mb-1">
                   {item.prenom} {item.nom}

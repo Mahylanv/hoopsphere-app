@@ -10,6 +10,7 @@ import Home from "../Pages/Home";
 import ManageCandidatures from "../Profil/Clubs/Candidatures/ManageCandidatures";
 import SearchJoueur from "../Components/SearchJoueur";
 import ProfilClub from "../Profil/Clubs/ProfilClub";
+import SearchJoueurTabs from "../screens/SearchJoueurTabs";
 
 import { MainTabParamListClub } from "../types";
 
@@ -74,8 +75,8 @@ export default function MainTabNavigatorClub() {
 
         {/* 🔍 Recherche de joueurs */}
         <Tab.Screen
-          name="SearchJoueur"
-          component={SearchJoueur}
+          name="SearchJoueurTabs"
+          component={SearchJoueurTabs}
           options={{ tabBarLabel: "Joueurs" }}
         />
 
