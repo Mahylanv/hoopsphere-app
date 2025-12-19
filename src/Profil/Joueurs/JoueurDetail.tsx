@@ -10,6 +10,7 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -234,6 +235,28 @@ export default function JoueurDetail() {
     }).start(() => setSheetOpen(false));
 
   /* -----------------------------------------------------
+   📞 CONTACT SHEET
+----------------------------------------------------- */
+  const contactSheetY = useRef(new Animated.Value(300)).current;
+  const [isContactOpen, setContactOpen] = useState(false);
+
+  const openContactSheet = () => {
+    setContactOpen(true);
+    Animated.timing(contactSheetY, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeContactSheet = () =>
+    Animated.timing(contactSheetY, {
+      toValue: 300,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => setContactOpen(false));
+
+  /* -----------------------------------------------------
      🔥 CAPTURE LOGIQUE
   ----------------------------------------------------- */
 
@@ -380,8 +403,18 @@ export default function JoueurDetail() {
         </View>
 
         {/* CONTACT */}
-        <View className="px-5 mt-10 mb-16">
-          <TouchableOpacity className="bg-[#ff6600] py-4 rounded-2xl items-center shadow-lg shadow-[#ff6600]/40">
+        <View className="px-5 mt-10 mb-7">
+          <TouchableOpacity
+            onPress={openContactSheet}
+            activeOpacity={0.85}
+            className="bg-[#ff6600] py-4 rounded-2xl items-center shadow-lg shadow-[#ff6600]/40 flex-row justify-center"
+          >
+            <Ionicons
+              name="chatbubble-ellipses-outline"
+              size={22}
+              color="#fff"
+              style={{ marginRight: 8 }}
+            />
             <Text className="text-white text-lg font-semibold">
               Contacter le joueur
             </Text>
@@ -426,6 +459,84 @@ export default function JoueurDetail() {
         />
         <Option icon="share-outline" label="Partager" onPress={shareCard} />
         <Option icon="star-outline" label="Favoris" onPress={addFavorite} />
+      </Animated.View>
+
+      {isContactOpen && (
+        <TouchableOpacity
+          onPress={closeContactSheet}
+          activeOpacity={1}
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.5)",
+          }}
+        />
+      )}
+
+      {/* BOTTOM SHEET CONTACT */}
+      <Animated.View
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 240,
+          padding: 20,
+          backgroundColor: "#111",
+          borderTopLeftRadius: 26,
+          borderTopRightRadius: 26,
+          transform: [{ translateY: contactSheetY }],
+        }}
+      >
+        <Text className="text-white text-xl font-bold mb-4">
+          Contacter le joueur
+        </Text>
+
+        {/* EMAIL */}
+        <Option
+          icon="mail-outline"
+          label="Envoyer un email"
+          onPress={async () => {
+            closeContactSheet();
+
+            if (!joueur.email || joueur.email === "-") {
+              Alert.alert("Indisponible", "Email non renseigné");
+              return;
+            }
+
+            const url = `mailto:${joueur.email}`;
+            const supported = await Linking.canOpenURL(url);
+
+            if (supported) {
+              Linking.openURL(url);
+            } else {
+              Alert.alert("Erreur", "Impossible d’ouvrir l’application mail");
+            }
+          }}
+        />
+
+        {/* TELEPHONE */}
+        <Option
+          icon="call-outline"
+          label="Appeler le joueur"
+          onPress={async () => {
+            closeContactSheet();
+
+            if (!joueur.telephone) {
+              Alert.alert("Indisponible", "Téléphone non renseigné");
+              return;
+            }
+
+            const url = `tel:${joueur.telephone}`;
+            const supported = await Linking.canOpenURL(url);
+
+            if (supported) {
+              Linking.openURL(url);
+            } else {
+              Alert.alert("Erreur", "Impossible d’ouvrir le téléphone");
+            }
+          }}
+        />
       </Animated.View>
     </SafeAreaView>
   );

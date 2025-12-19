@@ -33,12 +33,8 @@ type NavProp = NativeStackNavigationProp<RootStackParamList>;
 export default function FavoriteClubsTab() {
   const navigation = useNavigation<NavProp>();
 
-  const {
-    favoriteClubIds,
-    isFavorite,
-    toggleFavorite,
-    clearAllFavorites,
-  } = useFavoriteClubs();
+  const { favoriteClubIds, isFavorite, toggleFavorite, clearAllFavorites } =
+    useFavoriteClubs();
 
   const { clubs, loading } = useClubs();
 
@@ -59,8 +55,7 @@ export default function FavoriteClubsTab() {
 
       case "categories_count":
         return [...favs].sort(
-          (a, b) =>
-            (b.categories?.length ?? 0) - (a.categories?.length ?? 0)
+          (a, b) => (b.categories?.length ?? 0) - (a.categories?.length ?? 0)
         );
 
       case "recent":
@@ -86,9 +81,7 @@ export default function FavoriteClubsTab() {
     return (
       <SafeAreaView className="flex-1 bg-black items-center justify-center">
         <Ionicons name="star-outline" size={48} color="#555" />
-        <Text className="text-gray-400 mt-3">
-          Aucun club en favori
-        </Text>
+        <Text className="text-gray-400 mt-3">Aucun club en favori</Text>
       </SafeAreaView>
     );
   }
@@ -150,9 +143,7 @@ export default function FavoriteClubsTab() {
                       {item.name || "Club sans nom"}
                     </Text>
 
-                    <Text className="text-gray-400">
-                      {item.city || "—"}
-                    </Text>
+                    <Text className="text-gray-400">{item.city || "—"}</Text>
 
                     <View className="flex-row flex-wrap mt-1">
                       {cats.map((c) => (
@@ -160,9 +151,7 @@ export default function FavoriteClubsTab() {
                           key={`${item.id}-${c}`}
                           className="px-2 py-0.5 mr-2 mb-1 bg-gray-700 rounded-full"
                         >
-                          <Text className="text-xs text-gray-300">
-                            {c}
-                          </Text>
+                          <Text className="text-xs text-gray-300">{c}</Text>
                         </View>
                       ))}
                     </View>
@@ -174,11 +163,7 @@ export default function FavoriteClubsTab() {
                   onPress={() => toggleFavorite(item.id)}
                   hitSlop={10}
                 >
-                  <Ionicons
-                    name="star"
-                    size={22}
-                    color="#FACC15"
-                  />
+                  <Ionicons name="star" size={22} color="#FACC15" />
                 </TouchableOpacity>
               </View>
             </Pressable>
@@ -193,9 +178,7 @@ export default function FavoriteClubsTab() {
           onPress={() => setOptionsVisible(false)}
         >
           <View className="bg-[#1a1b1f] p-5 rounded-t-3xl border-t border-gray-800">
-            <Text className="text-white text-xl font-bold mb-4">
-              Options
-            </Text>
+            <Text className="text-white text-xl font-bold mb-4">Options</Text>
 
             <Text className="text-gray-400 mb-2">Trier par</Text>
 
@@ -223,11 +206,7 @@ export default function FavoriteClubsTab() {
                 </Text>
 
                 {sortBy === o.key && (
-                  <Ionicons
-                    name="checkmark"
-                    size={20}
-                    color="#F97316"
-                  />
+                  <Ionicons name="checkmark" size={20} color="#F97316" />
                 )}
               </TouchableOpacity>
             ))}
