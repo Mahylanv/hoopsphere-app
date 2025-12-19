@@ -15,6 +15,6 @@
     "**/*.ts",
     "**/*.tsx",
     "nativewind-env.d.ts"
-  ],
+, "scripts/cleanupAuth.ss"  ],
   "extends": "expo/tsconfig.base"
 }
