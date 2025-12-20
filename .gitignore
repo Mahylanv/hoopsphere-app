@@ -65,3 +65,5 @@ __pycache__/
 functions/node_modules/
 functions/package.json
 functions/package-lock.json
+
+scripts/serviceAccountKey.json

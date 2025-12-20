@@ -1,4 +1,5 @@
 "use strict";
+// functions/src/index.ts
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -33,89 +34,86 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onCandidatureCreated = void 0;
-// functions/src/index.ts
-const functions = __importStar(require("firebase-functions"));
+exports.onAuthUserDeleted = exports.onClubDeleted = exports.onPlayerDeleted = void 0;
 const admin = __importStar(require("firebase-admin"));
-if (!admin.apps.length)
+/* =====================================================
+   🔥 Firebase imports
+===================================================== */
+const v1_1 = require("firebase-functions/v1");
+const v2_1 = require("firebase-functions/v2");
+const firestore_1 = require("firebase-functions/v2/firestore");
+/* =====================================================
+   🔧 INIT ADMIN SDK
+===================================================== */
+if (!admin.apps.length) {
     admin.initializeApp();
+}
 const db = admin.firestore();
-const messaging = admin.messaging();
-// Si ton projet est en Europe, garde la région ci-dessous.
-// Sinon, enlève `.region("europe-west1")`.
-exports.onCandidatureCreated = functions
-    .region("europe-west1")
-    .firestore
-    .document("clubs/{clubUid}/offres/{offerId}/candidatures/{candId}")
-    .onCreate(async (snap, context) => {
+/* =====================================================
+   🌍 OPTIONS GLOBALES (v2)
+===================================================== */
+(0, v2_1.setGlobalOptions)({
+    region: "europe-west1",
+});
+/* =====================================================
+   🔥 FIRESTORE → AUTH (v2)
+===================================================== */
+// 🔹 JOUEUR supprimé → AUTH supprimé
+exports.onPlayerDeleted = (0, firestore_1.onDocumentDeleted)("joueurs/{uid}", async (event) => {
+    const uid = event.params.uid;
     try {
-        const data = snap.data() || {};
-        const clubUid = data.clubUid || context.params.clubUid;
-        if (!clubUid) {
-            console.warn("[onCandidatureCreated] Missing clubUid.");
-            return;
-        }
-        const applicantEmail = (data.applicantEmail || "Un joueur").toString();
-        const offerTitle = (data.offerTitle || "").toString().trim() || "Offre";
-        const messageText = (data.message || "").toString();
-        // 1) Notification in-app (doc Firestore)
-        await db
-            .collection("clubs")
-            .doc(clubUid)
-            .collection("notifications")
-            .add({
-            type: "candidature_created",
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            title: "Nouvelle candidature",
-            body: `${applicantEmail} a postulé à "${offerTitle}"`,
-            meta: {
-                offerId: context.params.offerId,
-                candId: context.params.candId,
-                applicantEmail,
-                message: messageText,
-            },
-            read: false,
-        });
-        // 2) Récupère les tokens FCM
-        const devSnap = await db
-            .collection("clubs")
-            .doc(clubUid)
-            .collection("devices")
-            .get();
-        const tokens = devSnap.docs
-            .map((d) => d.data()?.token)
-            .filter((t) => typeof t === "string" && t.length > 0);
-        if (tokens.length === 0) {
-            console.log("[onCandidatureCreated] No device tokens for club:", clubUid);
-            return;
-        }
-        const title = "Nouvelle candidature";
-        const body = `${applicantEmail} a postulé à "${offerTitle}"`;
-        // 3) Envoi push FCM (paquets de 500 max)
-        const chunkSize = 500;
-        for (let i = 0; i < tokens.length; i += chunkSize) {
-            const slice = tokens.slice(i, i + chunkSize);
-            const message = {
-                tokens: slice,
-                notification: { title, body },
-                data: {
-                    type: "candidature_created",
-                    offerId: context.params.offerId,
-                    candId: context.params.candId,
-                },
-                android: { priority: "high" },
-                apns: { payload: { aps: { sound: "default" } } },
-            };
-            const resp = await messaging.sendMulticast(message);
-            const failed = resp.responses.filter((r) => !r.success);
-            if (failed.length) {
-                console.warn(`[onCandidatureCreated] FCM errors (${failed.length}/${slice.length})`, failed.map((f) => f.error?.message));
-            }
-        }
-        console.log("[onCandidatureCreated] Done for club", clubUid);
+        await admin.auth().deleteUser(uid);
+        console.log("✅ Auth supprimé (joueur) :", uid);
     }
-    catch (err) {
-        console.error("[onCandidatureCreated] ERROR:", err);
+    catch (error) {
+        if (error.code === "auth/user-not-found") {
+            console.warn("⚠️ Auth déjà supprimé (joueur) :", uid);
+        }
+        else {
+            console.error("❌ Erreur suppression Auth joueur :", error);
+        }
     }
 });
-//# sourceMappingURL=index.js.map
+// 🔹 CLUB supprimé → AUTH supprimé
+exports.onClubDeleted = (0, firestore_1.onDocumentDeleted)("clubs/{uid}", async (event) => {
+    const uid = event.params.uid;
+    try {
+        await admin.auth().deleteUser(uid);
+        console.log("✅ Auth supprimé (club) :", uid);
+    }
+    catch (error) {
+        if (error.code === "auth/user-not-found") {
+            console.warn("⚠️ Auth déjà supprimé (club) :", uid);
+        }
+        else {
+            console.error("❌ Erreur suppression Auth club :", error);
+        }
+    }
+});
+/* =====================================================
+   🔥 AUTH → FIRESTORE (v1 OBLIGATOIRE)
+===================================================== */
+exports.onAuthUserDeleted = v1_1.auth
+    .user()
+    .onDelete(async (user) => {
+    const uid = user.uid;
+    try {
+        const joueurRef = db.collection("joueurs").doc(uid);
+        const clubRef = db.collection("clubs").doc(uid);
+        const [joueurSnap, clubSnap] = await Promise.all([
+            joueurRef.get(),
+            clubRef.get(),
+        ]);
+        if (joueurSnap.exists) {
+            await joueurRef.delete();
+            console.log("🧹 Joueur Firestore supprimé :", uid);
+        }
+        if (clubSnap.exists) {
+            await clubRef.delete();
+            console.log("🧹 Club Firestore supprimé :", uid);
+        }
+    }
+    catch (error) {
+        console.error("❌ Erreur cleanup Firestore :", error);
+    }
+});
