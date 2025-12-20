@@ -78,7 +78,7 @@ const EditProfileModal = forwardRef<ModalizeRef, Props>(
     useEffect(() => {
       import("firebase/firestore").then(async ({ collection, getDocs }) => {
         const refClubs = collection(
-          require("../../../../config/firebaseConfig").db,
+          require("../../../../../config/firebaseConfig").db,
           "clubs"
         );
         const snap = await getDocs(refClubs);

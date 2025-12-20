@@ -4,7 +4,7 @@ import React from "react";
 import { View, Text, Image, Dimensions, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Joueur } from "../../types";
-import { PlayerAverages } from "../../utils/computePlayerStats";
+import { PlayerAverages } from "../../utils/player/computePlayerStats";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.9;
@@ -47,7 +47,7 @@ export default function JoueurCard({
       >
         {/* 🌌 Fond */}
         <Image
-          source={require("../../assets/CARD-NORMAL-FOND.png")}
+          source={require("../../../assets/CARD-NORMAL-FOND.png")}
           className="absolute w-full h-full"
           resizeMode="contain"
         />

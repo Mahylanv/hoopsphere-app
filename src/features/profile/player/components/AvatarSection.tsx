@@ -78,7 +78,7 @@ export default function AvatarSection({
     <View className="items-center mt-8">
       {/* 🟧 Carte background */}
       <ImageBackground
-        source={require("../../../../assets/CARD-NORMAL-FOND.png")}
+        source={require("../../../../../assets/CARD-NORMAL-FOND.png")}
         resizeMode="contain"
         style={{
           width: 460,
