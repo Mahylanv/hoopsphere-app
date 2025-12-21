@@ -1,3 +1,5 @@
+// src/features/profile/player/services/postService.ts
+
 import { auth, db, storage } from "../../../../config/firebaseConfig";
 import {
   collection,
@@ -33,10 +35,15 @@ export type UpdatePostPayload = {
   postType: "highlight" | "match" | "training";
   skills: string[];
   visibility: "public" | "private";
+
+  // ➕ optionnel : seulement si on change le média
+  mediaUrl?: string;
+  mediaType?: "image" | "video";
 };
 
 /* ============================================================
    CREATE POST
+   - Double écriture volontaire
 ============================================================ */
 export const createPost = async (payload: CreatePostPayload) => {
   const user = auth.currentUser;
@@ -79,7 +86,10 @@ export const createPost = async (payload: CreatePostPayload) => {
       createdAt: serverTimestamp(),
     };
 
+    // 🌍 Feed global (lecture)
     await setDoc(postRef, postDoc);
+
+    // 👤 Source de vérité joueur
     await setDoc(
       doc(db, "joueurs", user.uid, "posts", postRef.id),
       postDoc
@@ -93,14 +103,13 @@ export const createPost = async (payload: CreatePostPayload) => {
 };
 
 /* ============================================================
-   UPDATE POST ✅ (CORRIGÉ)
+   UPDATE POST ✅ (SOURCE UNIQUE)
+   - Écriture UNIQUEMENT dans /joueurs/{uid}/posts
 ============================================================ */
 export const updatePost = async (
   postId: string,
   updates: UpdatePostPayload
 ) => {
-  console.log("🟡 updatePost()", postId, updates);
-
   const user = auth.currentUser;
   if (!user) throw new Error("Utilisateur non authentifié");
 
@@ -110,20 +119,21 @@ export const updatePost = async (
     postType: updates.postType,
     skills: updates.skills,
     visibility: updates.visibility,
+    ...(updates.mediaUrl && {
+      mediaUrl: updates.mediaUrl,
+      mediaType: "video",
+    }),
     updatedAt: serverTimestamp(),
   };
 
   try {
-    // 🌍 GLOBAL FEED
-    await updateDoc(doc(db, "posts", postId), cleanUpdates);
-
-    // 👤 PROFIL JOUEUR
+    // 👤 SEULE écriture autorisée côté client
     await updateDoc(
       doc(db, "joueurs", user.uid, "posts", postId),
       cleanUpdates
     );
 
-    console.log("✅ Post mis à jour :", postId);
+    console.log("✅ Post joueur mis à jour :", postId);
   } catch (e) {
     console.error("❌ updatePost error:", e);
     throw e;
@@ -132,10 +142,9 @@ export const updatePost = async (
 
 /* ============================================================
    DELETE POST
+   - Suppression des deux copies
 ============================================================ */
 export const deletePost = async (postId: string, mediaUrl?: string) => {
-  console.log("🟡 deletePost()", postId);
-
   const user = auth.currentUser;
   if (!user) throw new Error("Utilisateur non authentifié");
 
@@ -144,7 +153,7 @@ export const deletePost = async (postId: string, mediaUrl?: string) => {
     await deleteDoc(doc(db, "posts", postId));
     await deleteDoc(doc(db, "joueurs", user.uid, "posts", postId));
 
-    // 🗑️ Storage (optionnel mais propre)
+    // 🗑️ Storage
     if (mediaUrl) {
       const mediaRef = ref(storage, mediaUrl);
       await deleteObject(mediaRef);
