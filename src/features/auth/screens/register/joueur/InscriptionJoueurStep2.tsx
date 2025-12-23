@@ -1,4 +1,4 @@
-// src/Inscription/Joueurs/InscriptionJoueurStep2.tsx
+// src/features/auth/screens/register/joueur/InscriptionJoueurStep2.tsx
 
 import React, { useState } from "react";
 import {
@@ -46,6 +46,23 @@ export default function InscriptionJoueurStep2() {
     `${String(date.getDate()).padStart(2, "0")}/${String(
       date.getMonth() + 1
     ).padStart(2, "0")}/${date.getFullYear()}`;
+
+  const formatDobInput = (value: string) => {
+    // On enlève tout sauf chiffres
+    let cleaned = value.replace(/\D/g, "");
+
+    // JJ
+    if (cleaned.length >= 3) {
+      cleaned = `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
+    }
+
+    // JJ/MM
+    if (cleaned.length >= 6) {
+      cleaned = `${cleaned.slice(0, 5)}/${cleaned.slice(5, 9)}`;
+    }
+
+    return cleaned.slice(0, 10); // max JJ/MM/AAAA
+  };
 
   const handleContinue = () => {
     if (!isValid) return;
@@ -157,8 +174,9 @@ export default function InscriptionJoueurStep2() {
           /* --- WEB : simple champ texte --- */
           <TextInput
             value={dob}
-            onChangeText={setDob}
+            onChangeText={(text) => setDob(formatDobInput(text))}
             placeholder="Date de naissance (JJ/MM/AAAA)"
+            keyboardType="number-pad"
             placeholderTextColor="#999"
             className="h-14 rounded-lg px-4 text-white text-lg mb-6"
             style={{

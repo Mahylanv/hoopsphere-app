@@ -909,7 +909,15 @@ function OffersTab() {
               </View>
 
               {!!item.location && (
-                <Text className="text-gray-300 mb-2">📍 {item.location}</Text>
+                <View className="flex-row items-center mb-2">
+                  <Ionicons
+                    name="location-outline"
+                    size={16}
+                    color="#D1D5DB" // équivalent text-gray-300
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text className="text-gray-300">{item.location}</Text>
+                </View>
               )}
 
               {!!item.description && (

@@ -18,16 +18,21 @@ import { RootStackParamList } from "../types";
 import { updateUserProfile } from "../features/auth/services/userService";
 import usePlayerProfile from "../features/profile/player/hooks/usePlayerProfile";
 
+// ✅ composant réutilisable
+import AddressAutocomplete from "../shared/components/AddressAutocomplete";
+
 type NavProp = NativeStackNavigationProp<RootStackParamList, "TestPrenium">;
 
 export default function TestPrenium() {
   const { user } = usePlayerProfile();
   const navigation = useNavigation<NavProp>();
 
-  // ⚠️ premiumToggle pilote l’affichage des features Premium
+  // Premium
   const [premiumToggle, setPremiumToggle] = useState<boolean>(false);
 
-  // Sync local toggle with Firestore user value
+  // Adresse sélectionnée (test)
+  const [selectedAddress, setSelectedAddress] = useState<any>(null);
+
   useEffect(() => {
     if (user?.premium !== undefined) {
       setPremiumToggle(user.premium);
@@ -52,7 +57,6 @@ export default function TestPrenium() {
 
       {/* CONTENU */}
       <View className="flex-1 px-5 mt-8">
-
         {/* TOGGLE PREMIUM */}
         <Text className="text-white text-lg font-semibold mb-3">
           Mode Premium (test développeur)
@@ -65,18 +69,15 @@ export default function TestPrenium() {
             value={premiumToggle}
             onValueChange={async (value) => {
               setPremiumToggle(value);
-
               try {
                 await updateUserProfile({ premium: value });
-
                 Alert.alert(
                   "Statut mis à jour",
                   value
                     ? "Le compte est maintenant Premium ✨"
                     : "Le compte n'est plus Premium."
                 );
-              } catch (e) {
-                console.log("Erreur mise à jour Premium:", e);
+              } catch {
                 setPremiumToggle(!value);
               }
             }}
@@ -85,11 +86,9 @@ export default function TestPrenium() {
           />
         </View>
 
-        {/* --- FEATURES PREMIUM --- */}
-        {premiumToggle === true && (
-          <View className="gap-4">
-
-            {/* VISITEURS */}
+        {/* FEATURES PREMIUM */}
+        {premiumToggle && (
+          <View className="gap-4 mb-10">
             <Pressable
               onPress={() => navigation.navigate("Visitors")}
               className="bg-blue-600 px-4 py-3 rounded-xl"
@@ -99,7 +98,6 @@ export default function TestPrenium() {
               </Text>
             </Pressable>
 
-            {/* POSTS LIKÉS */}
             <Pressable
               onPress={() => navigation.navigate("LikedPosts")}
               className="bg-pink-600 px-4 py-3 rounded-xl"
@@ -108,9 +106,36 @@ export default function TestPrenium() {
                 Voir mes posts likés ❤️
               </Text>
             </Pressable>
-
           </View>
         )}
+
+        {/* ============================= */}
+        {/* 📍 TEST COMPOSANT ADRESSE */}
+        {/* ============================= */}
+        <View className="mt-10">
+          <Text className="text-white text-lg font-semibold mb-3">
+            Test composant AddressAutocomplete
+          </Text>
+
+          <AddressAutocomplete
+            placeholder="Adresse du joueur"
+            onSelect={(address) => {
+              console.log("Adresse sélectionnée :", address);
+              setSelectedAddress(address);
+            }}
+          />
+
+          {selectedAddress && (
+            <View className="mt-4 bg-[#1A1A1A] p-4 rounded-xl">
+              <Text className="text-white font-semibold mb-1">
+                Adresse sélectionnée :
+              </Text>
+              <Text className="text-gray-300">
+                {selectedAddress.label}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
     </SafeAreaView>
   );
