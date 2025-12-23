@@ -2,12 +2,12 @@
 // Écran d'accueil avec classement hebdomadaire et vidéos populaires
 
 import React, { useRef, useEffect, useState } from "react";
-import { 
+import {
   View,
-  Text, 
-  ScrollView, 
-  ActivityIndicator, 
-  Animated 
+  Text,
+  ScrollView,
+  ActivityIndicator,
+  Animated,
 } from "react-native";
 
 import usePlayerRanking from "../hooks/usePlayerRanking";
@@ -22,7 +22,9 @@ export default function HomeScreen() {
   const { videos, loading: videosLoading } = useAllVideos();
 
   // ⭐ Nouveaux states pour le PANEL
-  const [selectedPlayer, setSelectedPlayer] = useState<RankingPlayer | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<RankingPlayer | null>(
+    null
+  );
   const [panelVisible, setPanelVisible] = useState(false);
 
   // -------------------------------
@@ -71,15 +73,22 @@ export default function HomeScreen() {
     }
   }, [videosLoading]);
 
+  const videoItems = posts.map((post) => ({
+    id: post.id,
+    url: post.url,                 // ✅ ICI
+    playerUid: post.playerUid,
+    thumbnailUrl: null,            // (ou post.thumbnailUrl si tu l’ajoutes plus tard)
+    likeCount: 0,                  // valeur par défaut
+    isLikedByMe: false,            // valeur par défaut
+  }));
+
   // -------------------------------
   // ⭐ UI
   // -------------------------------
   return (
     <View className="flex-1 bg-[#0E0D0D]">
-      
       {/* --- CONTENU SCROLLABLE --- */}
       <ScrollView className="flex-1">
-
         {/* HEADER */}
         <Animated.View
           style={{
@@ -132,17 +141,21 @@ export default function HomeScreen() {
         <View className="w-full h-[1px] bg-gray-800 opacity-50 mt-8 mb-6" />
 
         {/* VIDÉOS POPULAIRES */}
+<<<<<<< HEAD
         {!videosLoading && videos.length > 0 && (
           <Animated.View style={{ opacity: fadeVideos }}>
             <VideoCarouselPreview videos={videos} />
+=======
+        {!postsLoading && posts.length > 0 && (
+          <Animated.View style={{ opacity: fadePosts }}>
+            <VideoCarouselPreview videos={videoItems} />
+>>>>>>> 0b975af (merge de feature/like et feature/accueil)
           </Animated.View>
         )}
 
         {!videosLoading && videos.length === 0 && (
           <View className="items-center mt-10">
-            <Text className="text-gray-400">
-              Aucune vidéo pour le moment.
-            </Text>
+            <Text className="text-gray-400">Aucune vidéo pour le moment.</Text>
           </View>
         )}
       </ScrollView>

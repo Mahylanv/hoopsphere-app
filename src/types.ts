@@ -111,6 +111,7 @@ export type RootStackParamList = {
       url: string;
       playerUid: string;
       likeCount: number;
+      thumbnailUrl?: string | null;
       isLikedByMe: boolean;
     }[];
     startIndex: number;

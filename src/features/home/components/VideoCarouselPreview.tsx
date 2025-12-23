@@ -17,6 +17,12 @@ import type { RootStackParamList } from "../../../types";
 
 type Navigation = NativeStackNavigationProp<RootStackParamList, "Home">;
 
+<<<<<<< HEAD
+=======
+/* ============================================================
+   TYPES
+============================================================ */
+>>>>>>> 0b975af (merge de feature/like et feature/accueil)
 type VideoItem = {
   id: string; // postId
   url: string;
@@ -25,6 +31,10 @@ type VideoItem = {
   likeCount: number;
   isLikedByMe: boolean;
 };
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0b975af (merge de feature/like et feature/accueil)
 
 const { width } = Dimensions.get("window");
 
