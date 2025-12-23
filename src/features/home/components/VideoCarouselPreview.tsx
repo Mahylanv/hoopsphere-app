@@ -17,13 +17,10 @@ import type { RootStackParamList } from "../../../types";
 
 type Navigation = NativeStackNavigationProp<RootStackParamList, "Home">;
 
-<<<<<<< HEAD
-=======
 /* ============================================================
    TYPES
 ============================================================ */
->>>>>>> 0b975af (merge de feature/like et feature/accueil)
-type VideoItem = {
+export type VideoItem = {
   id: string; // postId
   url: string;
   playerUid: string;
@@ -31,11 +28,6 @@ type VideoItem = {
   likeCount: number;
   isLikedByMe: boolean;
 };
-<<<<<<< HEAD
-=======
-
->>>>>>> 0b975af (merge de feature/like et feature/accueil)
-
 const { width } = Dimensions.get("window");
 
 /* ============================================================
@@ -121,7 +113,14 @@ function VideoPreviewItem({
         onPress={() =>
           navigation.navigate("VideoFeed", {
             startIndex: index,
-            videos,
+            videos: videos.map((v) => ({
+              id: v.id,
+              url: v.url,
+              playerUid: v.playerUid,
+              avatar: v.avatar ?? null, // ✅ PROPAGATION EXPLICITE
+              likeCount: v.likeCount ?? 0,
+              isLikedByMe: v.isLikedByMe ?? false,
+            })),
           })
         }
       >

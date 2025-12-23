@@ -19,7 +19,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../types";
 import * as Haptics from "expo-haptics";
 
-import { getFirestore, doc, onSnapshot } from "firebase/firestore";
+import { getFirestore, doc, onSnapshot, getDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 import LikeButton from "../components/LikeButton";
@@ -31,7 +31,7 @@ type VideoItem = {
   id: string; // postId
   url: string;
   playerUid: string;
-  avatar?: string;
+  avatar?: string | null;
   likeCount: number;
   isLikedByMe: boolean;
 };
@@ -67,6 +67,9 @@ export default function VideoFeedScreen({ route }: Props) {
   // Double tap
   const lastTap = useRef<number>(0);
 
+  const singleTapTimeout = useRef<NodeJS.Timeout | null>(null);
+  const DOUBLE_TAP_DELAY = 300;
+
   // Animation coeur plein écran
   const heartScale = useRef(new Animated.Value(0)).current;
   const [showHeart, setShowHeart] = useState(false);
@@ -84,7 +87,6 @@ export default function VideoFeedScreen({ route }: Props) {
       // likeCount
       const unsubPost = onSnapshot(postRef, (snap) => {
         if (!snap.exists()) return;
-
         setVideos((prev) =>
           prev.map((v) =>
             v.id === video.id
@@ -145,6 +147,31 @@ export default function VideoFeedScreen({ route }: Props) {
       };
     }, [])
   );
+
+  useEffect(() => {
+    const fetchAvatars = async () => {
+      const updated = await Promise.all(
+        videos.map(async (video) => {
+          if (video.avatar) return video;
+  
+          try {
+            const snap = await getDoc(doc(db, "joueurs", video.playerUid));
+            return {
+              ...video,
+              avatar: snap.exists() ? snap.data().avatar ?? null : null,
+            };
+          } catch {
+            return video;
+          }
+        })
+      );
+  
+      setVideos(updated);
+    };
+  
+    fetchAvatars();
+  }, []);
+  
 
   /* ============================================================
      VIEWABLE ITEM
@@ -212,18 +239,26 @@ export default function VideoFeedScreen({ route }: Props) {
 
   const handleVideoTap = (index: number) => {
     const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300;
+
+    // 🛑 Si un tap simple est en attente → on l'annule
+    if (singleTapTimeout.current) {
+      clearTimeout(singleTapTimeout.current);
+      singleTapTimeout.current = null;
+    }
 
     if (lastTap.current && now - lastTap.current < DOUBLE_TAP_DELAY) {
-      // ❤️ DOUBLE TAP → LIKE
+      // ❤️ DOUBLE TAP → LIKE (et RIEN d'autre)
       if (!videos[index].isLikedByMe) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         triggerHeartAnimation();
         handleToggleLike(index);
       }
     } else {
-      // 👆 TAP SIMPLE → pause / play
-      togglePlay(index);
+      // 👆 TAP SIMPLE → on attend avant d'agir
+      singleTapTimeout.current = setTimeout(() => {
+        togglePlay(index);
+        singleTapTimeout.current = null;
+      }, DOUBLE_TAP_DELAY);
     }
 
     lastTap.current = now;

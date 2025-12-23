@@ -12,14 +12,15 @@ import {
 
 import usePlayerRanking from "../hooks/usePlayerRanking";
 import WeeklyRanking from "../components/WeeklyRanking";
-import useAllVideos from "../hooks/useAllVideos";
+import useAllPosts from "../hooks/useAllPosts";
 import VideoCarouselPreview from "../components/VideoCarouselPreview";
 import RankingPlayerPanel from "../components/RankingPlayerPanel";
 import { RankingPlayer } from "../hooks/usePlayerRanking";
+import { VideoItem } from "../components/VideoCarouselPreview";
 
 export default function HomeScreen() {
   const { ranking, loading } = usePlayerRanking();
-  const { videos, loading: videosLoading } = useAllVideos();
+  const { posts, loading: postsLoading } = useAllPosts();
 
   // ⭐ Nouveaux states pour le PANEL
   const [selectedPlayer, setSelectedPlayer] = useState<RankingPlayer | null>(
@@ -34,7 +35,7 @@ export default function HomeScreen() {
   const slideHeader = useRef(new Animated.Value(-20)).current;
 
   const fadeRanking = useRef(new Animated.Value(0)).current;
-  const fadeVideos = useRef(new Animated.Value(0)).current;
+  const fadePosts = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -63,23 +64,23 @@ export default function HomeScreen() {
   }, [loading]);
 
   useEffect(() => {
-    if (!videosLoading && videos.length > 0) {
-      Animated.timing(fadeVideos, {
+    if (!postsLoading && posts.length > 0) {
+      Animated.timing(fadePosts, {
         toValue: 1,
         duration: 500,
         delay: 300,
         useNativeDriver: true,
       }).start();
     }
-  }, [videosLoading]);
+  }, [postsLoading]);
 
-  const videoItems = posts.map((post) => ({
+  const videoItems: VideoItem[] = posts.map((post) => ({
     id: post.id,
-    url: post.url,                 // ✅ ICI
+    url: post.url,
     playerUid: post.playerUid,
-    thumbnailUrl: null,            // (ou post.thumbnailUrl si tu l’ajoutes plus tard)
-    likeCount: 0,                  // valeur par défaut
-    isLikedByMe: false,            // valeur par défaut
+    likeCount: post.likeCount,
+    isLikedByMe: post.isLikedByMe,
+    thumbnailUrl: post.thumbnailUrl,
   }));
 
   // -------------------------------
@@ -141,19 +142,13 @@ export default function HomeScreen() {
         <View className="w-full h-[1px] bg-gray-800 opacity-50 mt-8 mb-6" />
 
         {/* VIDÉOS POPULAIRES */}
-<<<<<<< HEAD
-        {!videosLoading && videos.length > 0 && (
-          <Animated.View style={{ opacity: fadeVideos }}>
-            <VideoCarouselPreview videos={videos} />
-=======
         {!postsLoading && posts.length > 0 && (
           <Animated.View style={{ opacity: fadePosts }}>
             <VideoCarouselPreview videos={videoItems} />
->>>>>>> 0b975af (merge de feature/like et feature/accueil)
           </Animated.View>
         )}
 
-        {!videosLoading && videos.length === 0 && (
+        {!postsLoading && posts.length === 0 && (
           <View className="items-center mt-10">
             <Text className="text-gray-400">Aucune vidéo pour le moment.</Text>
           </View>
