@@ -1,4 +1,5 @@
-// src/Home/HomeScreen.tsx
+// src/features/home/screens/HomeScreen.tsx
+// Écran d'accueil avec classement hebdomadaire et vidéos populaires
 
 import React, { useRef, useEffect, useState } from "react";
 import { 

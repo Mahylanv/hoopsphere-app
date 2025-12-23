@@ -1,3 +1,5 @@
+// src/features/home/screens/VideoFeedScreen.tsx
+
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -17,12 +19,20 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../types";
 import * as Haptics from "expo-haptics";
 
+import { getFirestore, doc, onSnapshot } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+
+import LikeButton from "../components/LikeButton";
+
 const { height, width } = Dimensions.get("window");
 
 type VideoItem = {
+  id: string; // postId
   url: string;
   playerUid: string;
   avatar?: string;
+  likeCount: number;
+  isLikedByMe: boolean;
 };
 
 type Props = {
@@ -35,7 +45,8 @@ type Props = {
 };
 
 export default function VideoFeedScreen({ route }: Props) {
-  const { videos, startIndex } = route.params;
+  const { startIndex } = route.params;
+  const [videos, setVideos] = useState<VideoItem[]>(route.params.videos);
 
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -48,6 +59,49 @@ export default function VideoFeedScreen({ route }: Props) {
   const [isMuted, setIsMuted] = useState(false);
 
   const pauseAnim = useRef(new Animated.Value(0)).current;
+
+  const db = getFirestore();
+  const auth = getAuth();
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const unsubscribes: (() => void)[] = [];
+
+    videos.forEach((video) => {
+      const postRef = doc(db, "posts", video.id);
+      const likeRef = doc(db, "posts", video.id, "likes", user.uid);
+
+      // likeCount
+      const unsubPost = onSnapshot(postRef, (snap) => {
+        if (!snap.exists()) return;
+
+        setVideos((prev) =>
+          prev.map((v) =>
+            v.id === video.id
+              ? { ...v, likeCount: snap.data().likeCount || 0 }
+              : v
+          )
+        );
+      });
+
+      // isLikedByMe
+      const unsubLike = onSnapshot(likeRef, (snap) => {
+        setVideos((prev) =>
+          prev.map((v) =>
+            v.id === video.id ? { ...v, isLikedByMe: snap.exists() } : v
+          )
+        );
+      });
+
+      unsubscribes.push(unsubPost, unsubLike);
+    });
+
+    return () => {
+      unsubscribes.forEach((unsub) => unsub());
+    };
+  }, []);
 
   /* ============================================================
      AUTOPLAY + PAUSE AUTO
@@ -263,6 +317,14 @@ export default function VideoFeedScreen({ route }: Props) {
                   className="w-16 h-16 rounded-full border-2 border-white"
                 />
               </TouchableOpacity>
+
+              {/* LIKE */}
+              <LikeButton
+                postId={item.id}
+                postOwnerUid={item.playerUid}
+                initialLiked={item.isLikedByMe}
+                initialLikeCount={item.likeCount}
+              />
 
               {/* SHARE */}
               <TouchableOpacity className="bg-black/40 rounded-full p-3">

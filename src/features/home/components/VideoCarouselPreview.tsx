@@ -1,3 +1,6 @@
+// src/features/home/components/VideoCarouselPreview.tsx
+// Composant d'aperçu de carrousel vidéo avec miniatures générées
+
 import React, { useEffect, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, Dimensions, Animated, Image } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -9,10 +12,14 @@ import type { RootStackParamList } from "../../../types";
 
 type Navigation = NativeStackNavigationProp<RootStackParamList, "Home">;
 
-interface VideoItem {
+type VideoItem = {
+  id: string; // postId
   url: string;
   playerUid: string;
-}
+  avatar?: string;
+  likeCount: number;
+  isLikedByMe: boolean;
+};
 
 const { width } = Dimensions.get("window");
 

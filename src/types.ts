@@ -105,14 +105,22 @@ export type RootStackParamList = {
   JoueurDetail: { uid: string };
   ManageCandidatures: undefined;
   ClubTeamsList: undefined;
-  VideoFeed: {
+   VideoFeed: {
+    videos: {
+      id: string;
+      url: string;
+      playerUid: string;
+      likeCount: number;
+      isLikedByMe: boolean;
+    }[];
     startIndex: number;
-    videos: any[];
   };
   Visitors: undefined;
   TestPrenium: undefined;
   CreatePost: undefined;
   EditPost: undefined;
+  
+  LikedPosts: undefined;
 };
 
 // NAVIGATION — JOUEUR

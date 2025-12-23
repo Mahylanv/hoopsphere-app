@@ -1,3 +1,6 @@
+// src/legacy/TestPrenium.tsx
+// Écran de test pour le mode Premium (développeur)
+
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -21,10 +24,10 @@ export default function TestPrenium() {
   const { user } = usePlayerProfile();
   const navigation = useNavigation<NavProp>();
 
-  // ⚠️ premiumToggle doit piloter l'affichage du bouton
+  // ⚠️ premiumToggle pilote l’affichage des features Premium
   const [premiumToggle, setPremiumToggle] = useState<boolean>(false);
 
-  // Sync local toggle with Firestore user value when screen loads
+  // Sync local toggle with Firestore user value
   useEffect(() => {
     if (user?.premium !== undefined) {
       setPremiumToggle(user.premium);
@@ -39,7 +42,6 @@ export default function TestPrenium() {
       <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-800">
         <Text className="text-2xl font-bold text-white">Test Premium</Text>
 
-        {/* BOUTON HOME */}
         <Pressable
           onPress={() => navigation.navigate("Home")}
           className="bg-orange-500 px-4 py-2 rounded-lg"
@@ -62,7 +64,6 @@ export default function TestPrenium() {
           <Switch
             value={premiumToggle}
             onValueChange={async (value) => {
-              // UI immédiate
               setPremiumToggle(value);
 
               try {
@@ -76,7 +77,7 @@ export default function TestPrenium() {
                 );
               } catch (e) {
                 console.log("Erreur mise à jour Premium:", e);
-                setPremiumToggle(!value); // revert si erreur
+                setPremiumToggle(!value);
               }
             }}
             thumbColor={premiumToggle ? "#F97316" : "#888"}
@@ -84,16 +85,31 @@ export default function TestPrenium() {
           />
         </View>
 
-        {/* BOUTON VISITEURS (Piloté par premiumToggle) */}
+        {/* --- FEATURES PREMIUM --- */}
         {premiumToggle === true && (
-          <Pressable
-            onPress={() => navigation.navigate("Visitors")}
-            className="bg-blue-600 px-4 py-3 rounded-xl"
-          >
-            <Text className="text-white font-semibold text-center">
-              Voir qui a consulté mon profil
-            </Text>
-          </Pressable>
+          <View className="gap-4">
+
+            {/* VISITEURS */}
+            <Pressable
+              onPress={() => navigation.navigate("Visitors")}
+              className="bg-blue-600 px-4 py-3 rounded-xl"
+            >
+              <Text className="text-white font-semibold text-center">
+                Voir qui a consulté mon profil
+              </Text>
+            </Pressable>
+
+            {/* POSTS LIKÉS */}
+            <Pressable
+              onPress={() => navigation.navigate("LikedPosts")}
+              className="bg-pink-600 px-4 py-3 rounded-xl"
+            >
+              <Text className="text-white font-semibold text-center">
+                Voir mes posts likés ❤️
+              </Text>
+            </Pressable>
+
+          </View>
         )}
       </View>
     </SafeAreaView>
