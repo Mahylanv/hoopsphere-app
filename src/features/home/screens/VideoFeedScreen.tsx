@@ -23,6 +23,7 @@ import { getFirestore, doc, onSnapshot } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 import LikeButton from "../components/LikeButton";
+import { toggleLikePost } from "../services/likeService";
 
 const { height, width } = Dimensions.get("window");
 
@@ -62,6 +63,13 @@ export default function VideoFeedScreen({ route }: Props) {
 
   const db = getFirestore();
   const auth = getAuth();
+
+  // Double tap
+  const lastTap = useRef<number>(0);
+
+  // Animation coeur plein écran
+  const heartScale = useRef(new Animated.Value(0)).current;
+  const [showHeart, setShowHeart] = useState(false);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -174,6 +182,25 @@ export default function VideoFeedScreen({ route }: Props) {
     }).start();
   };
 
+  const triggerHeartAnimation = () => {
+    setShowHeart(true);
+    heartScale.setValue(0);
+
+    Animated.sequence([
+      Animated.spring(heartScale, {
+        toValue: 1,
+        friction: 4,
+        useNativeDriver: true,
+      }),
+      Animated.timing(heartScale, {
+        toValue: 0,
+        duration: 300,
+        delay: 400,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setShowHeart(false));
+  };
+
   /* ============================================================
      ACTIONS
   ============================================================ */
@@ -181,6 +208,50 @@ export default function VideoFeedScreen({ route }: Props) {
     try {
       await Share.share({ message: url });
     } catch {}
+  };
+
+  const handleVideoTap = (index: number) => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+
+    if (lastTap.current && now - lastTap.current < DOUBLE_TAP_DELAY) {
+      // ❤️ DOUBLE TAP → LIKE
+      if (!videos[index].isLikedByMe) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        triggerHeartAnimation();
+        handleToggleLike(index);
+      }
+    } else {
+      // 👆 TAP SIMPLE → pause / play
+      togglePlay(index);
+    }
+
+    lastTap.current = now;
+  };
+
+  const handleToggleLike = async (index: number) => {
+    const video = videos[index];
+    if (!video) return;
+
+    // Optimistic UI
+    setVideos((prev) =>
+      prev.map((v, i) =>
+        i === index
+          ? {
+              ...v,
+              isLikedByMe: !v.isLikedByMe,
+              likeCount: v.isLikedByMe ? v.likeCount - 1 : v.likeCount + 1,
+            }
+          : v
+      )
+    );
+
+    // Firestore (source réelle)
+    try {
+      await toggleLikePost(video.id, video.playerUid);
+    } catch (e) {
+      console.log("Erreur like:", e);
+    }
   };
 
   const togglePlay = async (index: number) => {
@@ -238,7 +309,7 @@ export default function VideoFeedScreen({ route }: Props) {
         })}
         renderItem={({ item, index }) => (
           <View style={{ height, width }}>
-            <TouchableWithoutFeedback onPress={() => togglePlay(index)}>
+            <TouchableWithoutFeedback onPress={() => handleVideoTap(index)}>
               <View style={{ width: "100%", height: "100%" }}>
                 <Video
                   ref={(ref) => {
@@ -281,6 +352,23 @@ export default function VideoFeedScreen({ route }: Props) {
                     <Ionicons name="pause-circle" size={80} color="white" />
                   </Animated.View>
                 )}
+
+                {showHeart && index === activeIndex && (
+                  <Animated.View
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      left: "50%",
+                      transform: [
+                        { translateX: -50 },
+                        { translateY: -50 },
+                        { scale: heartScale },
+                      ],
+                    }}
+                  >
+                    <Ionicons name="heart" size={100} color="#ff2d55" />
+                  </Animated.View>
+                )}
               </View>
             </TouchableWithoutFeedback>
 
@@ -320,12 +408,10 @@ export default function VideoFeedScreen({ route }: Props) {
 
               {/* LIKE */}
               <LikeButton
-                postId={item.id}
-                postOwnerUid={item.playerUid}
-                initialLiked={item.isLikedByMe}
-                initialLikeCount={item.likeCount}
+                liked={item.isLikedByMe}
+                likeCount={item.likeCount}
+                onToggleLike={() => handleToggleLike(index)}
               />
-
               {/* SHARE */}
               <TouchableOpacity className="bg-black/40 rounded-full p-3">
                 <Ionicons

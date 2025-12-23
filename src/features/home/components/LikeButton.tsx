@@ -1,31 +1,26 @@
-import React, { useRef, useState } from "react";
+// src/features/home/components/LikeButton.tsx
+
+import React, { useRef } from "react";
 import { TouchableOpacity, Animated, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
-import { toggleLikePost } from "../services/likeService";
 
 type Props = {
-  postId: string;
-  postOwnerUid: string;
-  initialLiked: boolean;
-  initialLikeCount: number;
+  liked: boolean;
+  likeCount: number;
+  onToggleLike: () => void;
 };
 
 export default function LikeButton({
-  postId,
-  postOwnerUid,
-  initialLiked,
-  initialLikeCount,
+  liked,
+  likeCount,
+  onToggleLike,
 }: Props) {
-  const [liked, setLiked] = useState(initialLiked);
-  const [count, setCount] = useState(initialLikeCount);
-
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const animateLike = () => {
+  const animate = () => {
     Animated.sequence([
       Animated.spring(scaleAnim, {
-        toValue: 1.4,
+        toValue: 1.3,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
@@ -35,22 +30,9 @@ export default function LikeButton({
     ]).start();
   };
 
-  const onPress = async () => {
-    animateLike();
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    // Optimistic UI
-    setLiked((prev) => !prev);
-    setCount((prev) => (liked ? prev - 1 : prev + 1));
-
-    try {
-      await toggleLikePost(postId, postOwnerUid);
-    } catch (error) {
-      // rollback en cas d’erreur
-      setLiked(initialLiked);
-      setCount(initialLikeCount);
-      console.error("Like error:", error);
-    }
+  const onPress = () => {
+    animate();
+    onToggleLike();
   };
 
   return (
@@ -58,7 +40,6 @@ export default function LikeButton({
       <TouchableOpacity
         onPress={onPress}
         className="bg-black/40 rounded-full p-3"
-        activeOpacity={0.8}
       >
         <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
           <Ionicons
@@ -70,7 +51,7 @@ export default function LikeButton({
       </TouchableOpacity>
 
       <Text className="text-white text-xs font-semibold">
-        {count > 0 ? count : ""}
+        {likeCount > 0 ? likeCount : ""}
       </Text>
     </View>
   );
