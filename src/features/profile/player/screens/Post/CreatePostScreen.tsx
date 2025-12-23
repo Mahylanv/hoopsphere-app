@@ -1,3 +1,5 @@
+// src/features/profile/player/screens/Post/CreatePostScreen.tsx
+
 import React, { useState } from "react";
 import {
   View,
@@ -12,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
+import * as VideoThumbnails from "expo-video-thumbnails";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useNavigation } from "@react-navigation/native";
@@ -21,9 +24,13 @@ import SkillTagsSelector from "./components/SkillTagsSelector";
 import VisibilitySelector from "./components/VisibilitySelector";
 import { createPost } from "../../services/postService";
 
+/* ============================================================
+   TYPES
+============================================================ */
 type PickedMedia = {
   uri: string;
   type: "image" | "video";
+  thumbnailUri?: string | null;
 };
 
 type PostType = "highlight" | "match" | "training";
@@ -42,11 +49,11 @@ export default function CreatePostScreen() {
   const navigation = useNavigation<any>();
 
   /* ============================================================
-     PICK MEDIA
+     PICK / CHANGE MEDIA
   ============================================================ */
   const pickMedia = async () => {
-    console.log("📸 pickMedia()");
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert("Permission refusée");
       return;
@@ -58,14 +65,53 @@ export default function CreatePostScreen() {
       allowsEditing: true,
     });
 
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      console.log("📸 Media sélectionné :", asset);
+    if (result.canceled) return;
 
+    const asset = result.assets[0];
+
+    // 🎥 VIDEO → MINIATURE
+    if (asset.type === "video") {
+      try {
+        const { uri: thumbUri } =
+          await VideoThumbnails.getThumbnailAsync(asset.uri, {
+            time: 500,
+          });
+
+        setMedia({
+          uri: asset.uri,
+          type: "video",
+          thumbnailUri: thumbUri,
+        });
+      } catch (e) {
+        console.warn("⚠️ Miniature vidéo impossible", e);
+        setMedia({
+          uri: asset.uri,
+          type: "video",
+          thumbnailUri: null,
+        });
+      }
+    } else {
+      // 🖼️ IMAGE
       setMedia({
         uri: asset.uri,
-        type: asset.type === "video" ? "video" : "image",
+        type: "image",
       });
+    }
+  };
+
+  const openMediaEditor = () => {
+    if (!media) return;
+  
+    if (media.type === "video") {
+      Alert.alert(
+        "Édition vidéo",
+        "Ici tu pourras couper / ajuster la vidéo (à brancher)",
+      );
+    } else {
+      Alert.alert(
+        "Édition image",
+        "Édition image à venir",
+      );
     }
   };
 
@@ -75,7 +121,6 @@ export default function CreatePostScreen() {
   const handlePublish = async () => {
     if (!media || loading) return;
 
-    console.log("🚀 handlePublish()");
     setLoading(true);
 
     try {
@@ -88,8 +133,6 @@ export default function CreatePostScreen() {
         skills,
         visibility,
       });
-
-      console.log("🎉 Publication réussie");
 
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success
@@ -107,13 +150,16 @@ export default function CreatePostScreen() {
     }
   };
 
+  /* ============================================================
+     RENDER
+  ============================================================ */
   return (
     <SafeAreaView className="flex-1 bg-black">
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
       >
-        <ScrollView contentContainerStyle={{ paddingBottom: 50 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
           {/* HEADER */}
           <View className="flex-row items-center justify-between px-4 py-3">
             <Text className="text-white text-lg font-semibold">
@@ -138,32 +184,86 @@ export default function CreatePostScreen() {
 
           <VisibilitySelector value={visibility} onChange={setVisibility} />
 
-          {/* MEDIA */}
-          <TouchableOpacity
-            onPress={pickMedia}
-            className="mx-4 mt-4 h-72 rounded-xl bg-[#1A1A1A] items-center justify-center overflow-hidden"
-          >
-            {!media ? (
-              <View className="items-center">
-                <Ionicons name="add-circle-outline" size={48} color="#aaa" />
-                <Text className="text-gray-400 mt-2">
-                  Ajouter une photo ou une vidéo
+          {/* MEDIA PREVIEW */}
+          <View className="mx-4 mt-4">
+            <TouchableOpacity
+              onPress={pickMedia}
+              activeOpacity={0.9}
+              className="h-72 rounded-xl bg-[#1A1A1A] items-center justify-center overflow-hidden"
+            >
+              {!media ? (
+                <View className="items-center">
+                  <Ionicons
+                    name="add-circle-outline"
+                    size={48}
+                    color="#aaa"
+                  />
+                  <Text className="text-gray-400 mt-2">
+                    Ajouter une photo ou une vidéo
+                  </Text>
+                </View>
+              ) : media.type === "image" ? (
+                <Image
+                  source={{ uri: media.uri }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <>
+                  {/* 🎬 MINIATURE VIDEO */}
+                  {media.thumbnailUri ? (
+                    <Image
+                      source={{ uri: media.thumbnailUri }}
+                      className="w-full h-full"
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View className="w-full h-full items-center justify-center bg-black">
+                      <Ionicons
+                        name="videocam"
+                        size={48}
+                        color="white"
+                      />
+                    </View>
+                  )}
+
+                  {/* ▶️ PLAY ICON */}
+                  <View className="absolute inset-0 items-center justify-center">
+                    <Ionicons
+                      name="play-circle"
+                      size={72}
+                      color="white"
+                    />
+                  </View>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* 🔁 CHANGE MEDIA */}
+            {media && (
+              <TouchableOpacity
+                onPress={pickMedia}
+                className="mt-3 self-center flex-row items-center"
+              >
+                <Ionicons
+                  name="refresh"
+                  size={18}
+                  color="#F97316"
+                />
+                <Text className="text-orange-400 ml-2 font-semibold">
+                  Modifier le média
                 </Text>
-              </View>
-            ) : (
-              <Image
-                source={{ uri: media.uri }}
-                className="w-full h-full"
-                resizeMode="cover"
-              />
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+          </View>
 
           <PostTypeSelector value={postType} onChange={setPostType} />
           <SkillTagsSelector selected={skills} onChange={setSkills} />
 
           <View className="mt-6 px-4">
-            <Text className="text-white mb-2 font-semibold">Description</Text>
+            <Text className="text-white mb-2 font-semibold">
+              Description
+            </Text>
             <TextInput
               value={description}
               onChangeText={setDescription}
@@ -175,9 +275,15 @@ export default function CreatePostScreen() {
           </View>
 
           <View className="mt-4 px-4">
-            <Text className="text-white mb-2 font-semibold">Lieu</Text>
+            <Text className="text-white mb-2 font-semibold">
+              Lieu
+            </Text>
             <View className="flex-row items-center bg-[#1A1A1A] rounded-xl px-4 py-3">
-              <Ionicons name="location-outline" size={20} color="#aaa" />
+              <Ionicons
+                name="location-outline"
+                size={20}
+                color="#aaa"
+              />
               <TextInput
                 value={location}
                 onChangeText={setLocation}
