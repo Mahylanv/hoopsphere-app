@@ -47,7 +47,7 @@ export default function JoueurCard({
       >
         {/* 🌌 Fond */}
         <Image
-          source={require("../../assets/CARD-NORMAL-FOND.png")}
+          source={require("../../../assets/CARD-NORMAL-FOND.png")}
           className="absolute w-full h-full"
           resizeMode="contain"
         />

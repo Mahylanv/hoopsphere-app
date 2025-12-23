@@ -22,7 +22,7 @@ import clsx from "clsx";
 import * as ImagePicker from "expo-image-picker";
 
 import DepartmentSelect from "../../../../../shared/components/DepartmentSelect";
-import { registerPlayer } from "../../services/authService";
+import { registerPlayer } from "../../../services/authService";
 
 import { auth } from "../../../../../config/firebaseConfig";
 
