@@ -1,3 +1,6 @@
+// src/legacy/TestPrenium.tsx
+// Écran de test pour le mode Premium (développeur)
+
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -15,16 +18,21 @@ import { RootStackParamList } from "../types";
 import { updateUserProfile } from "../features/auth/services/userService";
 import usePlayerProfile from "../features/profile/player/hooks/usePlayerProfile";
 
+// ✅ composant réutilisable
+import AddressAutocomplete from "../shared/components/AddressAutocomplete";
+
 type NavProp = NativeStackNavigationProp<RootStackParamList, "TestPrenium">;
 
 export default function TestPrenium() {
   const { user } = usePlayerProfile();
   const navigation = useNavigation<NavProp>();
 
-  // ⚠️ premiumToggle doit piloter l'affichage du bouton
+  // Premium
   const [premiumToggle, setPremiumToggle] = useState<boolean>(false);
 
-  // Sync local toggle with Firestore user value when screen loads
+  // Adresse sélectionnée (test)
+  const [selectedAddress, setSelectedAddress] = useState<any>(null);
+
   useEffect(() => {
     if (user?.premium !== undefined) {
       setPremiumToggle(user.premium);
@@ -39,7 +47,6 @@ export default function TestPrenium() {
       <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-800">
         <Text className="text-2xl font-bold text-white">Test Premium</Text>
 
-        {/* BOUTON HOME */}
         <Pressable
           onPress={() => navigation.navigate("Home")}
           className="bg-orange-500 px-4 py-2 rounded-lg"
@@ -50,7 +57,6 @@ export default function TestPrenium() {
 
       {/* CONTENU */}
       <View className="flex-1 px-5 mt-8">
-
         {/* TOGGLE PREMIUM */}
         <Text className="text-white text-lg font-semibold mb-3">
           Mode Premium (test développeur)
@@ -62,21 +68,17 @@ export default function TestPrenium() {
           <Switch
             value={premiumToggle}
             onValueChange={async (value) => {
-              // UI immédiate
               setPremiumToggle(value);
-
               try {
                 await updateUserProfile({ premium: value });
-
                 Alert.alert(
                   "Statut mis à jour",
                   value
                     ? "Le compte est maintenant Premium ✨"
                     : "Le compte n'est plus Premium."
                 );
-              } catch (e) {
-                console.log("Erreur mise à jour Premium:", e);
-                setPremiumToggle(!value); // revert si erreur
+              } catch {
+                setPremiumToggle(!value);
               }
             }}
             thumbColor={premiumToggle ? "#F97316" : "#888"}
@@ -84,17 +86,56 @@ export default function TestPrenium() {
           />
         </View>
 
-        {/* BOUTON VISITEURS (Piloté par premiumToggle) */}
-        {premiumToggle === true && (
-          <Pressable
-            onPress={() => navigation.navigate("Visitors")}
-            className="bg-blue-600 px-4 py-3 rounded-xl"
-          >
-            <Text className="text-white font-semibold text-center">
-              Voir qui a consulté mon profil
-            </Text>
-          </Pressable>
+        {/* FEATURES PREMIUM */}
+        {premiumToggle && (
+          <View className="gap-4 mb-10">
+            <Pressable
+              onPress={() => navigation.navigate("Visitors")}
+              className="bg-blue-600 px-4 py-3 rounded-xl"
+            >
+              <Text className="text-white font-semibold text-center">
+                Voir qui a consulté mon profil
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => navigation.navigate("LikedPosts")}
+              className="bg-pink-600 px-4 py-3 rounded-xl"
+            >
+              <Text className="text-white font-semibold text-center">
+                Voir mes posts likés ❤️
+              </Text>
+            </Pressable>
+          </View>
         )}
+
+        {/* ============================= */}
+        {/* 📍 TEST COMPOSANT ADRESSE */}
+        {/* ============================= */}
+        <View className="mt-10">
+          <Text className="text-white text-lg font-semibold mb-3">
+            Test composant AddressAutocomplete
+          </Text>
+
+          <AddressAutocomplete
+            placeholder="Adresse du joueur"
+            onSelect={(address) => {
+              console.log("Adresse sélectionnée :", address);
+              setSelectedAddress(address);
+            }}
+          />
+
+          {selectedAddress && (
+            <View className="mt-4 bg-[#1A1A1A] p-4 rounded-xl">
+              <Text className="text-white font-semibold mb-1">
+                Adresse sélectionnée :
+              </Text>
+              <Text className="text-gray-300">
+                {selectedAddress.label}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
     </SafeAreaView>
   );

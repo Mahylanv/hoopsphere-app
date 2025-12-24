@@ -384,6 +384,12 @@ export default function JoueurDetail() {
 
           <View className="bg-[#111] rounded-2xl p-5 border border-gray-800 shadow-lg shadow-black/40">
             <InfoRow icon="mail" label="Email" value={joueur.email} />
+            {/* ➕ Numéro du joueur */}
+            <InfoRow
+              icon="phone-portrait"
+              label="Numéro"
+              value={joueur.phone}
+            />
             <InfoRow icon="calendar" label="Naissance" value={joueur.dob} />
             <InfoRow
               icon="location"
@@ -518,23 +524,52 @@ export default function JoueurDetail() {
         {/* TELEPHONE */}
         <Option
           icon="call-outline"
-          label="Appeler le joueur"
-          onPress={async () => {
+          label="Contacter le joueur"
+          onPress={() => {
             closeContactSheet();
 
-            if (!joueur.telephone) {
+            if (!joueur.phone) {
               Alert.alert("Indisponible", "Téléphone non renseigné");
               return;
             }
 
-            const url = `tel:${joueur.telephone}`;
-            const supported = await Linking.canOpenURL(url);
+            Alert.alert(
+              "Contacter le joueur",
+              "Choisissez une action",
+              [
+                {
+                  text: "Appeler",
+                  onPress: async () => {
+                    const url = `tel:${joueur.phone}`;
+                    const supported = await Linking.canOpenURL(url);
 
-            if (supported) {
-              Linking.openURL(url);
-            } else {
-              Alert.alert("Erreur", "Impossible d’ouvrir le téléphone");
-            }
+                    if (supported) {
+                      Linking.openURL(url);
+                    } else {
+                      Alert.alert("Erreur", "Impossible d’ouvrir le téléphone");
+                    }
+                  },
+                },
+                {
+                  text: "Envoyer un message",
+                  onPress: async () => {
+                    const url = `sms:${joueur.phone}`;
+                    const supported = await Linking.canOpenURL(url);
+
+                    if (supported) {
+                      Linking.openURL(url);
+                    } else {
+                      Alert.alert("Erreur", "Impossible d’ouvrir les messages");
+                    }
+                  },
+                },
+                {
+                  text: "Annuler",
+                  style: "cancel",
+                },
+              ],
+              { cancelable: true }
+            );
           }}
         />
       </Animated.View>

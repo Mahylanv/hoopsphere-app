@@ -34,7 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onAuthUserDeleted = exports.onClubDeleted = exports.onPlayerDeleted = void 0;
+exports.onPlayerPostDeleted = exports.onAuthUserDeleted = exports.onClubDeleted = exports.onPlayerDeleted = void 0;
 const admin = __importStar(require("firebase-admin"));
 /* =====================================================
    🔥 Firebase imports
@@ -49,6 +49,7 @@ if (!admin.apps.length) {
     admin.initializeApp();
 }
 const db = admin.firestore();
+const bucket = admin.storage().bucket();
 /* =====================================================
    🌍 OPTIONS GLOBALES (v2)
 ===================================================== */
@@ -115,5 +116,34 @@ exports.onAuthUserDeleted = v1_1.auth
     }
     catch (error) {
         console.error("❌ Erreur cleanup Firestore :", error);
+    }
+});
+/* =====================================================
+   🔥 POST JOUEUR → CLEANUP GLOBAL (🔥 NOUVEAU)
+===================================================== */
+/**
+ * Quand un post est supprimé ici :
+ * /joueurs/{uid}/posts/{postId}
+ *
+ * ➜ On supprime automatiquement :
+ * - /posts/{postId}
+ * - le fichier Storage associé
+ */
+exports.onPlayerPostDeleted = (0, firestore_1.onDocumentDeleted)("joueurs/{uid}/posts/{postId}", async (event) => {
+    const { uid, postId } = event.params;
+    const data = event.data?.data();
+    try {
+        // 🗑️ Supprimer le post global
+        await db.doc(`posts/${postId}`).delete();
+        console.log(`🧹 Post global supprimé : ${postId}`);
+        // 🗑️ Supprimer le média dans Storage
+        if (data?.mediaUrl) {
+            const decodedPath = decodeURIComponent(data.mediaUrl.split("/o/")[1].split("?")[0]);
+            await bucket.file(decodedPath).delete();
+            console.log(`🧹 Media Storage supprimé : ${decodedPath}`);
+        }
+    }
+    catch (error) {
+        console.error("❌ Erreur cleanup post :", error);
     }
 });

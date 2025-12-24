@@ -1,3 +1,5 @@
+// src/features/home/screens/VideoFeedScreen.tsx
+
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -17,13 +19,20 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../types";
 import * as Haptics from "expo-haptics";
 
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../../config/firebaseConfig";
+
+import LikeButton from "../components/LikeButton";
+import { useVideoLikes } from "../hooks/useVideoLikes";
+import VideoDescription from "../components/VideoDescription";
+import { VideoItem } from "../../../types";
+
+
 const { height, width } = Dimensions.get("window");
 
-type VideoItem = {
-  url: string;
-  playerUid: string;
-  avatar?: string;
-};
+/* ============================================================
+   TYPES
+============================================================ */
 
 type Props = {
   route: {
@@ -34,8 +43,16 @@ type Props = {
   };
 };
 
+/* ============================================================
+   SCREEN
+============================================================ */
 export default function VideoFeedScreen({ route }: Props) {
-  const { videos, startIndex } = route.params;
+  const { startIndex, videos: initialVideos } = route.params;
+  const [videos, setVideos] = useState<VideoItem[]>(initialVideos);
+  const [activeIndex, setActiveIndex] = useState(startIndex);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [showHeart, setShowHeart] = useState(false);
 
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -43,14 +60,62 @@ export default function VideoFeedScreen({ route }: Props) {
   const flatListRef = useRef<FlatList<VideoItem>>(null);
   const videoRefs = useRef<(Video | null)[]>([]);
 
-  const [activeIndex, setActiveIndex] = useState(startIndex);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-
-  const pauseAnim = useRef(new Animated.Value(0)).current;
+  /* ============================================================
+     LIKE LOGIC (HOOK)
+  ============================================================ */
+  const { toggleLike } = useVideoLikes(videos, setVideos);
 
   /* ============================================================
-     AUTOPLAY + PAUSE AUTO
+     DOUBLE TAP / SINGLE TAP
+  ============================================================ */
+  const lastTap = useRef<number>(0);
+  const singleTapTimeout = useRef<NodeJS.Timeout | null>(null);
+  const DOUBLE_TAP_DELAY = 300;
+
+  /* ============================================================
+     ANIMATIONS
+  ============================================================ */
+  const pauseAnim = useRef(new Animated.Value(0)).current;
+  const heartScale = useRef(new Animated.Value(0)).current;
+
+  const showPauseIcon = () => {
+    Animated.timing(pauseAnim, {
+      toValue: 1,
+      duration: 200,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const hidePauseIcon = () => {
+    Animated.timing(pauseAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const triggerHeartAnimation = () => {
+    setShowHeart(true);
+    heartScale.setValue(0);
+
+    Animated.sequence([
+      Animated.spring(heartScale, {
+        toValue: 1,
+        friction: 4,
+        useNativeDriver: true,
+      }),
+      Animated.timing(heartScale, {
+        toValue: 0,
+        duration: 300,
+        delay: 400,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setShowHeart(false));
+  };
+
+  /* ============================================================
+     AUTOPLAY
   ============================================================ */
   useEffect(() => {
     videoRefs.current.forEach(async (video, index) => {
@@ -65,12 +130,13 @@ export default function VideoFeedScreen({ route }: Props) {
         }
       } catch {}
     });
+
     setIsPaused(false);
     hidePauseIcon();
   }, [activeIndex]);
 
   /* ============================================================
-     PAUSE QUAND ÉCRAN QUITTÉ
+     PAUSE WHEN LEAVING SCREEN
   ============================================================ */
   useFocusEffect(
     useCallback(() => {
@@ -83,6 +149,33 @@ export default function VideoFeedScreen({ route }: Props) {
       };
     }, [])
   );
+
+  /* ============================================================
+     LOAD AVATARS (ONCE)
+  ============================================================ */
+  useEffect(() => {
+    const fetchAvatars = async () => {
+      const updated = await Promise.all(
+        videos.map(async (video) => {
+          if (video.avatar) return video;
+
+          try {
+            const snap = await getDoc(doc(db, "joueurs", video.playerUid));
+            return {
+              ...video,
+              avatar: snap.exists() ? (snap.data().avatar ?? null) : null,
+            };
+          } catch {
+            return video;
+          }
+        })
+      );
+
+      setVideos(updated);
+    };
+
+    fetchAvatars();
+  }, []);
 
   /* ============================================================
      VIEWABLE ITEM
@@ -101,32 +194,27 @@ export default function VideoFeedScreen({ route }: Props) {
   };
 
   /* ============================================================
-     ANIMATIONS
-  ============================================================ */
-  const showPauseIcon = () => {
-    Animated.timing(pauseAnim, {
-      toValue: 1,
-      duration: 200,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const hidePauseIcon = () => {
-    Animated.timing(pauseAnim, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  /* ============================================================
      ACTIONS
   ============================================================ */
-  const handleShare = async (url: string) => {
-    try {
-      await Share.share({ message: url });
-    } catch {}
+  const handleVideoTap = (index: number) => {
+    const now = Date.now();
+
+    if (singleTapTimeout.current) {
+      clearTimeout(singleTapTimeout.current);
+      singleTapTimeout.current = null;
+    }
+
+    if (lastTap.current && now - lastTap.current < DOUBLE_TAP_DELAY) {
+      triggerHeartAnimation();
+      toggleLike(index);
+    } else {
+      singleTapTimeout.current = setTimeout(() => {
+        togglePlay(index);
+        singleTapTimeout.current = null;
+      }, DOUBLE_TAP_DELAY);
+    }
+
+    lastTap.current = now;
   };
 
   const togglePlay = async (index: number) => {
@@ -161,6 +249,12 @@ export default function VideoFeedScreen({ route }: Props) {
     Haptics.selectionAsync();
   };
 
+  const handleShare = async (url: string) => {
+    try {
+      await Share.share({ message: url });
+    } catch {}
+  };
+
   /* ============================================================
      RENDER
   ============================================================ */
@@ -169,10 +263,10 @@ export default function VideoFeedScreen({ route }: Props) {
       <FlatList
         ref={flatListRef}
         data={videos}
-        initialScrollIndex={startIndex}
         pagingEnabled
+        initialScrollIndex={startIndex}
         showsVerticalScrollIndicator={false}
-        keyExtractor={(_, i) => i.toString()}
+        keyExtractor={(item) => item.id}
         windowSize={5}
         removeClippedSubviews={false}
         onViewableItemsChanged={onViewableItemsChanged}
@@ -184,7 +278,7 @@ export default function VideoFeedScreen({ route }: Props) {
         })}
         renderItem={({ item, index }) => (
           <View style={{ height, width }}>
-            <TouchableWithoutFeedback onPress={() => togglePlay(index)}>
+            <TouchableWithoutFeedback onPress={() => handleVideoTap(index)}>
               <View style={{ width: "100%", height: "100%" }}>
                 <Video
                   ref={(ref) => {
@@ -193,16 +287,9 @@ export default function VideoFeedScreen({ route }: Props) {
                   source={{ uri: item.url }}
                   style={{ width: "100%", height: "100%" }}
                   resizeMode={ResizeMode.COVER}
-                  shouldPlay={false}
                   isLooping
-                  onLoad={() => {
-                    if (index === activeIndex) {
-                      videoRefs.current[index]?.playAsync();
-                    }
-                    // 🔥 preload implicite de la suivante
-                    const nextVideo = videoRefs.current[index + 1];
-                    nextVideo?.getStatusAsync();
-                  }}
+                  shouldPlay={index === activeIndex} // 🔥 AUTOPLAY
+                  isMuted={false}
                 />
 
                 {isPaused && index === activeIndex && (
@@ -214,17 +301,29 @@ export default function VideoFeedScreen({ route }: Props) {
                       transform: [
                         { translateX: -40 },
                         { translateY: -40 },
-                        {
-                          scale: pauseAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0.8, 1],
-                          }),
-                        },
+                        { scale: pauseAnim },
                       ],
                       opacity: pauseAnim,
                     }}
                   >
                     <Ionicons name="pause-circle" size={80} color="white" />
+                  </Animated.View>
+                )}
+
+                {showHeart && index === activeIndex && (
+                  <Animated.View
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      left: "50%",
+                      transform: [
+                        { translateX: -50 },
+                        { translateY: -50 },
+                        { scale: heartScale },
+                      ],
+                    }}
+                  >
+                    <Ionicons name="heart" size={100} color="#ff2d55" />
                   </Animated.View>
                 )}
               </View>
@@ -233,52 +332,41 @@ export default function VideoFeedScreen({ route }: Props) {
             {/* CLOSE */}
             <TouchableOpacity
               onPress={() => navigation.goBack()}
-              style={{
-                position: "absolute",
-                top: 45,
-                right: 20,
-                zIndex: 20,
-              }}
+              style={{ position: "absolute", top: 45, right: 20 }}
             >
               <Ionicons name="close" size={38} color="white" />
             </TouchableOpacity>
 
             {/* ACTIONS */}
             <View className="absolute right-4 top-[35%] items-center gap-6">
-              {/* AVATAR */}
               <TouchableOpacity
                 onPress={() =>
                   navigation.navigate("JoueurDetail", {
                     uid: item.playerUid,
                   })
                 }
-                className="bg-black/40 rounded-full p-1"
               >
                 <Image
                   source={{
                     uri:
-                      item.avatar ||
+                      item.avatar ??
                       "https://cdn-icons-png.flaticon.com/512/149/149071.png",
                   }}
                   className="w-16 h-16 rounded-full border-2 border-white"
                 />
               </TouchableOpacity>
 
-              {/* SHARE */}
-              <TouchableOpacity className="bg-black/40 rounded-full p-3">
-                <Ionicons
-                  name="share-social-outline"
-                  size={26}
-                  color="white"
-                  onPress={() => handleShare(item.url)}
-                />
+              <LikeButton
+                liked={item.isLikedByMe}
+                likeCount={item.likeCount}
+                onToggleLike={() => toggleLike(index)}
+              />
+
+              <TouchableOpacity onPress={() => handleShare(item.url)}>
+                <Ionicons name="share-social-outline" size={26} color="white" />
               </TouchableOpacity>
 
-              {/* MUTE / UNMUTE */}
-              <TouchableOpacity
-                onPress={toggleMute}
-                className="bg-black/40 rounded-full p-3"
-              >
+              <TouchableOpacity onPress={toggleMute}>
                 <Ionicons
                   name={isMuted ? "volume-mute-outline" : "volume-high-outline"}
                   size={24}
@@ -286,6 +374,12 @@ export default function VideoFeedScreen({ route }: Props) {
                 />
               </TouchableOpacity>
             </View>
+            <VideoDescription
+              description={item.description}
+              location={item.location}
+              createdAt={item.createdAt}
+              skills={item.skills}
+            />
           </View>
         )}
       />

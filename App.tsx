@@ -46,6 +46,7 @@ import VisitorsScreen from "./src/features/profile/player/screens/VisitorsScreen
 import TestPrenium from "./src/legacy/TestPrenium";
 import CreatePostScreen from "./src/features/profile/player/screens/Post/CreatePostScreen";
 import EditPostScreen from "./src/features/profile/player/screens/Post/EditPostScreen";
+import LikedPostsScreen from "./src/features/home/screens/LikedPostsScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -139,6 +140,12 @@ function RootNavigator() {
           name="Visitors"
           component={VisitorsScreen} // on le créera à l'étape suivante
           options={{ title: "Visiteurs du Profil" }}
+        />
+
+        <Stack.Screen
+          name="LikedPosts"
+          component={LikedPostsScreen}
+          options={{ headerShown: false }}
         />
 
         {/* Navigation principale */}

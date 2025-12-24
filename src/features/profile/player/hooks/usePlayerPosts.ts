@@ -1,11 +1,10 @@
-// src/Profil/Joueur/hooks/usePlayerPosts.ts
-
 import { useEffect, useState } from "react";
 import {
   collection,
   query,
   orderBy,
   onSnapshot,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "../../../../config/firebaseConfig";
 
@@ -15,15 +14,21 @@ import { db } from "../../../../config/firebaseConfig";
 export type PlayerPost = {
   id: string;
   playerUid: string;
+
   mediaUrl: string;
   mediaType: "image" | "video";
+  thumbnailUrl?: string | null; // ✅ MINIATURE VIDÉO
+
   description: string;
   location?: string | null;
+  createdBy?: string;
+
   postType: "highlight" | "match" | "training";
   skills: string[];
   visibility: "public" | "private";
-  createdAt: any;
-  likesCount: number;
+
+  createdAt: Timestamp;
+  likeCount: number;
   commentsCount: number;
 };
 
@@ -41,7 +46,7 @@ export default function usePlayerPosts(playerUid?: string) {
       return;
     }
 
-    console.log("📥 Chargement des posts PROFIL joueur :", playerUid);
+    console.log("📥 Chargement posts joueur :", playerUid);
 
     const q = query(
       collection(db, "joueurs", playerUid, "posts"),
@@ -51,10 +56,29 @@ export default function usePlayerPosts(playerUid?: string) {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const data: PlayerPost[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...(doc.data() as Omit<PlayerPost, "id">),
-        }));
+        const data: PlayerPost[] = snapshot.docs.map((doc) => {
+          const d = doc.data();
+
+          return {
+            id: doc.id,
+            playerUid: d.playerUid,
+
+            mediaUrl: d.mediaUrl,
+            mediaType: d.mediaType,
+            thumbnailUrl: d.thumbnailUrl ?? null, // ✅ IMPORTANT
+
+            description: d.description ?? null,
+            location: d.location ?? null,
+
+            postType: d.postType,
+            skills: d.skills ?? [],
+            visibility: d.visibility,
+
+            createdAt: d.createdAt,
+            likeCount: d.likeCount ?? 0,
+            commentsCount: d.commentsCount ?? 0,
+          };
+        });
 
         console.log("✅ Posts profil reçus :", data.length);
         setPosts(data);

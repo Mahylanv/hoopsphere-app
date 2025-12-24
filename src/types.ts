@@ -1,3 +1,5 @@
+// src/types.ts
+
 import { NavigatorScreenParams } from "@react-navigation/native";
 
 export type Joueur = {
@@ -105,14 +107,23 @@ export type RootStackParamList = {
   JoueurDetail: { uid: string };
   ManageCandidatures: undefined;
   ClubTeamsList: undefined;
-  VideoFeed: {
+   VideoFeed: {
+    videos: {
+      id: string;
+      url: string;
+      playerUid: string;
+      likeCount: number;
+      thumbnailUrl?: string | null;
+      isLikedByMe: boolean;
+    }[];
     startIndex: number;
-    videos: any[];
   };
   Visitors: undefined;
   TestPrenium: undefined;
   CreatePost: undefined;
   EditPost: undefined;
+  
+  LikedPosts: undefined;
 };
 
 // NAVIGATION — JOUEUR
@@ -171,4 +182,18 @@ export type TeamPlayer = {
 export type MediaItem = {
   url: string;
   type: "image" | "video";
+};
+
+export type VideoItem = {
+  id: string;
+  url: string;
+  avatar?: string | null;
+  playerUid: string;
+  likeCount: number;
+  isLikedByMe: boolean;
+  thumbnailUrl?: string | null;
+  description?: string;
+  createdAt?: any;
+  location?: string | null;
+  skills?: string[];
 };

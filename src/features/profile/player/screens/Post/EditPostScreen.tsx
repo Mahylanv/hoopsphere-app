@@ -1,4 +1,4 @@
-// src/Profil/Joueur/screens/Post/EditPostScreen.tsx
+// src/feature/profile/player/screens/Post/EditPostScreen.tsx
 
 import React, { useState } from "react";
 import {
@@ -11,12 +11,24 @@ import {
   Modal,
   Dimensions,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { updatePost } from "../../services/postService";
+import { updatePost, deletePost } from "../../services/postService";
+
+import * as ImagePicker from "expo-image-picker";
+
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
+import { storage } from "../../../../../config/firebaseConfig";
+import { auth } from "../../../../../config/firebaseConfig";
 
 const { width, height } = Dimensions.get("window");
 
@@ -34,11 +46,7 @@ type PostItem = {
   visibility: "public" | "private";
 };
 
-const POST_TYPES: PostItem["postType"][] = [
-  "highlight",
-  "match",
-  "training",
-];
+const POST_TYPES: PostItem["postType"][] = ["highlight", "match", "training"];
 
 /* ============================================================
    SCREEN
@@ -61,6 +69,11 @@ export default function EditPostScreen() {
   const [fullscreen, setFullscreen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const [newMediaUri, setNewMediaUri] = useState<string | null>(null);
+  const [newMediaType, setNewMediaType] = useState<"image" | "video" | null>(
+    null
+  );
+
   /* ============================================================
      ACTIONS
   ============================================================ */
@@ -78,19 +91,59 @@ export default function EditPostScreen() {
   const handleSave = async () => {
     try {
       setIsSaving(true);
-  
-      const payload = {
+
+      const user = auth.currentUser;
+      if (!user) throw new Error("Utilisateur non authentifié");
+
+      let updatedMediaUrl: string | undefined = undefined;
+
+      /* ===============================
+         1️⃣ SI NOUVELLE VIDÉO
+      =============================== */
+      if (newMediaUri && newMediaType === "video") {
+        console.log("🎥 Upload nouvelle vidéo");
+
+        // ➜ récupérer le fichier
+        const response = await fetch(newMediaUri);
+        const blob = await response.blob();
+
+        const filename = `${Date.now()}.mp4`;
+        const storagePath = `posts/${user.uid}/${filename}`;
+        const storageRef = ref(storage, storagePath);
+
+        await uploadBytes(storageRef, blob);
+        updatedMediaUrl = await getDownloadURL(storageRef);
+
+        // 🗑️ supprimer l’ancienne vidéo
+        if (post.mediaUrl) {
+          try {
+            await deleteObject(ref(storage, post.mediaUrl));
+          } catch (e) {
+            console.warn("⚠️ Impossible de supprimer l’ancienne vidéo", e);
+          }
+        }
+      }
+
+      /* ===============================
+         2️⃣ PAYLOAD FINAL
+      =============================== */
+      const payload: any = {
         description,
-        location: location || undefined,
+        location: location || null,
         postType,
         skills,
         visibility,
       };
-  
-      console.log("💾 updatePost payload :", payload);
-  
+
+      if (updatedMediaUrl) {
+        payload.mediaUrl = updatedMediaUrl;
+        payload.mediaType = "video";
+      }
+
+      console.log("💾 updatePost payload final :", payload);
+
       await updatePost(post.id, payload);
-  
+
       navigation.goBack();
     } catch (e) {
       console.log("❌ Erreur sauvegarde :", e);
@@ -98,7 +151,48 @@ export default function EditPostScreen() {
       setIsSaving(false);
     }
   };
-  
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Supprimer la publication",
+      "Cette action est définitive. Voulez-vous continuer ?",
+      [
+        {
+          text: "Annuler",
+          style: "cancel",
+        },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setIsSaving(true);
+
+              await deletePost(post.id, post.mediaUrl);
+
+              navigation.goBack();
+            } catch (e) {
+              console.log("❌ Erreur suppression :", e);
+            } finally {
+              setIsSaving(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleChangeMedia = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setNewMediaUri(result.assets[0].uri);
+      setNewMediaType("video");
+    }
+  };
 
   /* ============================================================
      RENDER
@@ -127,6 +221,31 @@ export default function EditPostScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 50 }}>
+        {/* VISIBILITY */}
+        <View className="mt-6 ml-5">
+          <Text className="text-white mb-2 font-semibold">Visibilité</Text>
+          <View className="flex-row gap-3">
+            {(["public", "private"] as const).map((v) => (
+              <TouchableOpacity
+                key={v}
+                onPress={() => setVisibility(v)}
+                className={`px-4 py-2 rounded-full border ${
+                  visibility === v
+                    ? "bg-orange-500 border-orange-500"
+                    : "border-gray-700"
+                }`}
+              >
+                <Text
+                  className={`font-semibold ${
+                    visibility === v ? "text-white" : "text-gray-400"
+                  }`}
+                >
+                  {v === "public" ? "Publique" : "Privée"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
         {/* MEDIA */}
         <TouchableOpacity
           activeOpacity={0.9}
@@ -136,14 +255,14 @@ export default function EditPostScreen() {
         >
           {post.mediaType === "image" ? (
             <Image
-              source={{ uri: post.mediaUrl }}
+              source={{ uri: newMediaUri ?? post.mediaUrl }}
               style={{ width: "100%", height: "100%" }}
               resizeMode="cover"
             />
           ) : (
             <>
               <Video
-                source={{ uri: post.mediaUrl }}
+                source={{ uri: newMediaUri ?? post.mediaUrl }}
                 style={{ width: "100%", height: "100%" }}
                 resizeMode={ResizeMode.COVER}
                 shouldPlay={false}
@@ -158,6 +277,25 @@ export default function EditPostScreen() {
               </View>
             </>
           )}
+
+          {/* MEDIA ACTION OVERLAY */}
+          <View className="absolute bottom-3 right-3 z-10">
+            <TouchableOpacity
+              onPress={handleChangeMedia}
+              className={`flex-row items-center px-4 py-2 rounded-full ${
+                newMediaUri ? "bg-orange-500" : "bg-black/70"
+              }`}
+            >
+              <Ionicons
+                name={newMediaUri ? "checkmark-circle" : "videocam"}
+                size={16}
+                color="white"
+              />
+              <Text className="text-white text-sm font-semibold ml-2">
+                {newMediaUri ? "Vidéo prête" : "Modifier"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </TouchableOpacity>
 
         <View className="mt-6 px-4">
@@ -178,9 +316,7 @@ export default function EditPostScreen() {
               >
                 <Text
                   className={`font-semibold ${
-                    postType === type
-                      ? "text-white"
-                      : "text-gray-400"
+                    postType === type ? "text-white" : "text-gray-400"
                   }`}
                 >
                   {type.toUpperCase()}
@@ -190,9 +326,7 @@ export default function EditPostScreen() {
           </View>
 
           {/* DESCRIPTION */}
-          <Text className="text-white mb-2 font-semibold">
-            Description
-          </Text>
+          <Text className="text-white mb-2 font-semibold">Description</Text>
           <TextInput
             value={description}
             onChangeText={setDescription}
@@ -219,9 +353,7 @@ export default function EditPostScreen() {
 
           {/* SKILLS */}
           <View className="mt-5">
-            <Text className="text-white mb-2 font-semibold">
-              Skills
-            </Text>
+            <Text className="text-white mb-2 font-semibold">Skills</Text>
 
             <View className="flex-row flex-wrap gap-2 mb-3">
               {skills.map((skill) => (
@@ -250,36 +382,17 @@ export default function EditPostScreen() {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* VISIBILITY */}
-          <View className="mt-6">
-            <Text className="text-white mb-2 font-semibold">
-              Visibilité
+        </View>
+        <View className="mt-10 px-4">
+          <TouchableOpacity
+            onPress={handleDelete}
+            disabled={isSaving}
+            className="border border-red-600 rounded-xl py-4 items-center"
+          >
+            <Text className="text-red-500 font-semibold text-base">
+              Supprimer la publication
             </Text>
-            <View className="flex-row gap-3">
-              {(["public", "private"] as const).map((v) => (
-                <TouchableOpacity
-                  key={v}
-                  onPress={() => setVisibility(v)}
-                  className={`px-4 py-2 rounded-full border ${
-                    visibility === v
-                      ? "bg-orange-500 border-orange-500"
-                      : "border-gray-700"
-                  }`}
-                >
-                  <Text
-                    className={`font-semibold ${
-                      visibility === v
-                        ? "text-white"
-                        : "text-gray-400"
-                    }`}
-                  >
-                    {v === "public" ? "Publique" : "Privée"}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 

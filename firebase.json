@@ -10,6 +10,7 @@
     },
     {
       "source": "auth-sync",
+      "runtime": "nodejs20",
       "codebase": "auth-sync",
       "ignore": [
         "node_modules",
@@ -19,7 +20,6 @@
         "*.local"
       ],
       "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run lint",
         "npm --prefix \"$RESOURCE_DIR\" run build"
       ]
     }

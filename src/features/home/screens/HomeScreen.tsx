@@ -1,27 +1,31 @@
-// src/Home/HomeScreen.tsx
+// src/features/home/screens/HomeScreen.tsx
+// Écran d'accueil avec classement hebdomadaire et vidéos populaires
 
 import React, { useRef, useEffect, useState } from "react";
-import { 
+import {
   View,
-  Text, 
-  ScrollView, 
-  ActivityIndicator, 
-  Animated 
+  Text,
+  ScrollView,
+  ActivityIndicator,
+  Animated,
 } from "react-native";
 
 import usePlayerRanking from "../hooks/usePlayerRanking";
 import WeeklyRanking from "../components/WeeklyRanking";
-import useAllVideos from "../hooks/useAllVideos";
+import useAllPosts from "../hooks/useAllPosts";
 import VideoCarouselPreview from "../components/VideoCarouselPreview";
 import RankingPlayerPanel from "../components/RankingPlayerPanel";
 import { RankingPlayer } from "../hooks/usePlayerRanking";
+import { VideoItem } from "../../../types";
 
 export default function HomeScreen() {
   const { ranking, loading } = usePlayerRanking();
-  const { videos, loading: videosLoading } = useAllVideos();
+  const { posts, loading: postsLoading } = useAllPosts();
 
   // ⭐ Nouveaux states pour le PANEL
-  const [selectedPlayer, setSelectedPlayer] = useState<RankingPlayer | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<RankingPlayer | null>(
+    null
+  );
   const [panelVisible, setPanelVisible] = useState(false);
 
   // -------------------------------
@@ -31,7 +35,7 @@ export default function HomeScreen() {
   const slideHeader = useRef(new Animated.Value(-20)).current;
 
   const fadeRanking = useRef(new Animated.Value(0)).current;
-  const fadeVideos = useRef(new Animated.Value(0)).current;
+  const fadePosts = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -60,25 +64,36 @@ export default function HomeScreen() {
   }, [loading]);
 
   useEffect(() => {
-    if (!videosLoading && videos.length > 0) {
-      Animated.timing(fadeVideos, {
+    if (!postsLoading && posts.length > 0) {
+      Animated.timing(fadePosts, {
         toValue: 1,
         duration: 500,
         delay: 300,
         useNativeDriver: true,
       }).start();
     }
-  }, [videosLoading]);
+  }, [postsLoading]);
+
+  const videoItems: VideoItem[] = posts.map((post) => ({
+    id: post.id,
+    url: post.url,
+    playerUid: post.playerUid,
+    likeCount: post.likeCount,
+    isLikedByMe: post.isLikedByMe,
+    thumbnailUrl: post.thumbnailUrl,
+    description: post.description ?? undefined,
+    location: post.location ?? undefined,
+    createdAt: post.createdAt,
+    skills: post.skills ?? [],
+  }));
 
   // -------------------------------
   // ⭐ UI
   // -------------------------------
   return (
     <View className="flex-1 bg-[#0E0D0D]">
-      
       {/* --- CONTENU SCROLLABLE --- */}
       <ScrollView className="flex-1">
-
         {/* HEADER */}
         <Animated.View
           style={{
@@ -131,17 +146,15 @@ export default function HomeScreen() {
         <View className="w-full h-[1px] bg-gray-800 opacity-50 mt-8 mb-6" />
 
         {/* VIDÉOS POPULAIRES */}
-        {!videosLoading && videos.length > 0 && (
-          <Animated.View style={{ opacity: fadeVideos }}>
-            <VideoCarouselPreview videos={videos} />
+        {!postsLoading && posts.length > 0 && (
+          <Animated.View style={{ opacity: fadePosts }}>
+            <VideoCarouselPreview videos={videoItems} />
           </Animated.View>
         )}
 
-        {!videosLoading && videos.length === 0 && (
+        {!postsLoading && posts.length === 0 && (
           <View className="items-center mt-10">
-            <Text className="text-gray-400">
-              Aucune vidéo pour le moment.
-            </Text>
+            <Text className="text-gray-400">Aucune vidéo pour le moment.</Text>
           </View>
         )}
       </ScrollView>

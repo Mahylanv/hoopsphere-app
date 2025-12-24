@@ -5,7 +5,6 @@ import * as admin from "firebase-admin";
 /* =====================================================
    🔥 Firebase imports
 ===================================================== */
-
 import { auth as authV1 } from "firebase-functions/v1";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onDocumentDeleted } from "firebase-functions/v2/firestore";
@@ -18,6 +17,7 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore();
+const bucket = admin.storage().bucket();
 
 /* =====================================================
    🌍 OPTIONS GLOBALES (v2)
@@ -99,3 +99,41 @@ export const onAuthUserDeleted = authV1
       console.error("❌ Erreur cleanup Firestore :", error);
     }
   });
+
+/* =====================================================
+   🔥 POST JOUEUR → CLEANUP GLOBAL (🔥 NOUVEAU)
+===================================================== */
+
+/**
+ * Quand un post est supprimé ici :
+ * /joueurs/{uid}/posts/{postId}
+ *
+ * ➜ On supprime automatiquement :
+ * - /posts/{postId}
+ * - le fichier Storage associé
+ */
+export const onPlayerPostDeleted = onDocumentDeleted(
+  "joueurs/{uid}/posts/{postId}",
+  async (event) => {
+    const { uid, postId } = event.params;
+    const data = event.data?.data();
+
+    try {
+      // 🗑️ Supprimer le post global
+      await db.doc(`posts/${postId}`).delete();
+      console.log(`🧹 Post global supprimé : ${postId}`);
+
+      // 🗑️ Supprimer le média dans Storage
+      if (data?.mediaUrl) {
+        const decodedPath = decodeURIComponent(
+          data.mediaUrl.split("/o/")[1].split("?")[0]
+        );
+
+        await bucket.file(decodedPath).delete();
+        console.log(`🧹 Media Storage supprimé : ${decodedPath}`);
+      }
+    } catch (error) {
+      console.error("❌ Erreur cleanup post :", error);
+    }
+  }
+);
