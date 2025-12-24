@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   collection,
-  getDocs,
+  onSnapshot,
   orderBy,
   query,
   doc,
@@ -21,11 +21,12 @@ export interface HomePost {
   playerUid: string;
   createdAt: any;
   avatar: string | null;
-
-  // ➕ requis par VideoCarouselPreview
   likeCount: number;
   isLikedByMe: boolean;
   thumbnailUrl?: string | null;
+  description?: string | null;
+  location?: string | null;
+  skills?: string[] | null;
 }
 
 /* ============================================================
@@ -36,27 +37,28 @@ export default function useAllPosts() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadPosts = async () => {
-      try {
-        console.log("📥 Chargement des posts HOME");
+    console.log("👂 Écoute temps réel des posts HOME");
 
-        const q = query(
-          collection(db, "posts"),
-          where("mediaType", "==", "video"),
-          where("visibility", "==", "public"),
-          orderBy("createdAt", "desc")
-        );
+    const q = query(
+      collection(db, "posts"),
+      where("mediaType", "==", "video"),
+      where("visibility", "==", "public"),
+      orderBy("createdAt", "desc")
+    );
 
-        const snap = await getDocs(q);
-
+    const unsubscribe = onSnapshot(
+      q,
+      async (snapshot) => {
         const all: HomePost[] = await Promise.all(
-          snap.docs.map(async (docSnap) => {
+          snapshot.docs.map(async (docSnap) => {
             const data = docSnap.data();
 
             // 🔥 avatar joueur
             let avatar: string | null = null;
             if (data.playerUid) {
-              const userSnap = await getDoc(doc(db, "joueurs", data.playerUid));
+              const userSnap = await getDoc(
+                doc(db, "joueurs", data.playerUid)
+              );
               avatar = userSnap.exists()
                 ? (userSnap.data().avatar ?? null)
                 : null;
@@ -68,25 +70,28 @@ export default function useAllPosts() {
               playerUid: data.playerUid,
               createdAt: data.createdAt,
               avatar,
-
-              // ✅ champs requis par VideoCarouselPreview
-              likeCount: data.likesCount ?? 0,
-              isLikedByMe: false, // à brancher plus tard
+              likeCount: data.likeCount ?? 0,
+              isLikedByMe: false, // branchable plus tard
               thumbnailUrl: data.thumbnailUrl ?? null,
+              description: data.description ?? null,
+              location: data.location ?? null,
+              skills: data.skills ?? [],
             };
           })
         );
 
-        console.log("✅ Posts HOME chargés :", all.length);
+        console.log("🔄 Feed HOME mis à jour :", all.length);
         setPosts(all);
-      } catch (e) {
-        console.error("❌ Erreur posts HOME :", e);
-      } finally {
+        setLoading(false);
+      },
+      (error) => {
+        console.error("❌ Erreur listener posts HOME :", error);
         setLoading(false);
       }
-    };
+    );
 
-    loadPosts();
+    // 🔥 cleanup obligatoire
+    return () => unsubscribe();
   }, []);
 
   return { posts, loading };

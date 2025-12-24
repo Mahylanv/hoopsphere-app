@@ -16,7 +16,7 @@ import useAllPosts from "../hooks/useAllPosts";
 import VideoCarouselPreview from "../components/VideoCarouselPreview";
 import RankingPlayerPanel from "../components/RankingPlayerPanel";
 import { RankingPlayer } from "../hooks/usePlayerRanking";
-import { VideoItem } from "../components/VideoCarouselPreview";
+import { VideoItem } from "../../../types";
 
 export default function HomeScreen() {
   const { ranking, loading } = usePlayerRanking();
@@ -81,6 +81,10 @@ export default function HomeScreen() {
     likeCount: post.likeCount,
     isLikedByMe: post.isLikedByMe,
     thumbnailUrl: post.thumbnailUrl,
+    description: post.description ?? undefined,
+    location: post.location ?? undefined,
+    createdAt: post.createdAt,
+    skills: post.skills ?? [],
   }));
 
   // -------------------------------

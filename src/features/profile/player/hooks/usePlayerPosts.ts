@@ -21,13 +21,14 @@ export type PlayerPost = {
 
   description: string;
   location?: string | null;
+  createdBy?: string;
 
   postType: "highlight" | "match" | "training";
   skills: string[];
   visibility: "public" | "private";
 
   createdAt: Timestamp;
-  likesCount: number;
+  likeCount: number;
   commentsCount: number;
 };
 
@@ -66,7 +67,7 @@ export default function usePlayerPosts(playerUid?: string) {
             mediaType: d.mediaType,
             thumbnailUrl: d.thumbnailUrl ?? null, // ✅ IMPORTANT
 
-            description: d.description,
+            description: d.description ?? null,
             location: d.location ?? null,
 
             postType: d.postType,
@@ -74,7 +75,7 @@ export default function usePlayerPosts(playerUid?: string) {
             visibility: d.visibility,
 
             createdAt: d.createdAt,
-            likesCount: d.likesCount ?? 0,
+            likeCount: d.likeCount ?? 0,
             commentsCount: d.commentsCount ?? 0,
           };
         });

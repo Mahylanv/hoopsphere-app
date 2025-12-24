@@ -14,20 +14,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../types";
+import { VideoItem } from "../../../types";
+
 
 type Navigation = NativeStackNavigationProp<RootStackParamList, "Home">;
 
 /* ============================================================
    TYPES
 ============================================================ */
-export type VideoItem = {
-  id: string; // postId
-  url: string;
-  playerUid: string;
-  avatar?: string;
-  likeCount: number;
-  isLikedByMe: boolean;
-};
+
 const { width } = Dimensions.get("window");
 
 /* ============================================================
@@ -120,6 +115,10 @@ function VideoPreviewItem({
               avatar: v.avatar ?? null, // ✅ PROPAGATION EXPLICITE
               likeCount: v.likeCount ?? 0,
               isLikedByMe: v.isLikedByMe ?? false,
+              description: v.description ?? null,
+              location: v.location ?? null,
+              createdAt: v.createdAt,
+              skills: v.skills ?? [],
             })),
           })
         }

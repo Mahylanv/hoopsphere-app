@@ -103,7 +103,7 @@ export const createPost = async (payload: CreatePostPayload) => {
       skills: payload.skills,
       visibility: payload.visibility,
 
-      likesCount: 0,
+      likeCount: 0,
       commentsCount: 0,
 
       createdAt: serverTimestamp(),

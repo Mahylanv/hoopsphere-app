@@ -1,3 +1,5 @@
+// src/types.ts
+
 import { NavigatorScreenParams } from "@react-navigation/native";
 
 export type Joueur = {
@@ -180,4 +182,18 @@ export type TeamPlayer = {
 export type MediaItem = {
   url: string;
   type: "image" | "video";
+};
+
+export type VideoItem = {
+  id: string;
+  url: string;
+  avatar?: string | null;
+  playerUid: string;
+  likeCount: number;
+  isLikedByMe: boolean;
+  thumbnailUrl?: string | null;
+  description?: string;
+  createdAt?: any;
+  location?: string | null;
+  skills?: string[];
 };
