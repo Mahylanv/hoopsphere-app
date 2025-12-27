@@ -1,0 +1,33 @@
+t=2025-12-27T10:17:20+0100 lvl=info msg="no configuration paths supplied"
+t=2025-12-27T10:17:20+0100 lvl=info msg="using configuration at default config path" path=/home/mahylan/.config/ngrok/ngrok.yml
+t=2025-12-27T10:17:20+0100 lvl=info msg="open config file" path=/home/mahylan/.config/ngrok/ngrok.yml err=nil
+t=2025-12-27T10:17:20+0100 lvl=info msg="FIPS 140 mode" enabled=false
+t=2025-12-27T10:17:20+0100 lvl=info msg="starting web service" obj=web addr=127.0.0.1:4040 allow_hosts=[]
+t=2025-12-27T10:17:20+0100 lvl=info msg="client session established" obj=tunnels.session
+t=2025-12-27T10:17:20+0100 lvl=info msg="tunnel session started" obj=tunnels.session
+t=2025-12-27T10:17:20+0100 lvl=info msg="started tunnel" obj=tunnels name=command_line addr=http://localhost:8000 url=https://b167437e9656.ngrok-free.app
+t=2025-12-27T10:17:21+0100 lvl=info msg=start pg=/api/tunnels id=91c1bfc6f6280393
+t=2025-12-27T10:17:21+0100 lvl=info msg=end pg=/api/tunnels id=91c1bfc6f6280393 status=200 dur=390.099µs
+t=2025-12-27T10:17:57+0100 lvl=info msg="join connections" obj=join id=3759dff4da45 l=127.0.0.1:8000 r=[2a01:cb16:2:a9ff:15c7:4c78:6257:99a4]:60036
+t=2025-12-27T10:18:20+0100 lvl=eror msg="heartbeat timeout, terminating session" obj=tunnels.session obj=csess id=dd17beccdd34 clientid=6df57dbc142f7612a52666649a0e91e0
+t=2025-12-27T10:18:20+0100 lvl=eror msg="session closed, starting reconnect loop" obj=tunnels.session obj=csess id=49a51a58bd8e err="session closed"
+t=2025-12-27T10:18:30+0100 lvl=eror msg="failed to reconnect session" obj=tunnels.session err="failed to dial ngrok server with address \"connect.ngrok-agent.com:443\": dial tcp: lookup connect.ngrok-agent.com: i/o timeout"
+t=2025-12-27T10:18:41+0100 lvl=eror msg="failed to reconnect session" obj=tunnels.session err="failed to dial ngrok server with address \"connect.ngrok-agent.com:443\": dial tcp: lookup connect.ngrok-agent.com: i/o timeout"
+t=2025-12-27T10:18:52+0100 lvl=eror msg="failed to reconnect session" obj=tunnels.session err="failed to dial ngrok server with address \"connect.ngrok-agent.com:443\": dial tcp: lookup connect.ngrok-agent.com: i/o timeout"
+t=2025-12-27T10:19:04+0100 lvl=eror msg="failed to reconnect session" obj=tunnels.session err="failed to dial ngrok server with address \"connect.ngrok-agent.com:443\": dial tcp: lookup connect.ngrok-agent.com: i/o timeout"
+t=2025-12-27T10:19:18+0100 lvl=eror msg="failed to reconnect session" obj=tunnels.session err="failed to dial ngrok server with address \"connect.ngrok-agent.com:443\": dial tcp: lookup connect.ngrok-agent.com: i/o timeout"
+t=2025-12-27T10:19:29+0100 lvl=info msg="client session established" obj=tunnels.session
+t=2025-12-27T10:19:29+0100 lvl=info msg="tunnel session started" obj=tunnels.session
+t=2025-12-27T10:20:13+0100 lvl=eror msg="heartbeat timeout, terminating session" obj=tunnels.session obj=csess id=2a0a527f92e5 clientid=6df57dbc142f7612a52666649a0e91e0
+t=2025-12-27T10:20:13+0100 lvl=eror msg="session closed, starting reconnect loop" obj=tunnels.session obj=csess id=49a51a58bd8e err="session closed"
+t=2025-12-27T10:20:23+0100 lvl=eror msg="failed to reconnect session" obj=tunnels.session err="failed to dial ngrok server with address \"connect.ngrok-agent.com:443\": dial tcp [2a05:d014:21b:8e01:1688:8f4e:c7e5:2909]:443: i/o timeout"
+t=2025-12-27T10:20:29+0100 lvl=info msg="client session established" obj=tunnels.session
+t=2025-12-27T10:20:29+0100 lvl=info msg="tunnel session started" obj=tunnels.session
+t=2025-12-27T10:21:54+0100 lvl=info msg="join connections" obj=join id=0a9f824404d2 l=127.0.0.1:8000 r=[2a01:cb16:2:a9ff:15c7:4c78:6257:99a4]:60243
+t=2025-12-27T10:23:17+0100 lvl=info msg="received stop request" obj=app stopReq="{err:<nil> restart:false}"
+t=2025-12-27T10:23:17+0100 lvl=info msg="session closing" obj=tunnels.session err=nil
+t=2025-12-27T10:23:17+0100 lvl=info msg="accept failed" obj=tunnels.session obj=csess id=49a51a58bd8e err="reconnecting session closed"
+t=2025-12-27T10:23:17+0100 lvl=info msg="failed to accept connection: Listener closed" obj=tunnels.session clientid=7ba32751a0c2157ca47e198b336d6063
+t=2025-12-27T10:23:17+0100 lvl=warn msg="Stopping forwarder" name=command_line acceptErr="failed to accept connection: Listener closed"
+t=2025-12-27T10:23:17+0100 lvl=warn msg="Error restarting forwarder" name=command_line err="failed to start tunnel: session closed"
+t=2025-12-27T10:23:17+0100 lvl=info msg="no more state changes" obj=tunnels.session

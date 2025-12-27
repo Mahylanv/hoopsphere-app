@@ -51,7 +51,10 @@ type ApiResponse = {
   teams?: Array<{ name: string; players: PlayerStats[] }>;
 };
 
-const API_URL = "https://e9f30b81934e.ngrok-free.app/parse-emarque";
+const rawApiUrl = (process.env.EXPO_PUBLIC_EMARQUE_URL || "http://localhost:8000/parse-emarque").trim();
+const API_URL = rawApiUrl.endsWith("/parse-emarque")
+  ? rawApiUrl
+  : `${rawApiUrl.replace(/\/$/, "")}/parse-emarque`;
 
 function normalize(s: string) {
   return s
