@@ -51,7 +51,7 @@ type ApiResponse = {
   teams?: Array<{ name: string; players: PlayerStats[] }>;
 };
 
-const API_URL = "https://79bb298fd7b0.ngrok-free.app/parse-emarque";
+const API_URL = "https://e9f30b81934e.ngrok-free.app/parse-emarque";
 
 function normalize(s: string) {
   return s
@@ -296,7 +296,7 @@ export default function Match() {
         <TouchableOpacity
           onPress={handleParse}
           disabled={loading || !canParse}
-          style={{ backgroundColor: !canParse ? "#444" : "#16a34a", padding: 14, borderRadius: 12, alignItems: "center" }}
+          style={{ backgroundColor: !canParse ? "#444" : "#f97316", padding: 14, borderRadius: 12, alignItems: "center" }}
         >
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700" }}>Analyser le PDF</Text>}
         </TouchableOpacity>
@@ -325,7 +325,7 @@ export default function Match() {
             <TouchableOpacity
               onPress={handleSave}
               disabled={saving || !matchNumber}
-              style={{ marginTop: 12, backgroundColor: matchNumber ? "#22c55e" : "#444", padding: 14, borderRadius: 12, alignItems: "center" }}
+              style={{ marginTop: 12, backgroundColor: matchNumber ? "#f97316" : "#444", padding: 14, borderRadius: 12, alignItems: "center" }}
             >
               {saving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700" }}>Valider</Text>}
             </TouchableOpacity>
