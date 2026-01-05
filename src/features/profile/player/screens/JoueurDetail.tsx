@@ -35,6 +35,7 @@ import {
 import { db } from "../../../../config/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { usePremiumStatus } from "../../../../shared/hooks/usePremiumStatus";
 
 const CARD_WIDTH = Dimensions.get("window").width * 0.9;
 const CARD_HEIGHT = CARD_WIDTH * 0.68;
@@ -53,6 +54,7 @@ export default function JoueurDetail() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [rating, setRating] = useState<number | null>(null);
+  const { isPremium } = usePremiumStatus();
 
   /* =============================================
      🔥 FETCH DU JOUEUR PAR UID
@@ -291,7 +293,23 @@ export default function JoueurDetail() {
     await Sharing.shareAsync(uri);
   };
 
-  const addFavorite = () => Alert.alert("Favoris", "Joueur ajouté !");
+  const addFavorite = () => {
+    if (!isPremium) {
+      Alert.alert(
+        "Fonction Premium",
+        "Les favoris sont réservés aux membres Premium.",
+        [
+          { text: "Plus tard", style: "cancel" },
+          {
+            text: "Passer Premium",
+            onPress: () => (navigation as any).navigate("Payment"),
+          },
+        ]
+      );
+      return;
+    }
+    Alert.alert("Favoris", "Joueur ajouté !");
+  };
 
   /* -----------------------------------------------------
      🔥 LOADING SCREEN

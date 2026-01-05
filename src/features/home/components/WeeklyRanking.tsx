@@ -79,6 +79,7 @@ export default function WeeklyRanking({
               rating: item.rating,
               trend: "same",
               stats: item.stats,
+              premium: item.premium,
             }}
             filter={filter}
             onPress={() => {

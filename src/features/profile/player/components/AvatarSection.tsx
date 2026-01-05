@@ -11,6 +11,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import CardOverlay from "./CardOverlay";
+import PremiumBadge from "../../../../shared/components/PremiumBadge";
 
 type PlayerStats = {
   gamesPlayed: number;
@@ -35,6 +36,7 @@ type Props = {
     departement?: string;
     club?: string;
     description?: string;
+    premium?: boolean;
   };
   onEditAvatar: (uri: string) => Promise<void>;
   avatarLoading: boolean;
@@ -116,19 +118,30 @@ export default function AvatarSection({
         </View>
 
         {/* 🟣 Nom */}
-        <Text
-          className="absolute text-white font-bold text-2xl"
+        <View
+          className="absolute w-full items-center"
           style={{
-            top: 247,
-            width: "100%",
-            textAlign: "center",
-            textShadowColor: "black",
-            textShadowOffset: { width: 1, height: 1 },
-            textShadowRadius: 4,
+            top: 240,
           }}
         >
-          {user.prenom} {user.nom}
-        </Text>
+          <View className="flex-row items-center justify-center">
+            <Text
+              className="text-white font-bold text-2xl"
+              style={{
+                textShadowColor: "black",
+                textShadowOffset: { width: 1, height: 1 },
+                textShadowRadius: 4,
+              }}
+            >
+              {user.prenom} {user.nom}
+            </Text>
+            {user.premium && (
+              <View className="ml-2">
+                <PremiumBadge compact />
+              </View>
+            )}
+          </View>
+        </View>
 
         {/* 🆕 Surcouche d'informations + stats */}
         <CardOverlay

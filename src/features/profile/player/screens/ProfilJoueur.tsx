@@ -11,6 +11,7 @@ import {
   ScrollView,
   RefreshControl,
   DeviceEventEmitter,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
@@ -283,7 +284,29 @@ export default function ProfilJoueur() {
             setBio={(v) => setEditField("description", v)}
           />
         </View>
-        <StatsChartSection playerUid={user?.uid} />
+        {user?.premium ? (
+          <StatsChartSection playerUid={user?.uid} />
+        ) : (
+          <View className="mt-6 px-5">
+            <View className="bg-[#1A1A1A] border border-gray-800 rounded-2xl p-4">
+              <Text className="text-white font-semibold text-lg">
+                Stats graphiques réservées au Premium
+              </Text>
+              <Text className="text-gray-400 mt-1">
+                Active l’offre Premium pour suivre tes courbes et progresser avec plus de détails.
+              </Text>
+
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Payment")}
+                className="mt-3 bg-orange-500 px-4 py-3 rounded-xl self-start"
+              >
+                <Text className="text-white font-semibold">
+                  Passer Premium
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
         {/* <GallerySection
           media={gallery}
           onAddMedia={goToCreatePost}

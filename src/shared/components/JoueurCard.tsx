@@ -5,6 +5,7 @@ import { View, Text, Image, Dimensions, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Joueur } from "../../types";
 import { PlayerAverages } from "../../utils/player/computePlayerStats";
+import PremiumBadge from "./PremiumBadge";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.9;
@@ -80,9 +81,16 @@ export default function JoueurCard({
 
         {/* Nom */}
         <View className="absolute top-[42%] w-full items-center">
-          <Text className="text-white text-[20px] font-bold">
-            {joueur.prenom} {joueur.nom}
-          </Text>
+          <View className="flex-row items-center justify-center">
+            <Text className="text-white text-[20px] font-bold">
+              {joueur.prenom} {joueur.nom}
+            </Text>
+            {joueur.premium && (
+              <View className="ml-2">
+                <PremiumBadge compact />
+              </View>
+            )}
+          </View>
         </View>
 
         {/* 📊 STATISTIQUES — NOUVELLE VERSION */}

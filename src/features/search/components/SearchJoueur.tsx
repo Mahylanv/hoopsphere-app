@@ -9,6 +9,7 @@ import {
   Image,
   ActivityIndicator,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "../../../config/firebaseConfig";
@@ -20,6 +21,8 @@ import { RootStackParamList } from "../../../types";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import JoueurFilter, { JoueurFiltre } from "../components/JoueurFilter";
 import { useFavoritePlayers } from "../hooks/useFavoritePlayers";
+import { usePremiumStatus } from "../../../shared/hooks/usePremiumStatus";
+import PremiumBadge from "../../../shared/components/PremiumBadge";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "SearchJoueur">;
 
@@ -36,8 +39,10 @@ const parsePoids = (p?: string) => {
 export default function SearchJoueur() {
   const navigation = useNavigation<NavProp>();
 
+  const { isPremium } = usePremiumStatus();
+
   const { favoritePlayerIds, isFavorite, toggleFavorite } =
-    useFavoritePlayers();
+    useFavoritePlayers(isPremium);
 
   const [search, setSearch] = useState("");
   const [joueurs, setJoueurs] = useState<Joueur[]>([]);
@@ -164,7 +169,16 @@ export default function SearchJoueur() {
         </View>
 
         <TouchableOpacity
-          onPress={() => setFilterVisible(true)}
+          onPress={() => {
+            if (!isPremium) {
+              Alert.alert(
+                "Réservé aux membres Premium",
+                "Active le Premium pour utiliser les filtres de recherche avancés."
+              );
+              return;
+            }
+            setFilterVisible(true);
+          }}
           className="p-2 rounded-xl"
         >
           <Ionicons name="filter-outline" size={26} color="#F97316" />
@@ -215,7 +229,16 @@ export default function SearchJoueur() {
             >
               {/* ⭐ FAVORI — coin haut droit */}
               <TouchableOpacity
-                onPress={() => toggleFavorite(item.uid)}
+                onPress={() => {
+                  if (!isPremium) {
+                    Alert.alert(
+                      "Favoris Premium",
+                      "Ajoute des joueurs en favori en passant en Premium."
+                    );
+                    return;
+                  }
+                  toggleFavorite(item.uid);
+                }}
                 hitSlop={10}
                 className="absolute top-2 right-2 z-10"
               >
@@ -236,9 +259,16 @@ export default function SearchJoueur() {
 
               {/* INFOS JOUEUR */}
               <View className="flex-1">
-                <Text className="text-white font-bold text-lg mb-1">
-                  {item.prenom} {item.nom}
-                </Text>
+                <View className="flex-row items-center mb-1">
+                  <Text className="text-white font-bold text-lg">
+                    {item.prenom} {item.nom}
+                  </Text>
+                  {item.premium && (
+                    <View className="ml-2">
+                      <PremiumBadge compact />
+                    </View>
+                  )}
+                </View>
 
                 <View className="flex-row items-center mb-1">
                   <Ionicons name="home-outline" size={14} color="#9ca3af" />
@@ -288,7 +318,7 @@ export default function SearchJoueur() {
 
       {/* Modal filtres */}
       <JoueurFilter
-        visible={filterVisible}
+        visible={filterVisible && isPremium}
         onClose={() => setFilterVisible(false)}
         onApply={(f) => setFilters(f)}
       />

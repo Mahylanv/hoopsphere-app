@@ -27,6 +27,7 @@ export type RankingPlayer = {
   club: string;
   genre: string;
   createdAt: any | null;
+  premium: boolean;
 
   // Stats & notes
   stats: PlayerAverages;
@@ -46,6 +47,10 @@ export default function usePlayerRanking() {
         for (const playerDoc of playersSnap.docs) {
           const uid = playerDoc.id;
           const playerData = playerDoc.data();
+
+          if (!playerData?.premium) {
+            continue;
+          }
 
           // Charger les matchs du joueur
           const matchesSnap = await getDocs(
@@ -78,6 +83,7 @@ export default function usePlayerRanking() {
                 : "https://via.placeholder.com/200.png",
 
             poste: playerData.poste ?? "",
+            premium: !!playerData.premium,
 
             // Champs nécessaires pour JoueurCard
             email: playerData.email ?? "",

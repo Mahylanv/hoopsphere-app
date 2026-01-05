@@ -4,6 +4,7 @@ import React from "react";
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { RankingFilter } from "../../search/utils/sortPlayers";
+import PremiumBadge from "../../../shared/components/PremiumBadge";
 
 interface RankingItemProps {
   player: {
@@ -15,6 +16,7 @@ interface RankingItemProps {
     rating: number;
     trend: "up" | "down" | "same";
     stats: any;
+    premium?: boolean;
   };
   filter: RankingFilter;
   onPress?: () => void;
@@ -79,9 +81,16 @@ export default function RankingItem({
         />
 
         <View className="flex-1">
-          <Text className="text-white font-semibold text-lg">
-            {player.name}
-          </Text>
+          <View className="flex-row items-center">
+            <Text className="text-white font-semibold text-lg">
+              {player.name}
+            </Text>
+            {player.premium && (
+              <View className="ml-2">
+                <PremiumBadge compact />
+              </View>
+            )}
+          </View>
           <Text className="text-gray-400 text-sm">{getStatText()}</Text>
         </View>
 
