@@ -11,6 +11,8 @@ import {
   where,
   Timestamp
 } from "firebase/firestore";
+import PremiumWall from "../../../../shared/components/PremiumWall";
+import { usePremiumStatus } from "../../../../shared/hooks/usePremiumStatus";
 
 type Visitor = {
   id: string;
@@ -25,11 +27,20 @@ export default function VisitorsScreen() {
   const [loading, setLoading] = useState(true);
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const navigation = useNavigation();
+  const { isPremium, loading: premiumLoading } = usePremiumStatus();
 
   useEffect(() => {
     const fetchVisitors = async () => {
+      if (!isPremium) {
+        setLoading(false);
+        return;
+      }
+
       const uid = auth.currentUser?.uid;
-      if (!uid) return;
+      if (!uid) {
+        setLoading(false);
+        return;
+      }
 
       try {
         // 📌 Aujourd'hui à minuit
@@ -90,14 +101,23 @@ export default function VisitorsScreen() {
     };
 
     fetchVisitors();
-  }, []);
+  }, [isPremium]);
 
-  if (loading) {
+  if (premiumLoading || loading) {
     return (
       <SafeAreaView className="flex-1 bg-black justify-center items-center">
         <ActivityIndicator size="large" color="#F97316" />
         <Text className="text-white mt-3">Chargement...</Text>
       </SafeAreaView>
+    );
+  }
+
+  if (!isPremium) {
+    return (
+      <PremiumWall
+        message="La liste des visiteurs est réservée aux membres Premium."
+        onPressUpgrade={() => (navigation as any).navigate("Payment")}
+      />
     );
   }
 

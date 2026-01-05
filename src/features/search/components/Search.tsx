@@ -13,11 +13,9 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
+  Alert,
 } from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -37,6 +35,8 @@ import ClubFilter, { ClubFiltre } from "./ClubFilters";
 import DepartmentSelect from "../../../shared/components/DepartmentSelect";
 import { useFavoriteClubs } from "../hooks/useFavoriteClubs";
 import FavoriteClubsTab from "../screens/FavoriteClubsTab";
+import PremiumWall from "../../../shared/components/PremiumWall";
+import { usePremiumStatus } from "../../../shared/hooks/usePremiumStatus";
 
 type SearchNavProp = NativeStackNavigationProp<RootStackParamList, "Search">;
 const Tab = createMaterialTopTabNavigator();
@@ -63,6 +63,11 @@ const normalize = (s: string) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
+
+type PremiumProps = {
+  isPremium: boolean;
+  onUpgrade: () => void;
+};
 
 function hasMixte(teams: FirestoreClub["teams"]): boolean {
   if (!teams && teams !== 0) return false;
@@ -117,7 +122,7 @@ function teamKindsLabel(item: FirestoreClub): string | null {
   return null;
 }
 
-function ClubsTab() {
+function ClubsTab({ isPremium, onUpgrade }: PremiumProps) {
   const navigation = useNavigation<SearchNavProp>();
 
   const [search, setSearch] = useState("");
@@ -131,7 +136,7 @@ function ClubsTab() {
   // Filtres (via modal)
   const [filterVisible, setFilterVisible] = useState(false);
   const [filters, setFilters] = useState<ClubFiltre>({});
-  const { isFavorite, toggleFavorite } = useFavoriteClubs();
+  const { isFavorite, toggleFavorite } = useFavoriteClubs(isPremium);
 
   // Chargement temps réel des clubs
   useEffect(() => {
@@ -257,7 +262,20 @@ function ClubsTab() {
             </Text>
           </View>
           <TouchableOpacity
-            onPress={() => setFilterVisible(true)}
+            onPress={() => {
+              if (!isPremium) {
+                Alert.alert(
+                  "Filtres Premium",
+                  "Débloque les filtres clubs avec l’offre Premium.",
+                  [
+                    { text: "Plus tard", style: "cancel" },
+                    { text: "Passer Premium", onPress: onUpgrade },
+                  ]
+                );
+                return;
+              }
+              setFilterVisible(true);
+            }}
             className="p-2 rounded-xl"
           >
             <Ionicons name="filter-outline" size={26} color="#F97316" />
@@ -364,7 +382,20 @@ function ClubsTab() {
 
                   {/* ⭐ FAVORI */}
                   <TouchableOpacity
-                    onPress={() => toggleFavorite(item.id)}
+                    onPress={() => {
+                      if (!isPremium) {
+                        Alert.alert(
+                          "Favoris Premium",
+                          "Ajoute des clubs en favori en passant en Premium.",
+                          [
+                            { text: "Annuler", style: "cancel" },
+                            { text: "Passer Premium", onPress: onUpgrade },
+                          ]
+                        );
+                        return;
+                      }
+                      toggleFavorite(item.id);
+                    }}
                     hitSlop={10}
                     className="ml-3"
                   >
@@ -396,7 +427,7 @@ function ClubsTab() {
 
       {/* Modal filtres */}
       <ClubFilter
-        visible={filterVisible}
+        visible={filterVisible && isPremium}
         onClose={() => setFilterVisible(false)}
         onApply={(f) => setFilters(f)}
         allCategories={allCategories}
@@ -633,7 +664,7 @@ function OffersFilter({
   );
 }
 
-function OffersTab() {
+function OffersTab({ isPremium, onUpgrade }: PremiumProps) {
   const navigation = useNavigation<SearchNavProp>();
 
   // Recherche unique : titre OU ville
@@ -837,7 +868,20 @@ function OffersTab() {
             </Text>
           </View>
           <TouchableOpacity
-            onPress={() => setFilterVisible(true)}
+            onPress={() => {
+              if (!isPremium) {
+                Alert.alert(
+                  "Filtres Premium",
+                  "Les filtres détaillés des offres sont réservés aux comptes Premium.",
+                  [
+                    { text: "Plus tard", style: "cancel" },
+                    { text: "Passer Premium", onPress: onUpgrade },
+                  ]
+                );
+                return;
+              }
+              setFilterVisible(true);
+            }}
             className="p-2 rounded-xl"
           >
             <Ionicons name="filter-outline" size={26} color="#F97316" />
@@ -992,7 +1036,7 @@ function OffersTab() {
 
       {/* Modal filtres — même UX que Clubs */}
       <OffersFilter
-        visible={filterVisible}
+        visible={filterVisible && isPremium}
         onClose={() => setFilterVisible(false)}
         onApply={setFilters}
         options={{
@@ -1008,7 +1052,11 @@ function OffersTab() {
 }
 
 export default function Search() {
-  const insets = useSafeAreaInsets(); // évite l’encoche qui cache les tabs
+  const { isPremium } = usePremiumStatus();
+  const navigation = useNavigation<SearchNavProp>();
+  const goToPremium = () => {
+    (navigation as any).navigate("Payment");
+  };
   return (
     <SafeAreaView className="flex-1 bg-black">
       <Tab.Navigator
@@ -1021,9 +1069,28 @@ export default function Search() {
           sceneStyle: { backgroundColor: "#000" },
         }}
       >
-        <Tab.Screen name="Clubs" component={ClubsTab} />
-        <Tab.Screen name="Offres" component={OffersTab} />
-        <Tab.Screen name="Favoris" component={FavoriteClubsTab} />
+        <Tab.Screen name="Clubs">
+          {() => (
+            <ClubsTab isPremium={isPremium} onUpgrade={goToPremium} />
+          )}
+        </Tab.Screen>
+        <Tab.Screen name="Offres">
+          {() => (
+            <OffersTab isPremium={isPremium} onUpgrade={goToPremium} />
+          )}
+        </Tab.Screen>
+        <Tab.Screen name="Favoris">
+          {() =>
+            isPremium ? (
+              <FavoriteClubsTab />
+            ) : (
+              <PremiumWall
+                message="Les favoris sont réservés aux membres Premium."
+                onPressUpgrade={goToPremium}
+              />
+            )
+          }
+        </Tab.Screen>
       </Tab.Navigator>
     </SafeAreaView>
   );

@@ -151,6 +151,7 @@ export default function RankingPlayerPanel({
     club: player.club ?? "",
     genre: player.genre ?? "",
     createdAt: player.createdAt ?? null,
+    premium: player.premium,
   };
 
   return (

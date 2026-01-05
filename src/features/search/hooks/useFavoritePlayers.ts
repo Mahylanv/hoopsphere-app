@@ -14,7 +14,7 @@ import {
 /* ============================================================
    HOOK — FAVORITE PLAYERS (par CLUB)
 ============================================================ */
-export function useFavoritePlayers() {
+export function useFavoritePlayers(enabled = true) {
   const [clubUid, setClubUid] = useState<string | null>(null);
   const [favoritePlayerIds, setFavoritePlayerIds] = useState<Set<string>>(
     new Set()
@@ -27,18 +27,25 @@ export function useFavoritePlayers() {
      AUTH (club connecté)
   ============================ */
   useEffect(() => {
+    if (!enabled) {
+      setClubUid(null);
+      setFavoritePlayerIds(new Set());
+      setLoading(false);
+      return;
+    }
+
     const unsub = auth.onAuthStateChanged((user) => {
       setClubUid(user?.uid ?? null);
     });
 
     return () => unsub();
-  }, []);
+  }, [enabled]);
 
   /* ============================
      SNAPSHOT FAVORIS
   ============================ */
   useEffect(() => {
-    if (!clubUid) {
+    if (!enabled || !clubUid) {
       setFavoritePlayerIds(new Set());
       setLoading(false);
       return;
@@ -61,7 +68,7 @@ export function useFavoritePlayers() {
     );
 
     return () => unsub();
-  }, [clubUid]);
+  }, [clubUid, enabled]);
 
   /* ============================
      HELPERS
@@ -73,7 +80,7 @@ export function useFavoritePlayers() {
 
   const addFavorite = useCallback(
     async (playerUid: string) => {
-      if (!clubUid) return;
+      if (!enabled || !clubUid) return;
 
       await setDoc(doc(db, "clubs", clubUid, "favoritePlayers", playerUid), {
         createdAt: serverTimestamp(),
@@ -93,7 +100,7 @@ export function useFavoritePlayers() {
 
   const toggleFavorite = useCallback(
     async (playerUid: string) => {
-      if (!clubUid) return;
+      if (!enabled || !clubUid) return;
 
       if (favoritePlayerIds.has(playerUid)) {
         await removeFavorite(playerUid);
@@ -101,11 +108,11 @@ export function useFavoritePlayers() {
         await addFavorite(playerUid);
       }
     },
-    [clubUid, favoritePlayerIds, addFavorite, removeFavorite]
+    [clubUid, favoritePlayerIds, addFavorite, removeFavorite, enabled]
   );
 
   const clearAllFavorites = useCallback(async () => {
-    if (!clubUid) return;
+    if (!enabled || !clubUid) return;
 
     const ids = Array.from(favoritePlayerIds);
 
@@ -118,7 +125,7 @@ export function useFavoritePlayers() {
         console.error("❌ Erreur suppression favori joueur:", playerUid, e);
       }
     }
-  }, [clubUid, favoritePlayerIds]);
+  }, [clubUid, favoritePlayerIds, enabled]);
 
   return {
     loading,

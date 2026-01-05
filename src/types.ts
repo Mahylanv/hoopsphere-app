@@ -17,6 +17,7 @@ export type Joueur = {
   departement?: string;
   avatar?: string;
   createdAt?: string;
+  premium?: boolean;
 };
 
 export type Club = {

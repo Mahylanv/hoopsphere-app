@@ -16,6 +16,9 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../types";
 import { useFavoritePlayers } from "../hooks/useFavoritePlayers";
 import { usePlayers } from "../hooks/usePlayers";
+import PremiumWall from "../../../shared/components/PremiumWall";
+import { usePremiumStatus } from "../../../shared/hooks/usePremiumStatus";
+import PremiumBadge from "../../../shared/components/PremiumBadge";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -24,12 +27,13 @@ type SortKey = "recent" | "name" | "poste" | "club";
 export default function FavoriteJoueursTab() {
   const navigation = useNavigation<NavProp>();
 
+  const { isPremium, loading: premiumLoading } = usePremiumStatus();
+
   const {
     favoritePlayerIds,
-    isFavorite,
     toggleFavorite,
     clearAllFavorites,
-  } = useFavoritePlayers();
+  } = useFavoritePlayers(isPremium);
 
   const { players, loading } = usePlayers();
 
@@ -69,12 +73,21 @@ export default function FavoriteJoueursTab() {
   /* ============================
      LOADING
   ============================ */
-  if (loading) {
+  if (premiumLoading || loading) {
     return (
       <SafeAreaView className="flex-1 bg-black items-center justify-center">
         <Ionicons name="hourglass-outline" size={32} color="#777" />
         <Text className="text-gray-400 mt-3">Chargement…</Text>
       </SafeAreaView>
+    );
+  }
+
+  if (!isPremium) {
+    return (
+      <PremiumWall
+        message="Les favoris joueurs sont réservés aux comptes Premium."
+        onPressUpgrade={() => navigation.navigate("Payment")}
+      />
     );
   }
 
@@ -151,9 +164,16 @@ export default function FavoriteJoueursTab() {
               />
 
               <View className="flex-1">
-                <Text className="text-white font-semibold text-lg">
-                  {item.prenom} {item.nom}
-                </Text>
+                <View className="flex-row items-center">
+                  <Text className="text-white font-semibold text-lg">
+                    {item.prenom} {item.nom}
+                  </Text>
+                  {item.premium && (
+                    <View className="ml-2">
+                      <PremiumBadge compact />
+                    </View>
+                  )}
+                </View>
 
                 <Text className="text-gray-400 text-sm">
                   {item.poste || "Poste inconnu"}

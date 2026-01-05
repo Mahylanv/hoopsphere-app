@@ -136,8 +136,8 @@ export default function HomeScreen() {
 
         {!loading && ranking.length === 0 && (
           <View className="items-center mt-10">
-            <Text className="text-gray-400 text-base">
-              Aucun joueur n’a encore été enregistré.
+            <Text className="text-gray-400 text-base text-center px-6">
+              Aucun joueur Premium n’est encore présent dans le classement.
             </Text>
           </View>
         )}

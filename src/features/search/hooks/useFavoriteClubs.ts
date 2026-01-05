@@ -12,7 +12,7 @@ type FavoriteSort =
   | "department"
   | "categories_count";
 
-export function useFavoriteClubs() {
+export function useFavoriteClubs(enabled = true) {
   const [favoriteClubIds, setFavoriteClubIds] = useState<Set<string>>(new Set());
   const [uid, setUid] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<FavoriteSort>("recent");
@@ -23,19 +23,25 @@ export function useFavoriteClubs() {
   useEffect(() => {
     console.log("🔐 useFavoriteClubs mounted");
 
+    if (!enabled) {
+      setUid(null);
+      setFavoriteClubIds(new Set());
+      return;
+    }
+
     const unsub = auth.onAuthStateChanged((user) => {
       console.log("👤 Auth state changed:", user?.uid);
       setUid(user?.uid ?? null);
     });
 
     return () => unsub();
-  }, []);
+  }, [enabled]);
 
   /* ============================
      FAVORITES SNAPSHOT
   ============================ */
   useEffect(() => {
-    if (!uid) {
+    if (!enabled || !uid) {
       console.log("⛔ Pas de uid → reset favoris");
       setFavoriteClubIds(new Set());
       return;
@@ -67,7 +73,7 @@ export function useFavoriteClubs() {
       console.log("🧹 Unsubscribe favoris");
       unsub();
     };
-  }, [uid]);
+  }, [uid, enabled]);
 
   /* ============================
      HELPERS
@@ -81,7 +87,7 @@ export function useFavoriteClubs() {
     async (clubUid: string) => {
       console.log("🔁 toggleFavorite:", clubUid);
 
-      if (!uid) {
+      if (!enabled || !uid) {
         console.log("⛔ toggleFavorite annulé (uid null)");
         return;
       }
@@ -94,7 +100,7 @@ export function useFavoriteClubs() {
         await addFavoriteClub(uid, clubUid);
       }
     },
-    [favoriteClubIds, uid]
+    [favoriteClubIds, uid, enabled]
   );
 
   /* ============================
@@ -103,7 +109,7 @@ export function useFavoriteClubs() {
   const clearAllFavorites = useCallback(async () => {
     console.log("🧨 clearAllFavorites appelé");
 
-    if (!uid) {
+    if (!enabled || !uid) {
       console.log("⛔ uid null → abandon");
       return;
     }
@@ -121,7 +127,7 @@ export function useFavoriteClubs() {
     }
 
     console.log("✅ Tous les favoris supprimés");
-  }, [favoriteClubIds, uid]);
+  }, [favoriteClubIds, uid, enabled]);
 
   return {
     favoriteClubIds,

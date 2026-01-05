@@ -17,6 +17,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFavoriteClubs } from "../hooks/useFavoriteClubs";
 import { useClubs } from "../hooks/useClubs";
 import type { RootStackParamList } from "../../../types";
+import PremiumWall from "../../../shared/components/PremiumWall";
+import { usePremiumStatus } from "../../../shared/hooks/usePremiumStatus";
 
 type FirestoreClub = {
   id: string;
@@ -33,8 +35,10 @@ type NavProp = NativeStackNavigationProp<RootStackParamList>;
 export default function FavoriteClubsTab() {
   const navigation = useNavigation<NavProp>();
 
-  const { favoriteClubIds, isFavorite, toggleFavorite, clearAllFavorites } =
-    useFavoriteClubs();
+  const { isPremium, loading: premiumLoading } = usePremiumStatus();
+
+  const { favoriteClubIds, toggleFavorite, clearAllFavorites } =
+    useFavoriteClubs(isPremium);
 
   const { clubs, loading } = useClubs();
 
@@ -69,11 +73,20 @@ export default function FavoriteClubsTab() {
   /* ============================
      LOADING / EMPTY
   ============================ */
-  if (loading) {
+  if (premiumLoading || loading) {
     return (
       <SafeAreaView className="flex-1 bg-black items-center justify-center">
         <ActivityIndicator size="large" color="#F97316" />
       </SafeAreaView>
+    );
+  }
+
+  if (!isPremium) {
+    return (
+      <PremiumWall
+        message="Les favoris clubs sont réservés aux membres Premium."
+        onPressUpgrade={() => navigation.navigate("Payment")}
+      />
     );
   }
 
