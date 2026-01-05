@@ -25,7 +25,7 @@ export type PlayerPost = {
 
   postType: "highlight" | "match" | "training";
   skills: string[];
-  visibility: "public" | "private";
+  visibility: "public" | "private" | "clubs";
 
   createdAt: Timestamp;
   likeCount: number;

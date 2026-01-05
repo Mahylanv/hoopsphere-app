@@ -28,7 +28,7 @@ export type CreatePostPayload = {
   location?: string;
   postType: "highlight" | "match" | "training";
   skills: string[];
-  visibility: "public" | "private";
+  visibility: "public" | "private" | "clubs";
 };
 
 export type UpdatePostPayload = {
@@ -36,7 +36,7 @@ export type UpdatePostPayload = {
   location?: string;
   postType: "highlight" | "match" | "training";
   skills: string[];
-  visibility: "public" | "private";
+  visibility: "public" | "private" | "clubs";
 };
 
 /* ============================================================

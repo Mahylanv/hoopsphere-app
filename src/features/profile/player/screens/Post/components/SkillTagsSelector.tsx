@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import React, { useState } from "react";
+import { View, Text, TouchableOpacity, TextInput } from "react-native";
 
 const SKILLS = [
   "3pts",
@@ -18,12 +18,29 @@ type Props = {
 };
 
 export default function SkillTagsSelector({ selected, onChange }: Props) {
+  const [custom, setCustom] = useState("");
+
+  const normalize = (s: string) => s.trim();
+
   const toggleSkill = (skill: string) => {
-    if (selected.includes(skill)) {
-      onChange(selected.filter((s) => s !== skill));
+    const label = normalize(skill);
+    if (!label) return;
+    if (selected.includes(label)) {
+      onChange(selected.filter((s) => s !== label));
     } else {
-      onChange([...selected, skill]);
+      onChange([...selected, label]);
     }
+  };
+
+  const addCustom = () => {
+    const label = normalize(custom);
+    if (!label) return;
+    if (selected.includes(label)) {
+      setCustom("");
+      return;
+    }
+    onChange([...selected, label]);
+    setCustom("");
   };
 
   return (
@@ -49,6 +66,23 @@ export default function SkillTagsSelector({ selected, onChange }: Props) {
             </TouchableOpacity>
           );
         })}
+      </View>
+
+      <View className="mt-4 flex-row items-center">
+        <TextInput
+          value={custom}
+          onChangeText={setCustom}
+          placeholder="#Ta compétence"
+          placeholderTextColor="#6b7280"
+          className="flex-1 bg-[#1a1a1a] text-white px-3 py-2 rounded-lg border border-gray-700"
+          autoCapitalize="none"
+        />
+        <TouchableOpacity
+          onPress={addCustom}
+          className="ml-3 bg-orange-500 px-3 py-2 rounded-lg"
+        >
+          <Text className="text-white font-semibold">Ajouter</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );

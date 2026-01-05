@@ -316,7 +316,7 @@ export default function ProfilJoueur() {
 
         <PostGridSection
           posts={posts}
-          onOpenPost={(post) =>
+          onOpenPost={(post, _index) =>
             navigation.navigate("EditPost", {
               post,
             })

@@ -23,6 +23,7 @@ export interface HomePost {
   avatar: string | null;
   likeCount: number;
   isLikedByMe: boolean;
+  premium: boolean;
   thumbnailUrl?: string | null;
   description?: string | null;
   location?: string | null;
@@ -55,13 +56,16 @@ export default function useAllPosts() {
 
             // 🔥 avatar joueur
             let avatar: string | null = null;
+            let premium = false;
             if (data.playerUid) {
               const userSnap = await getDoc(
                 doc(db, "joueurs", data.playerUid)
               );
-              avatar = userSnap.exists()
-                ? (userSnap.data().avatar ?? null)
-                : null;
+              if (userSnap.exists()) {
+                const uData = userSnap.data();
+                avatar = uData.avatar ?? null;
+                premium = !!uData.premium;
+              }
             }
 
             return {
@@ -72,6 +76,7 @@ export default function useAllPosts() {
               avatar,
               likeCount: data.likeCount ?? 0,
               isLikedByMe: false, // branchable plus tard
+              premium,
               thumbnailUrl: data.thumbnailUrl ?? null,
               description: data.description ?? null,
               location: data.location ?? null,
@@ -80,8 +85,21 @@ export default function useAllPosts() {
           })
         );
 
-        console.log("🔄 Feed HOME mis à jour :", all.length);
-        setPosts(all);
+        const getTime = (d: any) => {
+          if (!d) return 0;
+          if (typeof d.toMillis === "function") return d.toMillis();
+          const t = new Date(d).getTime();
+          return Number.isFinite(t) ? t : 0;
+        };
+
+        // Premium d'abord, puis date desc
+        const sorted = [...all].sort((a, b) => {
+          if (a.premium !== b.premium) return b.premium ? 1 : -1;
+          return getTime(b.createdAt) - getTime(a.createdAt);
+        });
+
+        console.log("🔄 Feed HOME mis à jour :", sorted.length);
+        setPosts(sorted);
         setLoading(false);
       },
       (error) => {

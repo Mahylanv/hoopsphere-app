@@ -43,7 +43,7 @@ type PostItem = {
   location?: string;
   postType: "highlight" | "match" | "training";
   skills: string[];
-  visibility: "public" | "private";
+  visibility: "public" | "private" | "clubs";
 };
 
 const POST_TYPES: PostItem["postType"][] = ["highlight", "match", "training"];
@@ -224,26 +224,30 @@ export default function EditPostScreen() {
         {/* VISIBILITY */}
         <View className="mt-6 ml-5">
           <Text className="text-white mb-2 font-semibold">Visibilité</Text>
-          <View className="flex-row gap-3">
-            {(["public", "private"] as const).map((v) => (
-              <TouchableOpacity
-                key={v}
-                onPress={() => setVisibility(v)}
-                className={`px-4 py-2 rounded-full border ${
-                  visibility === v
-                    ? "bg-orange-500 border-orange-500"
-                    : "border-gray-700"
-                }`}
-              >
-                <Text
-                  className={`font-semibold ${
-                    visibility === v ? "text-white" : "text-gray-400"
+          <View className="flex-row gap-3 flex-wrap">
+            {(["public", "private", "clubs"] as const).map((v) => {
+              const label =
+                v === "public" ? "Publique" : v === "private" ? "Privée" : "Clubs";
+              return (
+                <TouchableOpacity
+                  key={v}
+                  onPress={() => setVisibility(v)}
+                  className={`px-4 py-2 rounded-full border ${
+                    visibility === v
+                      ? "bg-orange-500 border-orange-500"
+                      : "border-gray-700"
                   }`}
                 >
-                  {v === "public" ? "Publique" : "Privée"}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    className={`font-semibold ${
+                      visibility === v ? "text-white" : "text-gray-400"
+                    }`}
+                  >
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
         {/* MEDIA */}
