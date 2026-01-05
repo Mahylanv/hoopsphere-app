@@ -47,6 +47,11 @@ export default function PostGridSection({
           <Text className="text-xl font-bold text-white ml-2">
             Publications
           </Text>
+          <View className="ml-2 bg-white/10 px-2.5 py-1 rounded-full">
+            <Text className="text-white text-xs font-semibold">
+              {posts?.length ?? 0}
+            </Text>
+          </View>
         </View>
 
         {/* CREATE POST */}

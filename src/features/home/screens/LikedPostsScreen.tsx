@@ -1,7 +1,7 @@
 // src/features/home/screens/LikedPostsScreen.tsx
 // Écran Premium – Posts likés par l'utilisateur
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -66,6 +66,7 @@ export default function LikedPostsScreen() {
 
   const [posts, setPosts] = useState<LikedPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortKey, setSortKey] = useState<"likesDesc" | "likesAsc" | "newest" | "oldest">("likesDesc");
 
   useEffect(() => {
     const fetchLikedPosts = async () => {
@@ -156,6 +157,29 @@ export default function LikedPostsScreen() {
         </View>
       </View>
 
+      {/* SORTING */}
+      <View className="px-4 py-3 border-b border-gray-900 flex-row flex-wrap gap-2">
+        {[
+          { key: "likesDesc", label: "Plus liké" },
+          { key: "likesAsc", label: "Moins liké" },
+          { key: "newest", label: "Plus récent" },
+          { key: "oldest", label: "Plus ancien" },
+        ].map((opt) => {
+          const active = sortKey === opt.key;
+          return (
+            <TouchableOpacity
+              key={opt.key}
+              onPress={() => setSortKey(opt.key as any)}
+              className={`px-3 py-2 rounded-full border ${active ? "border-orange-500 bg-orange-500/20" : "border-gray-700"}`}
+            >
+              <Text className={active ? "text-orange-300 font-semibold" : "text-gray-300"}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       {/* CONTENT */}
       {loading ? (
         <View className="flex-1 items-center justify-center">
@@ -169,7 +193,24 @@ export default function LikedPostsScreen() {
         </View>
       ) : (
         <FlatList
-          data={posts}
+          data={useMemo(() => {
+            const arr = [...posts];
+            return arr.sort((a, b) => {
+              const aDate = toDate(a.likedAt) || toDate(a.postCreatedAt);
+              const bDate = toDate(b.likedAt) || toDate(b.postCreatedAt);
+              switch (sortKey) {
+                case "likesAsc":
+                  return (a.likeCount ?? 0) - (b.likeCount ?? 0);
+                case "newest":
+                  return (bDate?.getTime() || 0) - (aDate?.getTime() || 0);
+                case "oldest":
+                  return (aDate?.getTime() || 0) - (bDate?.getTime() || 0);
+                case "likesDesc":
+                default:
+                  return (b.likeCount ?? 0) - (a.likeCount ?? 0);
+              }
+            });
+          }, [posts, sortKey])}
           keyExtractor={(item) => item.id}
           numColumns={2}
           showsVerticalScrollIndicator={false}
