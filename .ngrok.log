@@ -1,17 +1,48 @@
-t=2026-01-05T10:35:43+0100 lvl=info msg="no configuration paths supplied"
-t=2026-01-05T10:35:43+0100 lvl=info msg="using configuration at default config path" path=/home/mahylan/.config/ngrok/ngrok.yml
-t=2026-01-05T10:35:43+0100 lvl=info msg="open config file" path=/home/mahylan/.config/ngrok/ngrok.yml err=nil
-t=2026-01-05T10:35:43+0100 lvl=info msg="FIPS 140 mode" enabled=false
-t=2026-01-05T10:35:43+0100 lvl=info msg="starting web service" obj=web addr=127.0.0.1:4040 allow_hosts=[]
-t=2026-01-05T10:35:44+0100 lvl=info msg="client session established" obj=tunnels.session
-t=2026-01-05T10:35:44+0100 lvl=info msg="tunnel session started" obj=tunnels.session
-t=2026-01-05T10:35:44+0100 lvl=info msg="started tunnel" obj=tunnels name=command_line addr=http://localhost:8000 url=https://f5dbda400b0b.ngrok-free.app
-t=2026-01-05T10:35:44+0100 lvl=info msg=start pg=/api/tunnels id=b3cbc5980ab292ff
-t=2026-01-05T10:35:44+0100 lvl=info msg=end pg=/api/tunnels id=b3cbc5980ab292ff status=200 dur=512.274µs
-t=2026-01-05T10:37:00+0100 lvl=info msg="received stop request" obj=app stopReq="{err:<nil> restart:false}"
-t=2026-01-05T10:37:00+0100 lvl=info msg="session closing" obj=tunnels.session err=nil
-t=2026-01-05T10:37:00+0100 lvl=info msg="accept failed" obj=tunnels.session obj=csess id=6580a39fa234 err="reconnecting session closed"
-t=2026-01-05T10:37:00+0100 lvl=info msg="failed to accept connection: Listener closed" obj=tunnels.session clientid=8c9f7d144ea3fb0b8de64aeb0346de91
-t=2026-01-05T10:37:00+0100 lvl=warn msg="Stopping forwarder" name=command_line acceptErr="failed to accept connection: Listener closed"
-t=2026-01-05T10:37:00+0100 lvl=warn msg="Error restarting forwarder" name=command_line err="failed to start tunnel: session closed"
-t=2026-01-05T10:37:00+0100 lvl=info msg="no more state changes" obj=tunnels.session
+t=2026-01-05T11:31:10+0100 lvl=info msg="no configuration paths supplied"
+t=2026-01-05T11:31:10+0100 lvl=info msg="using configuration at default config path" path=/home/romain/.config/ngrok/ngrok.yml
+t=2026-01-05T11:31:10+0100 lvl=info msg="open config file" path=/home/romain/.config/ngrok/ngrok.yml err=nil
+t=2026-01-05T11:31:10+0100 lvl=info msg="starting web service" obj=web addr=127.0.0.1:4040 allow_hosts=[]
+t=2026-01-05T11:31:10+0100 lvl=eror msg="failed to reconnect session" obj=tunnels.session err="authentication failed: Your ngrok-agent version \"3.18.4\" is too old. The minimum supported agent version for your account is \"3.19.0\". Update to a newer version with 'ngrok update', by downloading from https://ngrok.com/download, or by updating your SDK version. Paid accounts are currently excluded from minimum agent version requirements. To begin handling traffic immediately without updating your agent, upgrade to a paid plan: https://dashboard.ngrok.com/billing/choose-a-plan.\r\n\r\nERR_NGROK_121\r\n"
+t=2026-01-05T11:31:10+0100 lvl=eror msg="session closing" obj=tunnels.session err="authentication failed: Your ngrok-agent version \"3.18.4\" is too old. The minimum supported agent version for your account is \"3.19.0\". Update to a newer version with 'ngrok update', by downloading from https://ngrok.com/download, or by updating your SDK version. Paid accounts are currently excluded from minimum agent version requirements. To begin handling traffic immediately without updating your agent, upgrade to a paid plan: https://dashboard.ngrok.com/billing/choose-a-plan.\r\n\r\nERR_NGROK_121\r\n"
+t=2026-01-05T11:31:10+0100 lvl=info msg="received stop request" obj=app stopReq="{err:{Remote:true Inner:{Inner:0xc000bf8420}} restart:false}"
+t=2026-01-05T11:31:10+0100 lvl=eror msg="terminating with error" obj=app err="authentication failed: Your ngrok-agent version \"3.18.4\" is too old. The minimum supported agent version for your account is \"3.19.0\". Update to a newer version with 'ngrok update', by downloading from https://ngrok.com/download, or by updating your SDK version. Paid accounts are currently excluded from minimum agent version requirements. To begin handling traffic immediately without updating your agent, upgrade to a paid plan: https://dashboard.ngrok.com/billing/choose-a-plan.\r\n\r\nERR_NGROK_121\r\n"
+t=2026-01-05T11:31:10+0100 lvl=crit msg="command failed" err="authentication failed: Your ngrok-agent version \"3.18.4\" is too old. The minimum supported agent version for your account is \"3.19.0\". Update to a newer version with 'ngrok update', by downloading from https://ngrok.com/download, or by updating your SDK version. Paid accounts are currently excluded from minimum agent version requirements. To begin handling traffic immediately without updating your agent, upgrade to a paid plan: https://dashboard.ngrok.com/billing/choose-a-plan.\r\n\r\nERR_NGROK_121\r\n"
+http - start an HTTP tunnel
+
+USAGE:
+  ngrok http [address:port | port] [flags]
+
+AUTHOR:
+  ngrok - <support@ngrok.com>
+
+COMMANDS: 
+  config          update or migrate ngrok's configuration file
+  http            start an HTTP tunnel
+  tcp             start a TCP tunnel
+  tunnel          start a tunnel for use with a tunnel-group backend
+
+EXAMPLES: 
+  ngrok http 80                                                 # secure public URL for port 80 web server
+  ngrok http --url baz.ngrok.dev 8080                           # port 8080 available at baz.ngrok.dev
+  ngrok tcp 22                                                  # tunnel arbitrary TCP traffic to port 22
+  ngrok http 80 --oauth=google --oauth-allow-email=foo@foo.com  # secure your app with oauth
+
+Paid Features: 
+  ngrok http 80 --url mydomain.com                              # run ngrok with your own custom domain
+  ngrok http 80 --cidr-allow 2600:8c00::a03c:91ee:fe69:9695/32  # run ngrok with IP policy restrictions
+  Upgrade your account at https://dashboard.ngrok.com/billing/subscription to access paid features
+
+Upgrade your account at https://dashboard.ngrok.com/billing/subscription to access paid features
+
+Flags:
+  -h, --help      help for ngrok
+
+Use "ngrok [command] --help" for more information about a command.
+
+ERROR:  authentication failed: Your ngrok-agent version "3.18.4" is too old. The minimum supported agent version for your account is "3.19.0". Update to a newer version with 'ngrok update', by downloading from https://ngrok.com/download, or by updating your SDK version. Paid accounts are currently excluded from minimum agent version requirements. To begin handling traffic immediately without updating your agent, upgrade to a paid plan: https://dashboard.ngrok.com/billing/choose-a-plan.
+t=2026-01-05T11:31:10+0100 lvl=warn msg="failed to check for update" obj=updater err="Post \"https://update.equinox.io/check\": context canceled"
+ERROR:  
+ERROR:  ERR_NGROK_121
+ERROR:  https://ngrok.com/docs/errors/err_ngrok_121
+t=2026-01-05T11:31:10+0100 lvl=info msg="no more state changes" obj=tunnels.session
+ERROR:  

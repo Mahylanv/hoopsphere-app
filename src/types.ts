@@ -125,6 +125,7 @@ export type RootStackParamList = {
   EditPost: undefined;
   
   LikedPosts: undefined;
+  PostLikes: undefined;
 };
 
 // NAVIGATION — JOUEUR

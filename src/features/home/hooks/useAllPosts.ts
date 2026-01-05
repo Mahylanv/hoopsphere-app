@@ -10,6 +10,7 @@ import {
   getDoc,
   where,
 } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import { db } from "../../../config/firebaseConfig";
 
 /* ============================================================
@@ -36,6 +37,8 @@ export interface HomePost {
 export default function useAllPosts() {
   const [posts, setPosts] = useState<HomePost[]>([]);
   const [loading, setLoading] = useState(true);
+  const auth = getAuth();
+  const uid = auth.currentUser?.uid;
 
   useEffect(() => {
     console.log("👂 Écoute temps réel des posts HOME");
@@ -68,6 +71,15 @@ export default function useAllPosts() {
               }
             }
 
+            // ❤️ est-ce que moi j'ai liké ce post ?
+            let isLikedByMe = false;
+            if (uid) {
+              const likeSnap = await getDoc(
+                doc(db, "posts", docSnap.id, "likes", uid)
+              );
+              isLikedByMe = likeSnap.exists();
+            }
+
             return {
               id: docSnap.id,
               url: data.mediaUrl,
@@ -75,8 +87,9 @@ export default function useAllPosts() {
               createdAt: data.createdAt,
               avatar,
               likeCount: data.likeCount ?? 0,
-              isLikedByMe: false, // branchable plus tard
+              // isLikedByMe: false, // branchable plus tard
               premium,
+              isLikedByMe,
               thumbnailUrl: data.thumbnailUrl ?? null,
               description: data.description ?? null,
               location: data.location ?? null,

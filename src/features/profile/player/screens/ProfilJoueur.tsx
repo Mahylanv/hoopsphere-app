@@ -126,11 +126,6 @@ export default function ProfilJoueur() {
     outputRange: [0, CARD_HEIGHT * 0.55],
     extrapolate: "clamp",
   });
-  const opacity = scrollY.interpolate({
-    inputRange: [0, 300],
-    outputRange: [1, 0],
-    extrapolate: "clamp",
-  });
 
   // Pull-to-refresh
   const [refreshing, setRefreshing] = useState(false);
@@ -220,7 +215,6 @@ export default function ProfilJoueur() {
               { scale },
               { translateY: Animated.add(translateY, adjustedTranslate) },
             ],
-            opacity,
           }}
         >
           <ViewShot
@@ -342,7 +336,7 @@ export default function ProfilJoueur() {
                   Alert.alert(
                     "Statut mis à jour",
                     value
-                      ? "Le compte est maintenant Premium ✨"
+                      ? "Le compte est maintenant Premium."
                       : "Le compte n'est plus Premium."
                   );
                 } catch (e) {

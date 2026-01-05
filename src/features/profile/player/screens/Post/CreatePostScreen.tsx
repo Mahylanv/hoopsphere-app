@@ -28,6 +28,7 @@ import VisibilitySelector from "./components/VisibilitySelector";
 import { createPost } from "../../services/postService";
 import { usePremiumStatus } from "../../../../../shared/hooks/usePremiumStatus";
 import { auth, db } from "../../../../../config/firebaseConfig";
+import AddressAutocomplete from "../../../../../shared/components/AddressAutocomplete";
 
 /* ============================================================
    TYPES
@@ -267,6 +268,10 @@ export default function CreatePostScreen() {
   /* ============================================================
      SUBMIT
   ============================================================ */
+  const MAX_DESCRIPTION_LINES = 3;
+  const clampDescription = (text: string) =>
+    text.split(/\r?\n/).slice(0, MAX_DESCRIPTION_LINES).join("\n");
+
   const handlePublish = async () => {
     if (!media || loading || compressing) return;
 
@@ -434,10 +439,11 @@ export default function CreatePostScreen() {
             </Text>
             <TextInput
               value={description}
-              onChangeText={setDescription}
+              onChangeText={(text) => setDescription(clampDescription(text))}
               placeholder="Explique le contexte, le match, l'action..."
               placeholderTextColor="#777"
               multiline
+              textAlignVertical="top"
               className="bg-[#1A1A1A] text-white p-4 rounded-xl min-h-[100px]"
             />
           </View>
@@ -446,20 +452,11 @@ export default function CreatePostScreen() {
             <Text className="text-white mb-2 font-semibold">
               Lieu
             </Text>
-            <View className="flex-row items-center bg-[#1A1A1A] rounded-xl px-4 py-3">
-              <Ionicons
-                name="location-outline"
-                size={20}
-                color="#aaa"
-              />
-              <TextInput
-                value={location}
-                onChangeText={setLocation}
-                placeholder="Gymnase, ville, tournoi..."
-                placeholderTextColor="#777"
-                className="text-white ml-3 flex-1"
-              />
-            </View>
+            <AddressAutocomplete
+              value={location}
+              placeholder="Gymnase, ville, tournoi..."
+              onSelect={(addr) => setLocation(addr.label)}
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
