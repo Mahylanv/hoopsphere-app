@@ -1,14 +1,13 @@
 // src/features/home/screens/PostLikesScreen.tsx
 // Liste les posts du joueur et affiche les personnes qui les ont likés
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
-  ScrollView,
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -28,12 +27,17 @@ import {
 import { Video, ResizeMode } from "expo-av";
 import { RootStackParamList } from "../../../types";
 
-const formatDate = (value: any) => {
+const toDate = (value: any) => {
   if (!value) return null;
   if (typeof value?.toDate === "function") value = value.toDate();
   else if (value?.seconds) value = new Date(value.seconds * 1000);
   const d = new Date(value);
-  if (isNaN(d.getTime())) return null;
+  return isNaN(d.getTime()) ? null : d;
+};
+
+const formatDate = (value: any) => {
+  const d = toDate(value);
+  if (!d) return null;
   return `${String(d.getDate()).padStart(2, "0")}/${String(
     d.getMonth() + 1
   ).padStart(2, "0")}/${d.getFullYear()}`;
@@ -105,7 +109,26 @@ export default function PostLikesScreen() {
   const [posts, setPosts] = useState<PostWithLikers[]>([]);
   const [loading, setLoading] = useState(true);
   const [permissionBlocked, setPermissionBlocked] = useState(false);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [sortKey, setSortKey] = useState<"likesDesc" | "likesAsc" | "newest" | "oldest">("likesDesc");
+
+  const sortedPosts = useMemo(() => {
+    const arr = [...posts];
+    return arr.sort((a, b) => {
+      const aDate = toDate(a.createdAt);
+      const bDate = toDate(b.createdAt);
+      switch (sortKey) {
+        case "likesAsc":
+          return (a.likeCount ?? 0) - (b.likeCount ?? 0);
+        case "newest":
+          return (bDate?.getTime() || 0) - (aDate?.getTime() || 0);
+        case "oldest":
+          return (aDate?.getTime() || 0) - (bDate?.getTime() || 0);
+        case "likesDesc":
+        default:
+          return (b.likeCount ?? 0) - (a.likeCount ?? 0);
+      }
+    });
+  }, [posts, sortKey]);
 
   useEffect(() => {
     const load = async () => {
@@ -244,6 +267,37 @@ export default function PostLikesScreen() {
         </View>
       </View>
 
+      {/* TRI */}
+      <View className="px-4 py-3 border-b border-gray-900 flex-row flex-wrap gap-2">
+        {[
+          { key: "likesDesc", label: "Plus liké" },
+          { key: "likesAsc", label: "Moins liké" },
+          { key: "newest", label: "Plus récent" },
+          { key: "oldest", label: "Plus ancien" },
+        ].map((opt) => {
+          const active = sortKey === opt.key;
+          return (
+            <TouchableOpacity
+              key={opt.key}
+              onPress={() => setSortKey(opt.key as any)}
+              className={`px-3 py-2 rounded-full border ${
+                active
+                  ? "border-orange-500 bg-orange-500/20"
+                  : "border-gray-700"
+              }`}
+            >
+              <Text
+                className={
+                  active ? "text-orange-300 font-semibold" : "text-gray-300"
+                }
+              >
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       {loading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#F97316" />
@@ -258,17 +312,17 @@ export default function PostLikesScreen() {
             </View>
           )}
           <FlatList
-            data={posts}
+            data={sortedPosts}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ padding: 12, paddingBottom: 40 }}
             ListEmptyComponent={() => (
-            <View className="flex-1 items-center justify-center mt-20">
-              <Text className="text-gray-400 text-center">
-                Aucun post trouvé ou pas encore de likes.
-              </Text>
-            </View>
-          )}
-          renderItem={({ item }) => (
+              <View className="flex-1 items-center justify-center mt-20">
+                <Text className="text-gray-400 text-center">
+                  Aucun post trouvé ou pas encore de likes.
+                </Text>
+              </View>
+            )}
+            renderItem={({ item }) => (
             <View className="bg-[#0f0f0f] border border-white/10 rounded-2xl p-4 mb-4">
               <Video
                 source={{ uri: item.mediaUrl }}
@@ -287,10 +341,6 @@ export default function PostLikesScreen() {
                   {formatDate(item.createdAt) ?? "Date inconnue"}
                 </Text>
               </View>
-
-              <Text className="text-gray-500 text-xs mt-1">
-                Publié le {formatDate(item.createdAt) ?? "date inconnue"}
-              </Text>
 
               <View className="mt-3">
                 <Text className="text-white font-semibold mb-2">

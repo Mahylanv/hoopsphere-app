@@ -155,7 +155,7 @@ export default function ClubOffers() {
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-900">
+      <View className="flex-1 justify-center items-center bg-[#0E0D0D]">
         <ActivityIndicator size="large" color="#F97316" />
         <Text className="text-gray-400 mt-3">Chargement des offres...</Text>
       </View>
@@ -163,7 +163,7 @@ export default function ClubOffers() {
   }
 
   return (
-    <View className="flex-1 bg-gray-900">
+    <View className="flex-1 bg-[#0E0D0D]">
       <StatusBar barStyle="light-content" />
 
       {/* Ajout d’offre uniquement si on affiche son propre club */}

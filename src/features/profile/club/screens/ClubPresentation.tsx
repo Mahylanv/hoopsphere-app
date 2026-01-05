@@ -82,7 +82,7 @@ export default function ClubPresentation() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-gray-900 justify-center items-center">
+      <View className="flex-1 bg-[#0E0D0D] justify-center items-center">
         <ActivityIndicator size="large" color="#F97316" />
         <Text className="text-gray-300 mt-3">Chargement du profil...</Text>
       </View>
@@ -91,7 +91,7 @@ export default function ClubPresentation() {
 
   if (!club) {
     return (
-      <View className="flex-1 bg-gray-900 justify-center items-center">
+      <View className="flex-1 bg-[#0E0D0D] justify-center items-center">
         <Text className="text-gray-300 text-center px-4">
           Aucune donnée trouvée.
         </Text>
@@ -107,7 +107,7 @@ export default function ClubPresentation() {
       : [];
 
   return (
-    <ScrollView className="flex-1 bg-gray-900 p-4">
+    <ScrollView className="flex-1 bg-[#0E0D0D] p-4">
       <StatusBar barStyle="light-content" />
 
       {/* === DESCRIPTION === */}
@@ -175,7 +175,7 @@ export default function ClubPresentation() {
       {isOwner && (
         <Modal visible={modalVisible} transparent animationType="fade">
           <View className="flex-1 bg-black/70 justify-center items-center px-6">
-            <View className="bg-gray-900 p-6 rounded-xl w-full max-w-md border border-gray-700">
+            <View className="bg-[#0E0D0D] p-6 rounded-xl w-full max-w-md border border-gray-700">
               <Text className="text-lg text-white font-semibold mb-3">
                 {fieldToEdit === "description" && "Ajouter une description"}
                 {fieldToEdit === "categories" && "Ajouter des catégories (séparées par des virgules)"}

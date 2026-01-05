@@ -162,7 +162,7 @@ export default function ProfilClub() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-900">
+    <SafeAreaView className="flex-1 bg-[#0E0D0D]">
       <StatusBar barStyle="light-content" />
 
       {/* HEADER */}

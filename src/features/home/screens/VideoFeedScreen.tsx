@@ -284,7 +284,7 @@ export default function VideoFeedScreen({ route }: Props) {
                   ref={(ref) => {
                     videoRefs.current[index] = ref;
                   }}
-                  source={{ uri: item.url }}
+                  source={{ uri: item.cachedUrl || item.url }}
                   style={{ width: "100%", height: "100%" }}
                   resizeMode={ResizeMode.COVER}
                   isLooping

@@ -66,7 +66,6 @@ export default function LikedPostsScreen() {
 
   const [posts, setPosts] = useState<LikedPost[]>([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     const fetchLikedPosts = async () => {
       const user = auth.currentUser;

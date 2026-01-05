@@ -11,6 +11,7 @@ import {
   where,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { Asset } from "expo-asset";
 import { db } from "../../../config/firebaseConfig";
 
 /* ============================================================
@@ -19,6 +20,7 @@ import { db } from "../../../config/firebaseConfig";
 export interface HomePost {
   id: string;
   url: string;
+  cachedUrl?: string | null;
   playerUid: string;
   createdAt: any;
   avatar: string | null;
@@ -34,21 +36,42 @@ export interface HomePost {
 /* ============================================================
    HOOK
 ============================================================ */
-export default function useAllPosts() {
+export default function useAllPosts({ includeClubVisibility = false }: { includeClubVisibility?: boolean } = {}) {
   const [posts, setPosts] = useState<HomePost[]>([]);
   const [loading, setLoading] = useState(true);
   const auth = getAuth();
   const uid = auth.currentUser?.uid;
 
+  const prefetchTopVideos = async (list: HomePost[]) => {
+    const MAX_PREFETCH = 4;
+    const copy = [...list];
+    await Promise.all(
+      copy.slice(0, MAX_PREFETCH).map(async (p) => {
+        try {
+          const asset = await Asset.fromURI(p.url);
+          await asset.downloadAsync();
+          p.cachedUrl = asset.localUri ?? asset.uri ?? p.url;
+        } catch (e) {
+          console.log("⚠️ Prefetch vidéo échoué :", e);
+          p.cachedUrl = p.url;
+        }
+      })
+    );
+    return copy;
+  };
+
   useEffect(() => {
     console.log("👂 Écoute temps réel des posts HOME");
 
-    const q = query(
-      collection(db, "posts"),
+    const constraints: any[] = [
       where("mediaType", "==", "video"),
-      where("visibility", "==", "public"),
-      orderBy("createdAt", "desc")
-    );
+      includeClubVisibility
+        ? where("visibility", "in", ["public", "clubs"])
+        : where("visibility", "==", "public"),
+      orderBy("createdAt", "desc"),
+    ];
+
+    const q = query(collection(db, "posts"), ...constraints);
 
     const unsubscribe = onSnapshot(
       q,
@@ -111,8 +134,11 @@ export default function useAllPosts() {
           return getTime(b.createdAt) - getTime(a.createdAt);
         });
 
+        // Prefetch des premières vidéos pour démarrage immédiat
+        const withCache = await prefetchTopVideos(sorted);
+
         console.log("🔄 Feed HOME mis à jour :", sorted.length);
-        setPosts(sorted);
+        setPosts(withCache);
         setLoading(false);
       },
       (error) => {

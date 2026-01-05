@@ -16,7 +16,7 @@ export default function SearchJoueurTabs() {
   const goToPremium = () => (navigation as any).navigate("Payment");
 
   return (
-    <SafeAreaView className="flex-1 bg-black">
+    <SafeAreaView className="flex-1 bg-[#0E0D0D]">
       <Tab.Navigator
         screenOptions={{
           tabBarStyle: { backgroundColor: "#1f2937" },
