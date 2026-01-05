@@ -28,6 +28,7 @@ import VisibilitySelector from "./components/VisibilitySelector";
 import { createPost } from "../../services/postService";
 import { usePremiumStatus } from "../../../../../shared/hooks/usePremiumStatus";
 import { auth, db } from "../../../../../config/firebaseConfig";
+import AddressAutocomplete from "../../../../../shared/components/AddressAutocomplete";
 
 /* ============================================================
    TYPES
@@ -451,6 +452,11 @@ export default function CreatePostScreen() {
             <Text className="text-white mb-2 font-semibold">
               Lieu
             </Text>
+            <AddressAutocomplete
+              value={location}
+              placeholder="Gymnase, ville, tournoi..."
+              onSelect={(addr) => setLocation(addr.label)}
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

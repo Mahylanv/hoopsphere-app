@@ -87,8 +87,9 @@ export default function useAllPosts() {
               createdAt: data.createdAt,
               avatar,
               likeCount: data.likeCount ?? 0,
-              isLikedByMe: false, // branchable plus tard
+              // isLikedByMe: false, // branchable plus tard
               premium,
+              isLikedByMe,
               thumbnailUrl: data.thumbnailUrl ?? null,
               description: data.description ?? null,
               location: data.location ?? null,
