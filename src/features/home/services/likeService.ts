@@ -5,6 +5,8 @@ import {
   runTransaction,
   serverTimestamp,
   getFirestore,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
@@ -46,6 +48,7 @@ export async function toggleLikePost(postId: string, postOwnerUid: string) {
 
       transaction.update(postRef, {
         likeCount: Math.max(currentLikeCount - 1, 0),
+        likedBy: arrayRemove(uid),
       });
 
       return;
@@ -66,6 +69,7 @@ export async function toggleLikePost(postId: string, postOwnerUid: string) {
 
     transaction.update(postRef, {
       likeCount: currentLikeCount + 1,
+      likedBy: arrayUnion(uid),
     });
   });
 }

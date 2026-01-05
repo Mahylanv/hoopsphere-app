@@ -56,10 +56,16 @@ export default function EditPostScreen() {
   const route = useRoute<any>();
   const { post } = route.params as { post: PostItem };
 
+  const MAX_DESCRIPTION_LINES = 3;
+  const clampDescription = (text: string) =>
+    (text || "").split(/\r?\n/).slice(0, MAX_DESCRIPTION_LINES).join("\n");
+
   /* -------------------------------
      STATES
   -------------------------------- */
-  const [description, setDescription] = useState(post.description);
+  const [description, setDescription] = useState(
+    clampDescription(post.description)
+  );
   const [location, setLocation] = useState(post.location || "");
   const [postType, setPostType] = useState(post.postType);
   const [visibility, setVisibility] = useState(post.visibility);
@@ -333,10 +339,11 @@ export default function EditPostScreen() {
           <Text className="text-white mb-2 font-semibold">Description</Text>
           <TextInput
             value={description}
-            onChangeText={setDescription}
+            onChangeText={(text) => setDescription(clampDescription(text))}
             multiline
             placeholder="Description"
             placeholderTextColor="#666"
+            textAlignVertical="top"
             className="bg-[#1A1A1A] text-white p-4 rounded-xl min-h-[100px]"
           />
 

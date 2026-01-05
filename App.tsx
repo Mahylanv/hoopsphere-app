@@ -47,6 +47,7 @@ import TestPrenium from "./src/legacy/TestPrenium";
 import CreatePostScreen from "./src/features/profile/player/screens/Post/CreatePostScreen";
 import EditPostScreen from "./src/features/profile/player/screens/Post/EditPostScreen";
 import LikedPostsScreen from "./src/features/home/screens/LikedPostsScreen";
+import PostLikesScreen from "./src/features/home/screens/PostLikesScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -145,6 +146,11 @@ function RootNavigator() {
         <Stack.Screen
           name="LikedPosts"
           component={LikedPostsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="PostLikes"
+          component={PostLikesScreen}
           options={{ headerShown: false }}
         />
 

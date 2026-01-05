@@ -106,6 +106,15 @@ export default function TestPrenium() {
                 Voir mes posts likés ❤️
               </Text>
             </Pressable>
+
+            <Pressable
+              onPress={() => navigation.navigate("PostLikes")}
+              className="bg-purple-600 px-4 py-3 rounded-xl"
+            >
+              <Text className="text-white font-semibold text-center">
+                Voir qui a liké mes posts
+              </Text>
+            </Pressable>
           </View>
         )}
 

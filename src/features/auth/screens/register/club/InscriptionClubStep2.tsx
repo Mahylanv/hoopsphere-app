@@ -17,6 +17,7 @@ import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { RootStackParamList } from "../../../../../types";
+import AddressAutocomplete from "../../../../../shared/components/AddressAutocomplete";
 
 // Firebase
 import { db } from "../../../../../config/firebaseConfig";
@@ -163,12 +164,10 @@ export default function InscriptionClubStep2() {
             </View>
 
             {/* Ville */}
-            <TextInput
-              placeholder="Ville"
-              placeholderTextColor="#ccc"
+            <AddressAutocomplete
               value={city}
-              onChangeText={setCity}
-              className="border border-gray-600 rounded-xl px-4 h-14 text-white bg-[#111] mb-8"
+              placeholder="Ville / adresse du club"
+              onSelect={(addr) => setCity(addr.label)}
             />
 
             {/* ---------- ÉQUIPES CONCERNÉES ---------- */}
