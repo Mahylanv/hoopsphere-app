@@ -15,9 +15,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as VideoThumbnails from "expo-video-thumbnails";
+import * as FileSystem from "expo-file-system";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useNavigation } from "@react-navigation/native";
+import { UIImagePickerControllerQualityType, VideoExportPreset } from "expo-image-picker";
 
 import PostTypeSelector from "./components/PostTypeSelector";
 import SkillTagsSelector from "./components/SkillTagsSelector";
@@ -45,8 +47,76 @@ export default function CreatePostScreen() {
   const [skills, setSkills] = useState<string[]>([]);
   const [visibility, setVisibility] = useState<Visibility>("public");
   const [loading, setLoading] = useState(false);
+  const [compressing, setCompressing] = useState(false);
 
   const navigation = useNavigation<any>();
+  const MAX_VIDEO_DURATION = 60; // seconds
+  const MAX_VIDEO_SIZE = 120 * 1024 * 1024; // 120 Mo en octets
+
+  const normalizeDurationSeconds = (duration?: number) => {
+    if (!duration) return 0;
+    // Certains devices renvoient la durée en ms
+    return duration > 1200 ? duration / 1000 : duration;
+  };
+
+  const checkVideoConstraints = async (
+    uri: string,
+    duration?: number,
+    fileSize?: number
+  ) => {
+    const durSec = normalizeDurationSeconds(duration);
+
+    let size = fileSize;
+    if (size == null) {
+      const info = await FileSystem.getInfoAsync(uri);
+      size = info.size ?? undefined;
+    }
+
+    const errors: string[] = [];
+
+    if (durSec && durSec > MAX_VIDEO_DURATION) {
+      errors.push(
+        `Durée maximale : 60 secondes (ta vidéo fait ~${Math.round(durSec)}s).`
+      );
+    }
+
+    if (size != null && size > MAX_VIDEO_SIZE) {
+      const mb = (size / (1024 * 1024)).toFixed(1);
+      errors.push(`Poids maximum : 120 Mo (taille détectée : ${mb} Mo).`);
+    }
+
+    if (errors.length > 0) {
+      Alert.alert("Vidéo non valide", errors.join("\n"));
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleCancel = () => {
+    const hasContent =
+      media ||
+      description.trim().length > 0 ||
+      location.trim().length > 0 ||
+      skills.length > 0;
+
+    if (hasContent) {
+      Alert.alert(
+        "Annuler la publication ?",
+        "Tes modifications seront perdues.",
+        [
+          { text: "Continuer", style: "cancel" },
+          {
+            text: "Quitter",
+            style: "destructive",
+            onPress: () => navigation.goBack(),
+          },
+        ]
+      );
+    } else {
+      navigation.goBack();
+    }
+  };
 
   /* ============================================================
      PICK / CHANGE MEDIA
@@ -60,9 +130,11 @@ export default function CreatePostScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images", "videos"],
-      quality: 1,
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      quality: 0.6,
       allowsEditing: true,
+      videoQuality: UIImagePickerControllerQualityType.Medium,
+      videoExportPreset: VideoExportPreset.MediumQuality,
     });
 
     if (result.canceled) return;
@@ -71,6 +143,18 @@ export default function CreatePostScreen() {
 
     // 🎥 VIDEO → MINIATURE
     if (asset.type === "video") {
+      setCompressing(true);
+      const ok = await checkVideoConstraints(
+        asset.uri,
+        asset.duration,
+        // Expo renvoie fileSize en octets (si dispo)
+        (asset as any).fileSize ?? undefined
+      );
+      if (!ok) {
+        setCompressing(false);
+        return;
+      }
+
       try {
         const { uri: thumbUri } =
           await VideoThumbnails.getThumbnailAsync(asset.uri, {
@@ -90,6 +174,8 @@ export default function CreatePostScreen() {
           thumbnailUri: null,
         });
       }
+
+      setCompressing(false);
     } else {
       // 🖼️ IMAGE
       setMedia({
@@ -99,19 +185,64 @@ export default function CreatePostScreen() {
     }
   };
 
-  const openMediaEditor = () => {
+  const openMediaEditor = async () => {
     if (!media) return;
-  
-    if (media.type === "video") {
-      Alert.alert(
-        "Édition vidéo",
-        "Ici tu pourras couper / ajuster la vidéo (à brancher)",
+
+    const picker = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes:
+        media.type === "video"
+          ? ImagePicker.MediaTypeOptions.Videos
+          : ImagePicker.MediaTypeOptions.Images,
+      quality: 0.6,
+      allowsEditing: true,
+      aspect: media.type === "image" ? [9, 16] : undefined,
+      videoQuality: UIImagePickerControllerQualityType.Medium,
+      videoExportPreset: VideoExportPreset.MediumQuality,
+    });
+
+    if (picker.canceled) return;
+
+    const asset = picker.assets[0];
+
+    if (asset.type === "video") {
+      setCompressing(true);
+
+      const ok = await checkVideoConstraints(
+        asset.uri,
+        asset.duration,
+        (asset as any).fileSize ?? undefined
       );
+      if (!ok) {
+        setCompressing(false);
+        return;
+      }
+
+      try {
+        const { uri: thumbUri } =
+          await VideoThumbnails.getThumbnailAsync(asset.uri, {
+            time: 500,
+          });
+
+        setMedia({
+          uri: asset.uri,
+          type: "video",
+          thumbnailUri: thumbUri,
+        });
+      } catch (e) {
+        console.warn("⚠️ Miniature vidéo impossible", e);
+        setMedia({
+          uri: asset.uri,
+          type: "video",
+          thumbnailUri: null,
+        });
+      }
+
+      setCompressing(false);
     } else {
-      Alert.alert(
-        "Édition image",
-        "Édition image à venir",
-      );
+      setMedia({
+        uri: asset.uri,
+        type: "image",
+      });
     }
   };
 
@@ -162,22 +293,36 @@ export default function CreatePostScreen() {
         <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
           {/* HEADER */}
           <View className="flex-row items-center justify-between px-4 py-3">
+            <TouchableOpacity onPress={handleCancel} disabled={loading || compressing}>
+              <Text
+                className={`text-base font-semibold ${
+                  loading || compressing ? "text-gray-600" : "text-gray-300"
+                }`}
+              >
+                Annuler
+              </Text>
+            </TouchableOpacity>
+
             <Text className="text-white text-lg font-semibold">
               Nouvelle publication
             </Text>
 
             <TouchableOpacity
               onPress={handlePublish}
-              disabled={!media || loading}
+              disabled={!media || loading || compressing}
             >
               <Text
                 className={`text-base font-semibold ${
-                  media && !loading
+                  media && !loading && !compressing
                     ? "text-orange-400"
                     : "text-gray-500"
                 }`}
               >
-                {loading ? "Publication..." : "Publier"}
+                {compressing
+                  ? "Compression..."
+                  : loading
+                    ? "Publication..."
+                    : "Publier"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -242,7 +387,7 @@ export default function CreatePostScreen() {
             {/* 🔁 CHANGE MEDIA */}
             {media && (
               <TouchableOpacity
-                onPress={pickMedia}
+                onPress={openMediaEditor}
                 className="mt-3 self-center flex-row items-center"
               >
                 <Ionicons
