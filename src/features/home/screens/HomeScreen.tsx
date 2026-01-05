@@ -18,9 +18,15 @@ import RankingPlayerPanel from "../components/RankingPlayerPanel";
 import { RankingPlayer } from "../hooks/usePlayerRanking";
 import { VideoItem } from "../../../types";
 
-export default function HomeScreen() {
+type Props = {
+  forClub?: boolean;
+};
+
+export default function HomeScreen({ forClub = false }: Props) {
   const { ranking, loading } = usePlayerRanking();
-  const { posts, loading: postsLoading } = useAllPosts();
+  const { posts, loading: postsLoading } = useAllPosts({
+    includeClubVisibility: forClub,
+  });
 
   // ⭐ Nouveaux states pour le PANEL
   const [selectedPlayer, setSelectedPlayer] = useState<RankingPlayer | null>(

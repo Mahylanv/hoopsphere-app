@@ -36,7 +36,7 @@ export interface HomePost {
 /* ============================================================
    HOOK
 ============================================================ */
-export default function useAllPosts() {
+export default function useAllPosts({ includeClubVisibility = false }: { includeClubVisibility?: boolean } = {}) {
   const [posts, setPosts] = useState<HomePost[]>([]);
   const [loading, setLoading] = useState(true);
   const auth = getAuth();
@@ -63,12 +63,15 @@ export default function useAllPosts() {
   useEffect(() => {
     console.log("👂 Écoute temps réel des posts HOME");
 
-    const q = query(
-      collection(db, "posts"),
+    const constraints: any[] = [
       where("mediaType", "==", "video"),
-      where("visibility", "==", "public"),
-      orderBy("createdAt", "desc")
-    );
+      includeClubVisibility
+        ? where("visibility", "in", ["public", "clubs"])
+        : where("visibility", "==", "public"),
+      orderBy("createdAt", "desc"),
+    ];
+
+    const q = query(collection(db, "posts"), ...constraints);
 
     const unsubscribe = onSnapshot(
       q,

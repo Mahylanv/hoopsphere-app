@@ -22,6 +22,9 @@ export default function SkillTagsSelector({ selected, onChange }: Props) {
 
   const normalize = (s: string) => s.trim();
 
+  const customTags = selected.filter((s) => !SKILLS.includes(s));
+  const builtinTags = SKILLS;
+
   const toggleSkill = (skill: string) => {
     const label = normalize(skill);
     if (!label) return;
@@ -50,11 +53,27 @@ export default function SkillTagsSelector({ selected, onChange }: Props) {
       </Text>
 
       <View className="flex-row flex-wrap gap-2">
-        {SKILLS.map((skill) => {
+        {builtinTags.map((skill) => {
           const active = selected.includes(skill);
           return (
             <TouchableOpacity
               key={skill}
+              onPress={() => toggleSkill(skill)}
+              className={`px-3 py-1.5 rounded-full border ${
+                active
+                  ? "bg-orange-500 border-orange-500"
+                  : "border-gray-600"
+              }`}
+            >
+              <Text className="text-white text-sm">#{skill}</Text>
+            </TouchableOpacity>
+          );
+        })}
+        {customTags.map((skill) => {
+          const active = selected.includes(skill);
+          return (
+            <TouchableOpacity
+              key={`custom-${skill}`}
               onPress={() => toggleSkill(skill)}
               className={`px-3 py-1.5 rounded-full border ${
                 active
@@ -72,7 +91,7 @@ export default function SkillTagsSelector({ selected, onChange }: Props) {
         <TextInput
           value={custom}
           onChangeText={setCustom}
-          placeholder="#Ta compétence"
+          placeholder="Ton hashtag perso"
           placeholderTextColor="#6b7280"
           className="flex-1 bg-[#1a1a1a] text-white px-3 py-2 rounded-lg border border-gray-700"
           autoCapitalize="none"

@@ -80,7 +80,7 @@ export default function EditOffer() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-900">
+    <SafeAreaView className="flex-1 bg-[#0E0D0D]">
       <StatusBar barStyle="light-content" />
 
       {/* 🔹 Header */}
@@ -221,7 +221,7 @@ export default function EditOffer() {
           <TouchableOpacity
             activeOpacity={1}
             onPress={() => setShowPosteSelect(false)}
-            className="flex-1 bg-black/60 justify-center px-6"
+        className="flex-1 bg-black/60 justify-center px-6"
           >
             <View className="bg-[#1b1f2a] rounded-3xl p-6">
               <Text className="text-white text-xl font-bold mb-4">Postes</Text>

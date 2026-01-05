@@ -131,7 +131,7 @@ export default function EditClubProfile() {
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-black">
+      <View className="flex-1 justify-center items-center bg-[#0E0D0D]">
         <ActivityIndicator size="large" color="#F97316" />
         <Text className="text-white mt-3">Chargement...</Text>
       </View>
@@ -139,7 +139,7 @@ export default function EditClubProfile() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-900">
+    <SafeAreaView className="flex-1 bg-[#0E0D0D]">
       {/* HEADER */}
       <View className="flex-row items-center px-5 py-4 border-b border-gray-800 bg-[#0E1117] shadow-md">
         <TouchableOpacity onPress={() => navigation.goBack()}>

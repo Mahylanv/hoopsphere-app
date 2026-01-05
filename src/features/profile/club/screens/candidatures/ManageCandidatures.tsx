@@ -176,7 +176,7 @@ export default function ManageCandidatures() {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-black">
+        <SafeAreaView className="flex-1 bg-[#0E0D0D]">
             {/* <StatusBar barStyle="light-content" /> */}
 
             {/* Header */}
