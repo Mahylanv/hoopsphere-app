@@ -16,7 +16,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as VideoThumbnails from "expo-video-thumbnails";
 import * as FileSystem from "expo-file-system";
-import * as FileSystem from "expo-file-system";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useNavigation } from "@react-navigation/native";
@@ -51,7 +50,6 @@ export default function CreatePostScreen() {
   const [skills, setSkills] = useState<string[]>([]);
   const [visibility, setVisibility] = useState<Visibility>("public");
   const [loading, setLoading] = useState(false);
-  const [compressing, setCompressing] = useState(false);
   const [compressing, setCompressing] = useState(false);
 
   const navigation = useNavigation<any>();
@@ -157,11 +155,7 @@ export default function CreatePostScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
       quality: 0.6,
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
-      quality: 0.6,
       allowsEditing: true,
-      videoQuality: UIImagePickerControllerQualityType.Medium,
-      videoExportPreset: VideoExportPreset.MediumQuality,
       videoQuality: UIImagePickerControllerQualityType.Medium,
       videoExportPreset: VideoExportPreset.MediumQuality,
     });
@@ -213,7 +207,6 @@ export default function CreatePostScreen() {
   };
 
   const openMediaEditor = async () => {
-  const openMediaEditor = async () => {
     if (!media) return;
 
     const picker = await ImagePicker.launchImageLibraryAsync({
@@ -264,10 +257,6 @@ export default function CreatePostScreen() {
       }
       setCompressing(false);
     } else {
-      setMedia({
-        uri: asset.uri,
-        type: "image",
-      });
       setMedia({
         uri: asset.uri,
         type: "image",
@@ -337,16 +326,6 @@ export default function CreatePostScreen() {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleCancel} disabled={loading || compressing}>
-              <Text
-                className={`text-base font-semibold ${
-                  loading || compressing ? "text-gray-600" : "text-gray-300"
-                }`}
-              >
-                Annuler
-              </Text>
-            </TouchableOpacity>
-
             <Text className="text-white text-lg font-semibold">
               Nouvelle publication
             </Text>
@@ -354,21 +333,14 @@ export default function CreatePostScreen() {
             <TouchableOpacity
               onPress={handlePublish}
               disabled={!media || loading || compressing}
-              disabled={!media || loading || compressing}
             >
               <Text
                 className={`text-base font-semibold ${
-                  media && !loading && !compressing
                   media && !loading && !compressing
                     ? "text-orange-400"
                     : "text-gray-500"
                 }`}
               >
-                {compressing
-                  ? "Compression..."
-                  : loading
-                    ? "Publication..."
-                    : "Publier"}
                 {compressing
                   ? "Compression..."
                   : loading
@@ -438,7 +410,6 @@ export default function CreatePostScreen() {
             {/* 🔁 CHANGE MEDIA */}
             {media && (
               <TouchableOpacity
-                onPress={openMediaEditor}
                 onPress={openMediaEditor}
                 className="mt-3 self-center flex-row items-center"
               >
