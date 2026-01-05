@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
 /* ============================================================
    TYPES
@@ -102,7 +103,9 @@ export default function VideoDescription({
 
     const skillTags = skills.map((skill) => `#${normalizeSkill(skill)}`);
 
-    const mergedTags = Array.from(new Set([...textTags, ...skillTags]));
+    const mergedTags = Array.from(
+      new Set([...textTags, ...skillTags])
+    ).filter((t) => t.replace("#", "").trim().length > 0);
 
     const shouldShowMore = cleanWords.length > WORD_LIMIT;
     const baseText = shouldShowMore
@@ -131,63 +134,66 @@ export default function VideoDescription({
   const exactDate = formatDate(createdAt);
 
   return (
-    <View className="absolute bottom-12 left-0 right-0">
-      <View className="bg-black/40 px-4 py-3.5 border-t border-white/12">
-        {/* 📝 DESCRIPTION */}
+    <View className="absolute bottom-0 left-0 right-0">
+      <LinearGradient
+        colors={["transparent", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.8)"]}
+        locations={[0, 0.2, 1]}
+        style={{ paddingHorizontal: 16, paddingTop: 44, paddingBottom: 48 }}
+      >
+        {/* DESCRIPTION */}
         {!!cleanText && (
-          <Text className="text-white text-[15px] leading-5">
+          <Text className="text-white text-[15px] leading-6">
             {displayText}
           </Text>
         )}
 
-        {/* 🔹 VOIR PLUS */}
+        {/* VOIR PLUS */}
         {shouldShowMore && (
           <TouchableOpacity
             onPress={() => setExpanded(!expanded)}
             className="mt-1"
             hitSlop={8}
           >
-            <Text className="text-orange-400 text-sm font-semibold">
+            <Text className="text-orange-300 text-sm font-semibold">
               {expanded ? "Voir moins" : "Voir plus"}
             </Text>
           </TouchableOpacity>
         )}
 
-        {/* #️⃣ HASHTAGS (DESCRIPTION + SKILLS) */}
+        {/* HASHTAGS */}
         {hashtags.length > 0 && (
-          <View className="flex-row flex-wrap gap-x-2 gap-y-1 mt-2">
+          <View className="flex-row flex-wrap gap-x-2 gap-y-2 mt-3">
             {hashtags.map((tag) => (
-              <Text key={tag} className="text-orange-300 text-sm font-semibold">
-                {tag}
-              </Text>
+              <View
+                key={tag}
+                className="bg-white/10 px-3 py-1 rounded-full border border-white/15"
+              >
+                <Text className="text-orange-300 text-xs font-semibold">
+                  {tag}
+                </Text>
+              </View>
             ))}
           </View>
         )}
 
-        {/* 📅 DATE */}
-        {createdAt && (
-          <View className="flex-row items-center mt-3">
-            <Text className="text-gray-400 text-xs">
-              {relativeDate || exactDate}
-            </Text>
-            {relativeDate && exactDate && (
-              <Text className="text-gray-600 text-xs ml-2">· {exactDate}</Text>
-            )}
-          </View>
-        )}
-
-        {/* 📍 LIEU */}
-        {locationDisplay ? (
-          <View className="flex-row items-center mt-2">
-              <Text
-              className="text-white font-semibold ml-2 flex-shrink"
+        {/* META */}
+        <View className="flex-col gap-y-1 mt-3">
+          {locationDisplay ? (
+            <Text
+              className="text-gray-200 text-xs"
               numberOfLines={expanded ? undefined : 1}
             >
-              {locationDisplay}
+              Lieu : {locationDisplay}
             </Text>
-          </View>
-        ) : null}
-      </View>
+          ) : null}
+          {createdAt && (
+            <Text className="text-gray-400 text-xs">
+              {relativeDate || exactDate}
+              {relativeDate && exactDate ? ` · ${exactDate}` : ""}
+            </Text>
+          )}
+        </View>
+      </LinearGradient>
     </View>
   );
 }

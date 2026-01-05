@@ -189,6 +189,7 @@ export type MediaItem = {
 export type VideoItem = {
   id: string;
   url: string;
+  cachedUrl?: string | null;
   avatar?: string | null;
   playerUid: string;
   likeCount: number;

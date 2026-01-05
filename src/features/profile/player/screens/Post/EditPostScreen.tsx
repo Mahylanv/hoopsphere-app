@@ -12,12 +12,15 @@ import {
   Dimensions,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { updatePost, deletePost } from "../../services/postService";
+import AddressAutocomplete from "../../../../../shared/components/AddressAutocomplete";
 
 import * as ImagePicker from "expo-image-picker";
 
@@ -226,7 +229,14 @@ export default function EditPostScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 50 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1"
+      >
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 50 }}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* VISIBILITY */}
         <View className="mt-6 ml-5">
           <Text className="text-white mb-2 font-semibold">Visibilité</Text>
@@ -350,16 +360,11 @@ export default function EditPostScreen() {
           {/* LOCATION */}
           <View className="mt-4">
             <Text className="text-white mb-2 font-semibold">Lieu</Text>
-            <View className="flex-row items-center bg-[#1A1A1A] rounded-xl px-4 py-3">
-              <Ionicons name="location-outline" size={18} color="#aaa" />
-              <TextInput
-                value={location}
-                onChangeText={setLocation}
-                placeholder="Lieu"
-                placeholderTextColor="#666"
-                className="text-white ml-3 flex-1"
-              />
-            </View>
+            <AddressAutocomplete
+              value={location}
+              placeholder="Gymnase, ville, tournoi..."
+              onSelect={(addr) => setLocation(addr.label)}
+            />
           </View>
 
           {/* SKILLS */}
@@ -405,7 +410,8 @@ export default function EditPostScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* FULLSCREEN VIDEO */}
       <Modal visible={fullscreen} transparent animationType="fade">
