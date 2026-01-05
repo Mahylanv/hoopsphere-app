@@ -21,6 +21,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useNavigation } from "@react-navigation/native";
 import { UIImagePickerControllerQualityType, VideoExportPreset } from "expo-image-picker";
+import { collection, getDocs, query, where } from "firebase/firestore";
 
 import PostTypeSelector from "./components/PostTypeSelector";
 import SkillTagsSelector from "./components/SkillTagsSelector";
@@ -54,10 +55,11 @@ export default function CreatePostScreen() {
   const [compressing, setCompressing] = useState(false);
 
   const navigation = useNavigation<any>();
+  const { isPremium } = usePremiumStatus();
   const MAX_VIDEO_DURATION = 60; // seconds
   const MAX_VIDEO_SIZE = 120 * 1024 * 1024; // 120 Mo en octets
 
-  const normalizeDurationSeconds = (duration?: number) => {
+  const normalizeDurationSeconds = (duration?: number | null) => {
     if (!duration) return 0;
     // Certains devices renvoient la durée en ms
     return duration > 1200 ? duration / 1000 : duration;
@@ -65,25 +67,25 @@ export default function CreatePostScreen() {
 
   const checkVideoConstraints = async (
     uri: string,
-    duration?: number,
-    fileSize?: number
+    duration?: number | null,
+    fileSize?: number | null
   ) => {
     const durSec = normalizeDurationSeconds(duration);
 
     let size = fileSize;
     if (size == null) {
       const info = await FileSystem.getInfoAsync(uri);
-      size = info.size ?? undefined;
+      if ("size" in info && typeof (info as any).size === "number") {
+        size = (info as any).size as number;
+      }
     }
 
     const errors: string[] = [];
-
     if (durSec && durSec > MAX_VIDEO_DURATION) {
       errors.push(
         `Durée maximale : 60 secondes (ta vidéo fait ~${Math.round(durSec)}s).`
       );
     }
-
     if (size != null && size > MAX_VIDEO_SIZE) {
       const mb = (size / (1024 * 1024)).toFixed(1);
       errors.push(`Poids maximum : 120 Mo (taille détectée : ${mb} Mo).`);
@@ -93,7 +95,30 @@ export default function CreatePostScreen() {
       Alert.alert("Vidéo non valide", errors.join("\n"));
       return false;
     }
+    return true;
+  };
 
+  const checkVideoQuota = async () => {
+    if (isPremium) return true;
+    const user = auth.currentUser;
+    if (!user) {
+      Alert.alert("Connexion requise", "Connecte-toi pour publier une vidéo.");
+      return false;
+    }
+
+    const q = query(
+      collection(db, "posts"),
+      where("playerUid", "==", user.uid),
+      where("mediaType", "==", "video")
+    );
+    const snap = await getDocs(q);
+    if (snap.size >= 10) {
+      Alert.alert(
+        "Limite atteinte",
+        "En version gratuite, tu peux publier jusqu'à 10 vidéos. Supprime-en une ou passe en Premium pour lever la limite."
+      );
+      return false;
+    }
     return true;
   };
 
@@ -110,11 +135,7 @@ export default function CreatePostScreen() {
         "Tes modifications seront perdues.",
         [
           { text: "Continuer", style: "cancel" },
-          {
-            text: "Quitter",
-            style: "destructive",
-            onPress: () => navigation.goBack(),
-          },
+          { text: "Quitter", style: "destructive", onPress: () => navigation.goBack() },
         ]
       );
     } else {
@@ -154,9 +175,8 @@ export default function CreatePostScreen() {
       setCompressing(true);
       const ok = await checkVideoConstraints(
         asset.uri,
-        asset.duration,
-        // Expo renvoie fileSize en octets (si dispo)
-        (asset as any).fileSize ?? undefined
+        asset.duration ?? undefined,
+        (asset as any).fileSize ?? null
       );
       if (!ok) {
         setCompressing(false);
@@ -182,7 +202,6 @@ export default function CreatePostScreen() {
           thumbnailUri: null,
         });
       }
-
       setCompressing(false);
     } else {
       // 🖼️ IMAGE
@@ -210,16 +229,14 @@ export default function CreatePostScreen() {
     });
 
     if (picker.canceled) return;
-
     const asset = picker.assets[0];
 
     if (asset.type === "video") {
       setCompressing(true);
-
       const ok = await checkVideoConstraints(
         asset.uri,
-        asset.duration,
-        (asset as any).fileSize ?? undefined
+        asset.duration ?? undefined,
+        (asset as any).fileSize ?? null
       );
       if (!ok) {
         setCompressing(false);
@@ -245,7 +262,6 @@ export default function CreatePostScreen() {
           thumbnailUri: null,
         });
       }
-
       setCompressing(false);
     } else {
       setMedia({
