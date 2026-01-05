@@ -18,30 +18,35 @@ import {
 import { StatusBar, ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-import { AuthProvider, useAuth } from "./src/context/AuthContext";
+import { AuthProvider, useAuth } from "./src/features/auth/context/AuthContext";
 import { RootStackParamList } from "./src/types";
 
-import Home from "./src/Pages/Home";
-import Connexion from "./src/Components/Connexion";
-import InscriptionJoueurStep1 from "./src/Inscription/Joueurs/InscriptionJoueurStep1";
-import InscriptionJoueurStep2 from "./src/Inscription/Joueurs/InscriptionJoueurStep2";
-import InscriptionJoueurStep3 from "./src/Inscription/Joueurs/InscriptionJoueurStep3";
-import InscriptionClub from "./src/Inscription/Clubs/InscriptionClub";
-import InscriptionClubStep2 from "./src/Inscription/Clubs/InscriptionClubStep2";
-import MainTabNavigatorJoueur from "./src/navigation/MainTabNavigatorJoueur";
-import MainTabNavigatorClub from "./src/navigation/MainTabNavigatorClub";
-import ChatDetail from "./src/Pages/ChatDetail";
-import OfferDetail from "./src/Pages/OfferDetail";
-import Payment from "./src/Pages/Payment";
-import EditOffer from "./src/Profil/Clubs/EditOffer";
-import JoueurDetail from "./src/Profil/Joueurs/JoueurDetail";
-import EditClubProfile from "./src/Profil/Clubs/EditClubProfile";
-import ClubTeamsList from "./src/Profil/Clubs/ClubTeamsList";
-import ProfilClub from "./src/Profil/Clubs/ProfilClub";
-import FullMediaViewerScreen from "./src/Profil/Joueurs/screens/FullMediaViewerScreen";
-import ManageCandidatures from "./src/Profil/Clubs/Candidatures/ManageCandidatures";
-import ForgotPassword from "./src/Pages/ForgotPassword";
-import VideoFeedScreen from "./src/Home/VideoFeedScreen";
+import Home from "./src/legacy/Home";
+import Connexion from "./src/features/auth/screens/Connexion";
+import InscriptionJoueurStep1 from "./src/features/auth/screens/register/joueur/InscriptionJoueurStep1";
+import InscriptionJoueurStep2 from "./src/features/auth/screens/register/joueur/InscriptionJoueurStep2";
+import InscriptionJoueurStep3 from "./src/features/auth/screens/register/joueur/InscriptionJoueurStep3";
+import InscriptionClub from "./src/features/auth/screens/register/club/InscriptionClub";
+import InscriptionClubStep2 from "./src/features/auth/screens/register/club/InscriptionClubStep2";
+import MainTabNavigatorJoueur from "./src/navigation/tabs/PlayerTabs";
+import MainTabNavigatorClub from "./src/navigation/tabs/ClubTabs";
+import ChatDetail from "./src/legacy/ChatDetail";
+import OfferDetail from "./src/legacy/OfferDetail";
+import Payment from "./src/legacy/Payment";
+import EditOffer from "./src/features/profile/club/screens/EditOffer";
+import JoueurDetail from "./src/features/profile/player/screens/JoueurDetail";
+import EditClubProfile from "./src/features/profile/club/screens/EditClubProfile";
+import ClubTeamsList from "./src/features/profile/club/screens/ClubTeamsList";
+import ProfilClub from "./src/features/profile/club/screens/ProfilClub";
+import FullMediaViewerScreen from "./src/features/profile/player/screens/FullMediaViewerScreen";
+import ManageCandidatures from "./src/features/profile/club/screens/candidatures/ManageCandidatures";
+import ForgotPassword from "./src/features/auth/screens/ForgotPassword";
+import VideoFeedScreen from "./src/features/home/screens/VideoFeedScreen";
+import VisitorsScreen from "./src/features/profile/player/screens/VisitorsScreen";
+import TestPrenium from "./src/legacy/TestPrenium";
+import CreatePostScreen from "./src/features/profile/player/screens/Post/CreatePostScreen";
+import EditPostScreen from "./src/features/profile/player/screens/Post/EditPostScreen";
+import LikedPostsScreen from "./src/features/home/screens/LikedPostsScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -131,12 +136,25 @@ function RootNavigator() {
           options={{ headerShown: false }}
         />
 
+        <Stack.Screen
+          name="Visitors"
+          component={VisitorsScreen} // on le créera à l'étape suivante
+          options={{ title: "Visiteurs du Profil" }}
+        />
+
+        <Stack.Screen
+          name="LikedPosts"
+          component={LikedPostsScreen}
+          options={{ headerShown: false }}
+        />
+
         {/* Navigation principale */}
         <Stack.Screen name="MainTabs" component={MainTabNavigatorJoueur} />
         <Stack.Screen name="MainTabsClub" component={MainTabNavigatorClub} />
 
         {/* Pages */}
-        <Stack.Screen name="ChatDetail" component={ChatDetail} />
+        {/* <Stack.Screen name="ChatDetail" component={ChatDetail} /> */}
+        <Stack.Screen name="TestPrenium" component={TestPrenium} />
         <Stack.Screen name="OfferDetail" component={OfferDetail} />
         <Stack.Screen name="Payment" component={Payment} />
         <Stack.Screen name="EditOffer" component={EditOffer} />
@@ -154,6 +172,12 @@ function RootNavigator() {
           options={{ headerShown: false }}
         />
         <Stack.Screen name="VideoFeed" component={VideoFeedScreen} />
+        <Stack.Screen name="CreatePost" component={CreatePostScreen} />
+        <Stack.Screen
+          name="EditPost"
+          component={EditPostScreen}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </SafeAreaView>
   );

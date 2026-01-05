@@ -1,3 +1,5 @@
+// src/types.ts
+
 import { NavigatorScreenParams } from "@react-navigation/native";
 
 export type Joueur = {
@@ -15,6 +17,7 @@ export type Joueur = {
   departement?: string;
   avatar?: string;
   createdAt?: string;
+  premium?: boolean;
 };
 
 export type Club = {
@@ -105,10 +108,23 @@ export type RootStackParamList = {
   JoueurDetail: { uid: string };
   ManageCandidatures: undefined;
   ClubTeamsList: undefined;
-  VideoFeed: {
+   VideoFeed: {
+    videos: {
+      id: string;
+      url: string;
+      playerUid: string;
+      likeCount: number;
+      thumbnailUrl?: string | null;
+      isLikedByMe: boolean;
+    }[];
     startIndex: number;
-    videos: any[];
   };
+  Visitors: undefined;
+  TestPrenium: undefined;
+  CreatePost: undefined;
+  EditPost: undefined;
+  
+  LikedPosts: undefined;
 };
 
 // NAVIGATION — JOUEUR
@@ -116,7 +132,8 @@ export type RootStackParamList = {
 export type MainTabParamListJoueur = {
   HomeScreen: undefined;
   Match: undefined;
-  Chat: undefined;
+  // Chat: undefined;
+  TestPrenium: undefined;
   Search: undefined;
   Profil: undefined;
 };
@@ -129,6 +146,7 @@ export type MainTabParamListClub = {
   // Chat: undefined;
   SearchJoueur: undefined;
   ProfilClub: undefined;
+  SearchJoueurTabs: undefined;
 };
 
 // AUTRES TYPES (optionnels)
@@ -137,7 +155,7 @@ export type Offer = {
   id?: string; // <-- ici optionnel
   title: string;
   description: string;
-  position: string;
+  position: string[];
   team: string;
   publishedAt: string;
   gender: "Homme" | "Femme" | "Mixte";
@@ -165,4 +183,18 @@ export type TeamPlayer = {
 export type MediaItem = {
   url: string;
   type: "image" | "video";
+};
+
+export type VideoItem = {
+  id: string;
+  url: string;
+  avatar?: string | null;
+  playerUid: string;
+  likeCount: number;
+  isLikedByMe: boolean;
+  thumbnailUrl?: string | null;
+  description?: string;
+  createdAt?: any;
+  location?: string | null;
+  skills?: string[];
 };
