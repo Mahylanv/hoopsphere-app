@@ -1,4 +1,4 @@
-// src/Profil/Joueurs/components/AvatarSection.tsx
+// src/features/profile/player/components/AvatarSection.tsx
 
 import React from "react";
 import {
@@ -95,6 +95,7 @@ export default function AvatarSection({
             width: 141,
             height: 141,
             borderRadius: 134 / 2,
+            zIndex: 20,
           }}
         >
           <Image
