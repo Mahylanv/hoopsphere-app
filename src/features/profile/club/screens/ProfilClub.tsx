@@ -37,6 +37,7 @@ export default function ProfilClub() {
 
   // club passé depuis Search (peut être undefined)
   const clubFromRoute = params?.club as any | undefined;
+  const openCreateOffer = params?.openCreateOffer ?? false;
 
   const [club, setClub] = useState<any>(clubFromRoute ?? null);
   const [loading, setLoading] = useState(!clubFromRoute); // si on a déjà le club, pas besoin de loader initial
@@ -236,7 +237,7 @@ export default function ProfilClub() {
         <Tab.Screen
           name="Offres"
           component={ClubOffers}
-          initialParams={{ club: safeClub }}
+          initialParams={{ club: safeClub, openCreateOffer }}
         />
       </Tab.Navigator>
     </SafeAreaView>

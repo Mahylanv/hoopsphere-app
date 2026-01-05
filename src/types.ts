@@ -91,7 +91,7 @@ export type RootStackParamList = {
     startIndex: number;
   };
   
-  ProfilClub: { club: Club };
+  ProfilClub: { club?: Club; openCreateOffer?: boolean };
 
   Search: undefined;
 

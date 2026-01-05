@@ -52,6 +52,7 @@ export default function ClubOffers() {
   const clubParam = params?.club as unknown as Partial<ClubType> & {
     uid?: string;
   };
+  const openCreateOffer = params?.openCreateOffer ?? false;
 
   // UID du club affiché (priorité au param)
   const clubUid = clubParam?.uid || clubParam?.id || auth.currentUser?.uid;
@@ -60,6 +61,7 @@ export default function ClubOffers() {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [autoOpened, setAutoOpened] = useState(false);
 
   // Champs formulaire
   const [title, setTitle] = useState("");
@@ -106,6 +108,13 @@ export default function ClubOffers() {
     );
     return () => unsub();
   }, [clubUid]);
+
+  useEffect(() => {
+    if (openCreateOffer && auth.currentUser?.uid === clubUid && !autoOpened) {
+      setModalVisible(true);
+      setAutoOpened(true);
+    }
+  }, [openCreateOffer, clubUid, autoOpened]);
 
   const addOffer = async () => {
     if (!clubUid) return;
