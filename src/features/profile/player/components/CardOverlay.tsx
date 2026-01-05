@@ -1,4 +1,4 @@
-// src/Profil/Joueurs/components/CardOverlay.tsx
+// src/features/profile/player/components/CardOverlay.tsx
 
 import React from "react";
 import { View, Text } from "react-native";
@@ -41,6 +41,7 @@ export default function CardOverlay({ fields, stats, rating }: Props) {
           left: "24.6%",
           width: 67,
           height: 67,
+          zIndex: 5,
         }}
       >
         <Text className="text-white text-2xl font-extrabold">
