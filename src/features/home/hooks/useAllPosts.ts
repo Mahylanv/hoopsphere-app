@@ -10,7 +10,7 @@ import {
   getDoc,
   where,
 } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { Asset } from "expo-asset";
 import { db } from "../../../config/firebaseConfig";
 
@@ -39,8 +39,32 @@ export interface HomePost {
 export default function useAllPosts({ includeClubVisibility = false }: { includeClubVisibility?: boolean } = {}) {
   const [posts, setPosts] = useState<HomePost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uid, setUid] = useState<string | null>(null);
+  const [isClub, setIsClub] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+
   const auth = getAuth();
-  const uid = auth.currentUser?.uid;
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      setUid(user?.uid ?? null);
+      setIsClub(false);
+
+      if (user?.uid) {
+        try {
+          const clubSnap = await getDoc(doc(db, "clubs", user.uid));
+          setIsClub(clubSnap.exists());
+        } catch (e) {
+          console.warn("⚠️ check isClub failed:", e);
+          setIsClub(false);
+        }
+      }
+
+      setAuthReady(true);
+    });
+
+    return () => unsub();
+  }, [auth]);
 
   const prefetchTopVideos = async (list: HomePost[]) => {
     const MAX_PREFETCH = 4;
@@ -61,15 +85,19 @@ export default function useAllPosts({ includeClubVisibility = false }: { include
   };
 
   useEffect(() => {
+    if (includeClubVisibility && !authReady) return;
+
     console.log("👂 Écoute temps réel des posts HOME");
 
-    const constraints: any[] = [
-      where("mediaType", "==", "video"),
-      includeClubVisibility
-        ? where("visibility", "in", ["public", "clubs"])
-        : where("visibility", "==", "public"),
-      orderBy("createdAt", "desc"),
-    ];
+    const constraints: any[] = [where("mediaType", "==", "video")];
+
+    if (includeClubVisibility && isClub) {
+      constraints.push(where("visibility", "in", ["public", "clubs"]));
+    } else {
+      constraints.push(where("visibility", "==", "public"));
+    }
+
+    constraints.push(orderBy("createdAt", "desc"));
 
     const q = query(collection(db, "posts"), ...constraints);
 
@@ -110,7 +138,6 @@ export default function useAllPosts({ includeClubVisibility = false }: { include
               createdAt: data.createdAt,
               avatar,
               likeCount: data.likeCount ?? 0,
-              // isLikedByMe: false, // branchable plus tard
               premium,
               isLikedByMe,
               thumbnailUrl: data.thumbnailUrl ?? null,
@@ -149,7 +176,7 @@ export default function useAllPosts({ includeClubVisibility = false }: { include
 
     // 🔥 cleanup obligatoire
     return () => unsubscribe();
-  }, []);
+  }, [includeClubVisibility, isClub, authReady, uid]);
 
   return { posts, loading };
 }
