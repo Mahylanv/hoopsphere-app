@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-type Visibility = "public" | "private";
+type Visibility = "public" | "private" | "clubs";
 
 type Props = {
   value: Visibility;
@@ -16,7 +16,7 @@ export default function VisibilitySelector({ value, onChange }: Props) {
         Visibilité
       </Text>
 
-      <View className="flex-row gap-4">
+      <View className="flex-row gap-3 flex-wrap">
         {/* PUBLIC */}
         <TouchableOpacity
           onPress={() => onChange("public")}
@@ -41,6 +41,19 @@ export default function VisibilitySelector({ value, onChange }: Props) {
         >
           <Ionicons name="lock-closed-outline" size={18} color="white" />
           <Text className="text-white">Privé</Text>
+        </TouchableOpacity>
+
+        {/* CLUBS */}
+        <TouchableOpacity
+          onPress={() => onChange("clubs")}
+          className={`flex-row items-center gap-2 px-4 py-3 rounded-xl border ${
+            value === "clubs"
+              ? "bg-orange-500 border-orange-500"
+              : "border-gray-600"
+          }`}
+        >
+          <Ionicons name="business-outline" size={18} color="white" />
+          <Text className="text-white">Clubs</Text>
         </TouchableOpacity>
       </View>
     </View>
