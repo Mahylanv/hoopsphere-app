@@ -1,17 +1,8 @@
-// functions/src/index.ts
-
 import * as admin from "firebase-admin";
-
-/* =====================================================
-   🔥 Firebase imports
-===================================================== */
 import { auth as authV1 } from "firebase-functions/v1";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onDocumentDeleted } from "firebase-functions/v2/firestore";
-
-/* =====================================================
-   🔧 INIT ADMIN SDK
-===================================================== */
+import { onSchedule } from "firebase-functions/v2/scheduler";
 if (!admin.apps.length) {
   admin.initializeApp();
 }
@@ -19,16 +10,9 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const bucket = admin.storage().bucket();
 
-/* =====================================================
-   🌍 OPTIONS GLOBALES (v2)
-===================================================== */
 setGlobalOptions({
   region: "europe-west1",
 });
-
-/* =====================================================
-   🔥 FIRESTORE → AUTH (v2)
-===================================================== */
 
 // 🔹 JOUEUR supprimé → AUTH supprimé
 export const onPlayerDeleted = onDocumentDeleted(
@@ -67,6 +51,84 @@ export const onClubDeleted = onDocumentDeleted(
     }
   }
 );
+
+/* =====================================================
+   📧 RELANCE AUTO CANDIDATURES (7 jours)
+   - Si le joueur est Premium et la candidature n'est pas refusée
+   - Envoie un email de relance au club (via collection mail queue)
+===================================================== */
+export const sendCandidatureReminders = onSchedule("every 24 hours", async () => {
+  const sevenDaysAgo = admin.firestore.Timestamp.fromDate(
+    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  );
+
+  const statuses = ["pending", "accepted"];
+
+  for (const status of statuses) {
+    const snap = await db
+      .collectionGroup("candidatures")
+      .where("status", "==", status)
+      .where("createdAt", "<=", sevenDaysAgo)
+      .where("reminderSent", "in", [false, null])
+      .get()
+      .catch((e) => {
+        console.error("❌ Erreur requête candidatures:", e);
+        return null;
+      });
+
+    if (!snap || snap.empty) continue;
+
+    for (const docSnap of snap.docs) {
+      const data = docSnap.data() as any;
+      const applicantUid = data.applicantUid;
+      const clubUid = data.clubUid;
+
+      if (!applicantUid || !clubUid) continue;
+
+      // Vérifier premium joueur
+      const playerDoc = await db.collection("joueurs").doc(applicantUid).get();
+      if (!playerDoc.exists || !playerDoc.data()?.premium) continue;
+
+      // Email du club
+      const clubDoc = await db.collection("clubs").doc(clubUid).get();
+      const clubEmail = clubDoc.exists ? clubDoc.data()?.email : null;
+      if (!clubEmail) continue;
+
+      // Sujet / message simple
+      const offerTitle = data.offerTitle || "Votre offre";
+      const subject = `Relance candidature – ${offerTitle}`;
+      const text = [
+        "Bonjour,",
+        "",
+        "Un joueur Premium a postulé à votre offre il y a 7 jours et n’a pas reçu de réponse.",
+        `Offre : ${offerTitle}`,
+        data.offerLocation ? `Localisation : ${data.offerLocation}` : null,
+        "",
+        "Merci de revenir vers lui ou de mettre à jour le statut de la candidature.",
+        "",
+        "Ceci est un rappel automatique.",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      // File d'email (extension mail si installée)
+      await db.collection("mail").add({
+        to: [clubEmail],
+        message: {
+          subject,
+          text,
+        },
+      });
+
+      await docSnap.ref.update({
+        reminderSent: true,
+        reminderSentAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      console.log("📧 Relance candidature envoyée pour", docSnap.ref.path);
+    }
+  }
+});
 
 /* =====================================================
    🔥 AUTH → FIRESTORE (v1 OBLIGATOIRE)

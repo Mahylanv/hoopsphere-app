@@ -54,7 +54,7 @@ service cloud.firestore {
       match /posts/{postId} {
         allow read: if
           resource.data.visibility == "public" ||
-          (resource.data.visibility == "clubs" && request.auth != null && isClub(request.auth.uid)) ||
+          (resource.data.visibility == "clubs" && request.auth != null) ||
           (request.auth != null && request.auth.uid == uid);
 
         allow create, update, delete: if
@@ -72,7 +72,7 @@ service cloud.firestore {
           request.auth != null &&
           (
             request.auth.uid == resource.data.playerUid ||
-            (resource.data.visibility == "clubs" && isClub(request.auth.uid))
+            (resource.data.visibility == "clubs")
           )
         );
 
