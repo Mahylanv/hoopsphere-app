@@ -5,7 +5,9 @@ import {
   orderBy,
   onSnapshot,
   Timestamp,
+  where,
 } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import { db } from "../../../../config/firebaseConfig";
 
 /* ============================================================
@@ -18,6 +20,9 @@ export type PlayerPost = {
   mediaUrl: string;
   mediaType: "image" | "video";
   thumbnailUrl?: string | null; // ✅ MINIATURE VIDÉO
+
+  // cache local éventuel (préfet chage vidéo)
+  cachedUrl?: string | null;
 
   description: string;
   location?: string | null;
@@ -38,6 +43,17 @@ export type PlayerPost = {
 export default function usePlayerPosts(playerUid?: string) {
   const [posts, setPosts] = useState<PlayerPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const auth = getAuth();
+
+  useEffect(() => {
+    if (!playerUid) {
+      setPosts([]);
+      setLoading(false);
+      return;
+    }
+
+    // 🔽 requête Firestore ici
+  }, [playerUid]);
 
   useEffect(() => {
     if (!playerUid) {
@@ -48,10 +64,19 @@ export default function usePlayerPosts(playerUid?: string) {
 
     console.log("📥 Chargement posts joueur :", playerUid);
 
-    const q = query(
-      collection(db, "joueurs", playerUid, "posts"),
-      orderBy("createdAt", "desc")
-    );
+    const currentUid = auth.currentUser?.uid;
+    const isOwner = currentUid === playerUid;
+
+    const constraints = [
+      where("playerUid", "==", playerUid),
+      orderBy("createdAt", "desc"),
+    ];
+
+    if (!isOwner) {
+      constraints.push(where("visibility", "==", "public"));
+    }
+
+    const q = query(collection(db, "posts"), ...constraints);
 
     const unsubscribe = onSnapshot(
       q,

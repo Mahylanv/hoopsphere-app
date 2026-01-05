@@ -1,4 +1,5 @@
-// src/Profil/Joueurs/JoueurDetail.tsx
+// src/features/profile/player/screens/JoueurDetail.tsx
+// Écran Détail d'un joueur – Profil public
 
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -11,6 +12,8 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
+  FlatList,
+  Image,
 } from "react-native";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -36,6 +39,9 @@ import { db } from "../../../../config/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { usePremiumStatus } from "../../../../shared/hooks/usePremiumStatus";
+import usePlayerPosts from "../hooks/usePlayerPosts";
+import PostGridSection from "../components/PostGridSection";
+import { Video, ResizeMode } from "expo-av";
 
 const CARD_WIDTH = Dimensions.get("window").width * 0.9;
 const CARD_HEIGHT = CARD_WIDTH * 0.68;
@@ -55,6 +61,9 @@ export default function JoueurDetail() {
   const [stats, setStats] = useState<any>(null);
   const [rating, setRating] = useState<number | null>(null);
   const { isPremium } = usePremiumStatus();
+  const { posts: playerPosts, loading: postsLoading } = usePlayerPosts(uid);
+  const ITEM_WIDTH = Dimensions.get("window").width * 0.78;
+  const ITEM_HEIGHT = ITEM_WIDTH * 0.65;
 
   /* =============================================
      🔥 FETCH DU JOUEUR PAR UID
@@ -426,8 +435,88 @@ export default function JoueurDetail() {
           </View>
         </View>
 
+        {/* PUBLICATIONS */}
+        <View className="px-4 mb-10 mt-6">
+          <View className="flex-row items-center mb-3">
+            <Ionicons name="play-outline" size={22} color="white" />
+            <Text className="text-white text-xl font-bold ml-2">
+              Publications
+            </Text>
+            <View className="ml-2 bg-white/10 px-3 py-1 rounded-full">
+              <Text className="text-white text-xs font-semibold">
+                {playerPosts.length}
+              </Text>
+            </View>
+          </View>
+
+          {postsLoading ? (
+            <View className="py-10 items-center">
+              <ActivityIndicator size="small" color="#F97316" />
+            </View>
+          ) : playerPosts.length === 0 ? (
+            <Text className="text-gray-400">Aucune publication.</Text>
+          ) : (
+            <FlatList
+              data={playerPosts}
+              keyExtractor={(item) => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={ITEM_WIDTH + 14}
+              decelerationRate="fast"
+              contentContainerStyle={{ paddingVertical: 6, paddingRight: 14 }}
+              ItemSeparatorComponent={() => <View style={{ width: 14 }} />}
+              renderItem={({ item, index }) => (
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() =>
+                    navigation.navigate("VideoFeed", {
+                      videos: playerPosts.map((p) => ({
+                        id: p.id,
+                        url: p.mediaUrl,
+                        cachedUrl: (p as any).cachedUrl ?? undefined,
+                        playerUid: p.playerUid ?? uid,
+                        likeCount: p.likeCount ?? 0,
+                        isLikedByMe: false,
+                        thumbnailUrl: p.thumbnailUrl ?? null,
+                        description: p.description ?? "",
+                        location: p.location ?? null,
+                        skills: p.skills ?? [],
+                        createdAt: p.createdAt,
+                      })),
+                      startIndex: index,
+                    })
+                  }
+                  style={{
+                    width: ITEM_WIDTH,
+                    height: ITEM_HEIGHT,
+                    borderRadius: 18,
+                    overflow: "hidden",
+                    backgroundColor: "#0f1115",
+                  }}
+                >
+                  {item.mediaType === "image" ? (
+                    <Image
+                      source={{ uri: item.mediaUrl }}
+                      style={{ width: "100%", height: "100%" }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Video
+                      source={{ uri: item.mediaUrl }}
+                      style={{ width: "100%", height: "100%" }}
+                      resizeMode={ResizeMode.COVER}
+                      shouldPlay={false}
+                      isMuted
+                    />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          )}
+        </View>
+
         {/* CONTACT */}
-        <View className="px-5 mt-10 mb-7">
+        <View className="px-5 mt-2 mb-7">
           <TouchableOpacity
             onPress={openContactSheet}
             activeOpacity={0.85}
