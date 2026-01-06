@@ -15,6 +15,7 @@ import { Video, ResizeMode } from "expo-av";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../types";
 import { VideoItem } from "../../../types";
+import { LinearGradient } from "expo-linear-gradient";
 
 
 type Navigation = NativeStackNavigationProp<RootStackParamList, "Home">;
@@ -24,6 +25,8 @@ type Navigation = NativeStackNavigationProp<RootStackParamList, "Home">;
 ============================================================ */
 
 const { width } = Dimensions.get("window");
+const PREVIEW_WIDTH = Math.min(width * 0.72, 360);
+const PREVIEW_HEIGHT = PREVIEW_WIDTH * (15 / 9); // légèrement moins haut que 9:16
 
 /* ============================================================
    MAIN COMPONENT
@@ -34,6 +37,11 @@ export default function VideoCarouselPreview({
   videos: VideoItem[];
 }) {
   const navigation = useNavigation<Navigation>();
+  const brand = {
+    orange: "#F97316",
+    blue: "#2563EB",
+    surface: "#0E0D0D",
+  } as const;
 
   /**
    * ✅ Sélection stable
@@ -47,11 +55,33 @@ export default function VideoCarouselPreview({
 
   return (
     <View className="mt-10 px-5">
-      <Text className="text-white text-xl font-bold mb-4">
-        Vidéos populaires
-      </Text>
+      <View className="flex-row items-center justify-between mb-4">
+        <View className="flex-row items-center">
+          <LinearGradient
+            colors={[brand.orange, brand.blue]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 12,
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 10,
+            }}
+          >
+            <Ionicons name="play-circle" size={20} color="#fff" />
+          </LinearGradient>
+          <View>
+            <Text className="text-white text-xl font-bold">
+              Vidéos populaires
+            </Text>
+            <Text className="text-gray-400 text-xs">Highlights en tendance</Text>
+          </View>
+        </View>
+      </View>
 
-      <View className="flex-col">
+      <View className="flex-col" style={{ alignItems: "center" }}>
         {previewVideos.map((video, index) => (
           <VideoPreviewItem
             key={video.id ?? `${video.playerUid}-${index}`}
@@ -95,16 +125,16 @@ function VideoPreviewItem({
   return (
     <Animated.View
       style={{
-        width: width - 40,
-        height: 160,
+        width: PREVIEW_WIDTH,
+        height: PREVIEW_HEIGHT,
         marginBottom: 20,
         opacity: fadeAnim,
+        alignSelf: "center",
       }}
-      className="rounded-2xl overflow-hidden bg-[#111]"
     >
       <TouchableOpacity
         activeOpacity={0.9}
-        className="w-full h-full"
+        className="w-full h-full rounded-2xl overflow-hidden bg-[#111]"
         onPress={() =>
           navigation.navigate("VideoFeed", {
             startIndex: index,
