@@ -27,7 +27,7 @@ import usePlayerProfile from "../hooks/usePlayerProfile"; // adapte le path exac
 import { computePlayerStats } from "../../../../utils/player/computePlayerStats";
 import { computePlayerRating } from "../../../../utils/player/computePlayerRating";
 import { RootStackParamList } from "../../../../types";
-import JoueurCard from "../../../../shared/components/JoueurCard";
+import AvatarSection from "../components/AvatarSection";
 
 import {
   collection,
@@ -44,7 +44,7 @@ import PostGridSection from "../components/PostGridSection";
 import { Video, ResizeMode } from "expo-av";
 
 const CARD_WIDTH = Dimensions.get("window").width * 0.9;
-const CARD_HEIGHT = CARD_WIDTH * 0.68;
+const CARD_HEIGHT = CARD_WIDTH * 1.3;
 
 type RouteProps = RouteProp<RootStackParamList, "JoueurDetail">;
 type NavProps = NativeStackNavigationProp<RootStackParamList, "JoueurDetail">;
@@ -217,12 +217,6 @@ export default function JoueurDetail() {
     extrapolate: "clamp",
   });
 
-  const opacity = scrollY.interpolate({
-    inputRange: [0, 300],
-    outputRange: [1, 0],
-    extrapolate: "clamp",
-  });
-
   /* -----------------------------------------------------
      🔥 BOTTOM SHEET
   ----------------------------------------------------- */
@@ -358,7 +352,7 @@ export default function JoueurDetail() {
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         contentContainerStyle={{
-          paddingTop: CARD_HEIGHT * 2.1,
+          paddingTop: CARD_HEIGHT * 1.3,
           paddingBottom: 120,
         }}
         onScroll={Animated.event(
@@ -366,7 +360,7 @@ export default function JoueurDetail() {
           { useNativeDriver: true }
         )}
       >
-        {/* 🔥 CARTE ANIMÉE */}
+        {/* 🔥 CARTE ANIMÉE (même structure que ProfilJoueur) */}
         <Animated.View
           style={{
             position: "absolute",
@@ -378,7 +372,6 @@ export default function JoueurDetail() {
               { scale },
               { translateY: Animated.add(translateY, adjustedTranslate) },
             ],
-            opacity,
           }}
         >
           <ViewShot
@@ -386,21 +379,28 @@ export default function JoueurDetail() {
             options={{ format: "png", quality: 1 }}
             style={{ borderRadius: 20, overflow: "hidden" }}
           >
-            <JoueurCard
-              joueur={joueur}
-              showActionsButton={false}
-              rating={rating ?? undefined}
-            />
-          </ViewShot>
-
-          <View style={{ position: "absolute" }}>
-            <JoueurCard
-              joueur={joueur}
+            <AvatarSection
+              user={{
+                avatar: joueur.avatar ?? null,
+                prenom: joueur.prenom ?? "",
+                nom: joueur.nom ?? "",
+                dob: joueur.dob,
+                taille: joueur.taille,
+                poids: joueur.poids,
+                poste: joueur.poste,
+                main: joueur.main,
+                departement: joueur.departement,
+                club: joueur.club,
+                description: joueur.description,
+                premium: joueur.premium,
+              }}
+              onEditAvatar={async () => {}}
+              avatarLoading={false}
               stats={stats}
               rating={rating ?? undefined}
-              onPressActions={openSheet}
+              editable={false}
             />
-          </View>
+          </ViewShot>
         </Animated.View>
 
         {/* 🔥 Infos joueur */}
