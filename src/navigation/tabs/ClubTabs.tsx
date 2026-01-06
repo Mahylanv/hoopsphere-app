@@ -11,6 +11,7 @@ import ManageCandidatures from "../../features/profile/club/screens/candidatures
 // import SearchJoueur from "../Components/SearchJoueur";
 import ProfilClub from "../../features/profile/club/screens/ProfilClub";
 import SearchJoueurTabs from "../../features/search/screens/SearchJoueurTabs";
+import ClubPremiumScreen from "../../features/profile/club/screens/ClubPremiumScreen";
 
 import { MainTabParamListClub } from "../../types";
 
@@ -46,6 +47,9 @@ export default function MainTabNavigatorClub() {
             case "SearchJoueurTabs":
               iconName = "search-outline";
               break;
+            case "ClubPremium":
+              iconName = "star-outline";
+              break;
             case "ProfilClub":
               iconName = "business-outline";
               break;
@@ -76,6 +80,13 @@ export default function MainTabNavigatorClub() {
           name="SearchJoueurTabs"
           component={SearchJoueurTabs}
           options={{ tabBarLabel: "Joueurs" }}
+        />
+
+        {/* ⭐ Espace Premium Club */}
+        <Tab.Screen
+          name="ClubPremium"
+          component={ClubPremiumScreen}
+          options={{ tabBarLabel: "Premium" }}
         />
 
         {/* 🏢 Profil du club */}

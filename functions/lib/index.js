@@ -34,13 +34,14 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onPlayerPostDeleted = exports.onAuthUserDeleted = exports.onClubDeleted = exports.onPlayerDeleted = void 0;
+exports.resetViewsMonthly = exports.onPlayerPostDeleted = exports.onAuthUserDeleted = exports.onClubDeleted = exports.onPlayerDeleted = void 0;
 const admin = __importStar(require("firebase-admin"));
 /* =====================================================
    🔥 Firebase imports
 ===================================================== */
 const v1_1 = require("firebase-functions/v1");
 const v2_1 = require("firebase-functions/v2");
+const scheduler_1 = require("firebase-functions/v2/scheduler");
 const firestore_1 = require("firebase-functions/v2/firestore");
 /* =====================================================
    🔧 INIT ADMIN SDK
@@ -146,4 +147,38 @@ exports.onPlayerPostDeleted = (0, firestore_1.onDocumentDeleted)("joueurs/{uid}/
     catch (error) {
         console.error("❌ Erreur cleanup post :", error);
     }
+});
+/* =====================================================
+   🧹 RESET MENSUEL DES VUES (Joueurs & Clubs)
+   - Exécuté chaque 1er du mois à 02:00 (Europe/Paris)
+   - Supprime toutes les vues stockées pour repartir de zéro
+===================================================== */
+async function clearAllViewsForCollection(collectionName) {
+    const parentSnap = await db.collection(collectionName).get();
+    for (const docSnap of parentSnap.docs) {
+        const viewsRef = docSnap.ref.collection("views");
+        let hasMore = true;
+        while (hasMore) {
+            const viewsBatch = await viewsRef.limit(300).get();
+            if (viewsBatch.empty) {
+                hasMore = false;
+                break;
+            }
+            const batch = db.batch();
+            viewsBatch.forEach((v) => batch.delete(v.ref));
+            await batch.commit();
+            console.log(`🧹 ${collectionName}/${docSnap.id} : ${viewsBatch.size} vues supprimées`);
+        }
+    }
+}
+exports.resetViewsMonthly = (0, scheduler_1.onSchedule)({
+    schedule: "0 2 1 * *", // 1er du mois à 02:00
+    timeZone: "Europe/Paris",
+}, async () => {
+    console.log("🧹 Démarrage reset mensuel des vues (joueurs & clubs)");
+    await Promise.all([
+        clearAllViewsForCollection("clubs"),
+        clearAllViewsForCollection("joueurs"),
+    ]);
+    console.log("✅ Reset mensuel des vues terminé");
 });
