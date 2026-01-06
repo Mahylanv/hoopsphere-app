@@ -57,6 +57,15 @@ export default function ProfilClub() {
       routes: [{ name: "Home" }],
     });
   };
+  const [triggerCreateOffer, setTriggerCreateOffer] = useState(openCreateOffer);
+
+  // Consomme le paramètre et le nettoie pour éviter la réouverture automatique
+  useEffect(() => {
+    if (openCreateOffer) {
+      setTriggerCreateOffer(true);
+      (navigation as any)?.setParams?.({ openCreateOffer: false });
+    }
+  }, [openCreateOffer, navigation]);
 
   // Consomme et nettoie le paramètre d'ouverture d'offre pour éviter la persistance au relaunch
   // tout en permettant une nouvelle demande ultérieure.
