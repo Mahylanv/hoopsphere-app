@@ -5,10 +5,10 @@ import {
   runTransaction,
   serverTimestamp,
   getFirestore,
-  arrayUnion,
-  arrayRemove,
+  getDoc,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { increment } from "firebase/firestore";
 
 const db = getFirestore();
 const auth = getAuth();
@@ -25,19 +25,16 @@ export async function toggleLikePost(postId: string, postOwnerUid: string) {
 
   const uid = user.uid;
 
+  const isClub = (await getDoc(doc(db, "clubs", uid))).exists();
+  const userLikeRef = isClub
+    ? doc(db, "clubs", uid, "likedPosts", postId)
+    : doc(db, "joueurs", uid, "likedPosts", postId);
+
   const postRef = doc(db, "posts", postId);
   const postLikeRef = doc(db, "posts", postId, "likes", uid);
-  const userLikeRef = doc(db, "joueurs", uid, "likedPosts", postId);
 
   await runTransaction(db, async (transaction) => {
-    const postSnap = await transaction.get(postRef);
-    if (!postSnap.exists()) {
-      throw new Error("Post not found");
-    }
-
     const likeSnap = await transaction.get(postLikeRef);
-
-    const currentLikeCount = postSnap.data().likeCount || 0;
 
     // ======================
     // UNLIKE
@@ -46,10 +43,7 @@ export async function toggleLikePost(postId: string, postOwnerUid: string) {
       transaction.delete(postLikeRef);
       transaction.delete(userLikeRef);
 
-      transaction.update(postRef, {
-        likeCount: Math.max(currentLikeCount - 1, 0),
-        likedBy: arrayRemove(uid),
-      });
+      transaction.update(postRef, { likeCount: increment(-1) });
 
       return;
     }
@@ -67,9 +61,6 @@ export async function toggleLikePost(postId: string, postOwnerUid: string) {
       createdAt: serverTimestamp(),
     });
 
-    transaction.update(postRef, {
-      likeCount: currentLikeCount + 1,
-      likedBy: arrayUnion(uid),
-    });
+    transaction.update(postRef, { likeCount: increment(1) });
   });
 }
