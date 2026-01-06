@@ -42,6 +42,7 @@ type Props = {
   avatarLoading: boolean;
   stats?: PlayerStats; 
   rating?: number;
+  editable?: boolean;
 };
 
 export default function AvatarSection({
@@ -50,6 +51,7 @@ export default function AvatarSection({
   avatarLoading,
   stats,
   rating,
+  editable = true,
 }: Props) {
   const pickImage = async () => {
     try {
@@ -108,13 +110,15 @@ export default function AvatarSection({
           />
 
           {/* ✏️ Bouton modifier avatar */}
-          <TouchableOpacity
-            onPress={pickImage}
-            disabled={avatarLoading}
-            className="absolute bottom-1 right-1 bg-black/60 p-1.5 rounded-full"
-          >
-            <Feather name="edit-2" size={16} color="white" />
-          </TouchableOpacity>
+          {editable && (
+            <TouchableOpacity
+              onPress={pickImage}
+              disabled={avatarLoading}
+              className="absolute bottom-1 right-1 bg-black/60 p-1.5 rounded-full"
+            >
+              <Feather name="edit-2" size={16} color="white" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* 🟣 Nom */}
