@@ -42,6 +42,15 @@ export default function ProfilClub() {
   const [club, setClub] = useState<any>(clubFromRoute ?? null);
   const [loading, setLoading] = useState(!clubFromRoute); // si on a déjà le club, pas besoin de loader initial
   const [uploading, setUploading] = useState(false);
+  const [triggerCreateOffer, setTriggerCreateOffer] = useState(openCreateOffer);
+
+  // Consomme le paramètre et le nettoie pour éviter la réouverture automatique
+  useEffect(() => {
+    if (openCreateOffer) {
+      setTriggerCreateOffer(true);
+      (navigation as any)?.setParams?.({ openCreateOffer: false });
+    }
+  }, [openCreateOffer, navigation]);
 
   // Si aucun club passé par la route, on tente de charger le club du user connecté
   useEffect(() => {
@@ -237,7 +246,7 @@ export default function ProfilClub() {
         <Tab.Screen
           name="Offres"
           component={ClubOffers}
-          initialParams={{ club: safeClub, openCreateOffer }}
+          initialParams={{ club: safeClub, openCreateOffer: triggerCreateOffer }}
         />
       </Tab.Navigator>
     </SafeAreaView>

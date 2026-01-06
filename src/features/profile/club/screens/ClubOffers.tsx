@@ -48,11 +48,14 @@ type Offer = {
 
 export default function ClubOffers() {
   const navigation = useNavigation<NavProp>();
-  const { params } = useRoute<ProfileRoute>();
+  const route = useRoute<ProfileRoute>();
+  const params = route.params;
   const clubParam = params?.club as unknown as Partial<ClubType> & {
     uid?: string;
   };
-  const openCreateOffer = params?.openCreateOffer ?? false;
+  const [shouldAutoOpen, setShouldAutoOpen] = useState(
+    () => params?.openCreateOffer ?? false
+  );
 
   // UID du club affiché (priorité au param)
   const clubUid = clubParam?.uid || clubParam?.id || auth.currentUser?.uid;
@@ -85,6 +88,15 @@ export default function ClubOffers() {
     );
   };
 
+  // Si un nouveau paramètre openCreateOffer arrive (ex: action rapide),
+  // on réarme l'auto-ouverture même si cela a déjà été consommé précédemment.
+  useEffect(() => {
+    if (params?.openCreateOffer) {
+      setShouldAutoOpen(true);
+      setAutoOpened(false);
+    }
+  }, [params?.openCreateOffer]);
+
   useEffect(() => {
     if (!clubUid) {
       setLoading(false);
@@ -110,11 +122,21 @@ export default function ClubOffers() {
   }, [clubUid]);
 
   useEffect(() => {
-    if (openCreateOffer && auth.currentUser?.uid === clubUid && !autoOpened) {
+    if (shouldAutoOpen && auth.currentUser?.uid === clubUid && !autoOpened) {
       setModalVisible(true);
       setAutoOpened(true);
+      setShouldAutoOpen(false);
+      // Réinitialise le param sur la route Offres et son parent (tabs) pour éviter la persistance
+      navigation.setParams({ openCreateOffer: false } as any);
+      navigation.getParent()?.setParams?.({ openCreateOffer: false } as any);
+      navigation.getParent()?.getParent()?.setParams?.({ openCreateOffer: false } as any);
+    } else if (params?.openCreateOffer && !shouldAutoOpen) {
+      // Si la navigation rehydrate encore le param, on le nettoie sans rouvrir
+      navigation.setParams({ openCreateOffer: false } as any);
+      navigation.getParent()?.setParams?.({ openCreateOffer: false } as any);
+      navigation.getParent()?.getParent()?.setParams?.({ openCreateOffer: false } as any);
     }
-  }, [openCreateOffer, clubUid, autoOpened]);
+  }, [shouldAutoOpen, params?.openCreateOffer, clubUid, autoOpened, navigation]);
 
   const addOffer = async () => {
     if (!clubUid) return;
@@ -139,6 +161,7 @@ export default function ClubOffers() {
       };
       await addDoc(ref, newOffer);
       setModalVisible(false);
+      setAutoOpened(false);
       setTitle("");
       setDescription("");
       setTeam("");
@@ -476,10 +499,13 @@ export default function ClubOffers() {
                 </View>
 
                 <View className="flex-row justify-end gap-3">
-                  <TouchableOpacity
-                    onPress={() => setModalVisible(false)}
-                    className="px-5 py-2.5 bg-gray-700 rounded-xl"
-                  >
+                <TouchableOpacity
+                  onPress={() => {
+                    setModalVisible(false);
+                    setAutoOpened(false);
+                  }}
+                  className="px-5 py-2.5 bg-gray-700 rounded-xl"
+                >
                     <Text className="text-white text-[15px]">Annuler</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
