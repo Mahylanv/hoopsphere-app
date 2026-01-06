@@ -17,6 +17,7 @@ import {
 } from "react-native-safe-area-context";
 import { StatusBar, ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { MenuProvider } from "react-native-popup-menu";
 
 import { AuthProvider, useAuth } from "./src/features/auth/context/AuthContext";
 import { RootStackParamList } from "./src/types";
@@ -38,6 +39,8 @@ import JoueurDetail from "./src/features/profile/player/screens/JoueurDetail";
 import EditClubProfile from "./src/features/profile/club/screens/EditClubProfile";
 import ClubTeamsList from "./src/features/profile/club/screens/ClubTeamsList";
 import ProfilClub from "./src/features/profile/club/screens/ProfilClub";
+import ClubLikedVideosScreen from "./src/features/profile/club/screens/ClubLikedVideosScreen";
+import ClubVisitorsScreen from "./src/features/profile/club/screens/ClubVisitorsScreen";
 import FullMediaViewerScreen from "./src/features/profile/player/screens/FullMediaViewerScreen";
 import ManageCandidatures from "./src/features/profile/club/screens/candidatures/ManageCandidatures";
 import ForgotPassword from "./src/features/auth/screens/ForgotPassword";
@@ -142,6 +145,8 @@ function RootNavigator() {
           component={VisitorsScreen} // on le créera à l'étape suivante
           options={{ title: "Visiteurs du Profil" }}
         />
+        <Stack.Screen name="ClubLikedVideos" component={ClubLikedVideosScreen} />
+        <Stack.Screen name="ClubVisitors" component={ClubVisitorsScreen} />
 
         <Stack.Screen
           name="LikedPosts"
@@ -200,9 +205,11 @@ export default function App() {
             barStyle="light-content"
           />
 
-          <PersistedNavContainer>
-            <RootNavigator />
-          </PersistedNavContainer>
+          <MenuProvider skipInstanceCheck>
+            <PersistedNavContainer>
+              <RootNavigator />
+            </PersistedNavContainer>
+          </MenuProvider>
         </SafeAreaProvider>
       </AuthProvider>
     </GestureHandlerRootView>

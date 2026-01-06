@@ -8,9 +8,10 @@ import {
   Image,
   ActivityIndicator,
   Alert,
-  DeviceEventEmitter,
+  Modal,
+  StyleSheet,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -25,7 +26,7 @@ import { signOut } from "firebase/auth";
 
 // Firebase
 import { auth, db } from "../../../../config/firebaseConfig";
-import { doc, getDoc, updateDoc, setDoc, serverTimestamp, getDocs } from "firebase/firestore";
+import { doc, getDoc, updateDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 type ClubProfileNavProp = NativeStackNavigationProp<RootStackParamList, "ProfilClub">;
@@ -48,6 +49,8 @@ export default function ProfilClub() {
   const [triggerCreateOffer, setTriggerCreateOffer] = useState(
     () => !!openCreateOffer
   );
+  const [ownerMenuVisible, setOwnerMenuVisible] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const resetToLegacyHome = () => {
     const parentNav = (navigation as any)?.getParent?.();
@@ -123,6 +126,7 @@ export default function ProfilClub() {
     // en BDD tu as souvent un champ `uid` sur le doc club
     return uid && club && (club.uid === uid || club.id === uid);
   }, [club]);
+  const isPremiumClub = !!(club as any)?.premium;
 
   const formatDepartment = (dep: any) => {
     if (!dep || typeof dep !== "string") return "";
@@ -174,6 +178,7 @@ export default function ProfilClub() {
   };
 
   const handleLogout = () => {
+    setOwnerMenuVisible(false);
     Alert.alert(
       "Déconnexion",
       "Voulez-vous vraiment vous déconnecter ?",
@@ -242,9 +247,72 @@ export default function ProfilClub() {
     description: club.description || "",
   };
 
+  const closeOwnerMenu = () => setOwnerMenuVisible(false);
+
+  const navigateFromMenu = (screen: keyof RootStackParamList) => {
+    closeOwnerMenu();
+    navigation.navigate(screen as never);
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-[#0E0D0D]">
       <StatusBar barStyle="light-content" />
+
+      {isOwner && (
+        <Modal
+          visible={ownerMenuVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={closeOwnerMenu}
+        >
+          <View className="flex-1">
+            <Pressable
+              style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.45)" }]}
+              onPress={closeOwnerMenu}
+            />
+            <View
+              style={{
+                position: "absolute",
+                top: insets.top + 12,
+                right: 12,
+              }}
+            >
+              <View className="bg-[#0f172a] rounded-2xl border border-white/10 px-2 py-1 w-60 shadow-lg shadow-black/50">
+                <Pressable
+                  onPress={() => navigateFromMenu("ClubLikedVideos")}
+                  className="flex-row items-center py-3 px-2 rounded-xl active:bg-white/5"
+                >
+                  <Ionicons name="heart-outline" size={18} color="#F97316" />
+                  <Text className="text-white ml-3">Vidéos likées</Text>
+                </Pressable>
+                {isPremiumClub && (
+                  <Pressable
+                    onPress={() => navigateFromMenu("ClubVisitors")}
+                    className="flex-row items-center py-3 px-2 rounded-xl active:bg-white/5"
+                  >
+                    <Ionicons name="eye-outline" size={18} color="#2563EB" />
+                    <Text className="text-white ml-3">Consultations de profil</Text>
+                  </Pressable>
+                )}
+                <Pressable
+                  onPress={() => navigateFromMenu("EditClubProfile")}
+                  className="flex-row items-center py-3 px-2 rounded-xl active:bg-white/5"
+                >
+                  <Ionicons name="create-outline" size={18} color="#fff" />
+                  <Text className="text-white ml-3">Modifier le profil</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleLogout}
+                  className="flex-row items-center py-3 px-2 rounded-xl active:bg-white/5"
+                >
+                  <Ionicons name="log-out-outline" size={18} color="#ef4444" />
+                  <Text className="text-white ml-3">Déconnexion</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {/* HEADER */}
       <View className="items-center px-4 py-6 border-b border-gray-700 relative">
@@ -257,21 +325,13 @@ export default function ProfilClub() {
 
         {/* Boutons propriétaire : édition + déconnexion */}
         {isOwner && (
-          <View className="absolute right-4 top-6 items-end space-y-2">
-            <Pressable
-              onPress={() => navigation.navigate("EditClubProfile")}
-              className="p-2"
-            >
-              <Ionicons name="create-outline" size={22} color="#fff" />
-            </Pressable>
-
-            <Pressable
-              onPress={handleLogout}
-              className="p-2"
-            >
-              <Ionicons name="log-out-outline" size={22} color="#fff" />
-            </Pressable>
-          </View>
+          <Pressable
+            onPress={() => setOwnerMenuVisible(true)}
+            className="absolute right-4 top-6 p-2"
+            hitSlop={8}
+          >
+            <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
+          </Pressable>
         )}
 
         <View className="relative">
