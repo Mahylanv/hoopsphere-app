@@ -58,20 +58,6 @@ export default function ProfilClub() {
     });
   };
 
-  // Consomme et nettoie le paramètre d'ouverture d'offre pour éviter la persistance au relaunch
-  // tout en permettant une nouvelle demande ultérieure.
-  useEffect(() => {
-    if (openCreateOffer) {
-      setTriggerCreateOffer(true);
-    } else {
-      setTriggerCreateOffer(false);
-    }
-
-    (navigation as any)?.setParams?.({ openCreateOffer: false });
-    navigation.getParent()?.setParams?.({ openCreateOffer: false } as any);
-    navigation.getParent()?.getParent()?.setParams?.({ openCreateOffer: false } as any);
-  }, [openCreateOffer, navigation]);
-
   // Si aucun club passé par la route, on tente de charger le club du user connecté
   useEffect(() => {
     if (clubFromRoute) return; // déjà fourni
@@ -326,8 +312,7 @@ export default function ProfilClub() {
         <Tab.Screen
           name="Offres"
           component={ClubOffers}
-          key={`offres-${triggerCreateOffer ? "open" : "default"}`}
-          initialParams={{ club: safeClub, openCreateOffer: triggerCreateOffer }}
+          initialParams={{ club: safeClub, openCreateOffer }}
         />
       </Tab.Navigator>
     </SafeAreaView>
