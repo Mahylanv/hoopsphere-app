@@ -62,8 +62,6 @@ export default function usePlayerPosts(playerUid?: string) {
       return;
     }
 
-    console.log("📥 Chargement posts joueur :", playerUid);
-
     const currentUid = auth.currentUser?.uid;
     const isOwner = currentUid === playerUid;
 
@@ -105,7 +103,6 @@ export default function usePlayerPosts(playerUid?: string) {
           };
         });
 
-        console.log("✅ Posts profil reçus :", data.length);
         setPosts(data);
         setLoading(false);
       },
