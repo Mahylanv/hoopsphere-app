@@ -116,7 +116,7 @@ export default function HomeScreen({ forClub = false }: Props) {
         const snap = await getDoc(doc(db, "clubs", uid));
         setClubPremium(!!snap.data()?.premium);
       } catch (e) {
-        console.log("Erreur chargement premium club :", e);
+        // console.log("Erreur chargement premium club :", e);
         setClubPremium(false);
       }
     };
@@ -173,7 +173,7 @@ export default function HomeScreen({ forClub = false }: Props) {
 
         setVisitors(Array.from(map.values()));
       } catch (e) {
-        console.log("Erreur chargement visiteurs :", e);
+        // console.log("Erreur chargement visiteurs :", e);
       } finally {
         setVisitorsLoading(false);
       }
@@ -300,7 +300,7 @@ export default function HomeScreen({ forClub = false }: Props) {
               Fil HoopSphere
             </Text>
             <Text className="text-3xl font-bold text-white tracking-tight mt-2">
-              Bienvenue 👋
+              Bienvenue 
             </Text>
             <Text className="text-gray-300 mt-1 text-base">
               Ton aperçu express du moment : joueurs en feu et vidéos qui tournent.

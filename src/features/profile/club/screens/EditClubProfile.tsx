@@ -112,7 +112,7 @@ export default function EditClubProfile() {
               // 3️⃣ Redirection vers l'écran Home du stack principal
               navigation.navigate("Home" as never);
             } catch (err: any) {
-              console.log("Erreur suppression compte :", err);
+              // console.log("Erreur suppression compte :", err);
 
               if (err.code === "auth/requires-recent-login") {
                 Alert.alert(

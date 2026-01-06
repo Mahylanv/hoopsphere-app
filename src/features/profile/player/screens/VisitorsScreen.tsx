@@ -122,7 +122,7 @@ export default function VisitorsScreen() {
 
         setVisitors(enriched);
       } catch (e) {
-        console.log("Erreur chargement visiteurs :", e);
+        // console.log("Erreur chargement visiteurs :", e);
       }
 
       setLoading(false);

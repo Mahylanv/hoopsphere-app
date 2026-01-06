@@ -191,7 +191,6 @@ export default function usePlayerProfile() {
 
       setGallery(list);
     } catch (e) {
-      console.log("🔥 ERREUR loadGallery:", e);
     }
 
     setGalleryLoading(false);
@@ -242,7 +241,6 @@ export default function usePlayerProfile() {
         { url, type: isVideo ? "video" : "image" },
       ]);
     } catch (e) {
-      console.log("🔥 ERREUR addGalleryMedia:", e);
     }
 
     setGalleryLoading(false);
@@ -270,7 +268,6 @@ export default function usePlayerProfile() {
         }
       });
   
-      // 3️⃣ 🔥 Suppression galerie globale
       const globalRef = collection(db, "gallery");
       const globalSnaps = await getDocs(globalRef);
   
@@ -286,7 +283,6 @@ export default function usePlayerProfile() {
       // 4️⃣ Update front
       setGallery((prev) => prev.filter((m) => m.url !== url));
     } catch (e) {
-      console.log("🔥 ERREUR deleteGalleryMedia:", e);
     }
   };
   
@@ -314,7 +310,6 @@ export default function usePlayerProfile() {
       setEditFields((prev) => ({ ...prev, avatar: url }));
       setUser((prev: any) => ({ ...prev, avatar: url }));
     } catch (e) {
-      console.log("🔥 ERREUR avatar:", e);
     }
 
     setAvatarLoading(false);
@@ -332,21 +327,20 @@ export default function usePlayerProfile() {
       await reauthenticateWithCredential(current, cred);
       return true;
     } catch (e) {
-      console.log("❌ ERREUR RE-AUTH :", e);
+      // console.log("❌ ERREUR RE-AUTH :", e);
       return false;
     }
   };
 
   /* ============================================================
-   🔥 ENREGISTRE UNE VISITE DE PROFIL
 ============================================================ */
   const saveProfileView = async (targetUid: string) => {
     const viewer = auth.currentUser;
     if (!viewer) return;
 
     try {
-      console.log("📌 Tentative d'enregistrement d'une visite...");
-      console.log("👤 viewerUid =", viewer.uid, "| target =", targetUid);
+      // console.log("📌 Tentative d'enregistrement d'une visite...");
+      // console.log("👤 viewerUid =", viewer.uid, "| target =", targetUid);
 
       const ref = collection(db, "joueurs", targetUid, "views");
 
@@ -357,9 +351,9 @@ export default function usePlayerProfile() {
         seen: false, // ou true selon ton besoin
       });
 
-      console.log("✅ Visite enregistrée !");
+      // console.log("✅ Visite enregistrée !");
     } catch (e) {
-      console.log("❌ ERREUR saveProfileView :", e);
+      // console.log("❌ ERREUR saveProfileView :", e);
     }
   };
 
@@ -370,7 +364,6 @@ export default function usePlayerProfile() {
     const current = auth.currentUser;
     if (!current) return;
 
-    console.log("🔥 saveProfile CALLED");
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const cleanedPhone = (editFields.phone ?? "").replace(/\s/g, "");
@@ -418,7 +411,6 @@ export default function usePlayerProfile() {
       setPasswordForReauth("");
       setPasswordModalVisible(false);
     } catch (e) {
-      console.log("🔥 ERREUR saveProfile:", e);
       alert("Impossible de sauvegarder les modifications.");
     }
   };

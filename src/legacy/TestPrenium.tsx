@@ -103,7 +103,7 @@ export default function TestPrenium() {
               className="bg-pink-600 px-4 py-3 rounded-xl"
             >
               <Text className="text-white font-semibold text-center">
-                Voir mes posts likés ❤️
+                Voir mes posts likés 
               </Text>
             </Pressable>
 
@@ -129,7 +129,7 @@ export default function TestPrenium() {
           <AddressAutocomplete
             placeholder="Adresse du joueur"
             onSelect={(address) => {
-              console.log("Adresse sélectionnée :", address);
+              // console.log("Adresse sélectionnée :", address);
               setSelectedAddress(address);
             }}
           />

@@ -65,7 +65,7 @@ function PersistedNavContainer({ children }: { children: React.ReactNode }) {
           setInitialState(JSON.parse(savedState));
         }
       } catch (e) {
-        console.log("Erreur de restauration navigation :", e);
+        // console.log("Erreur de restauration navigation :", e);
       }
       setIsReady(true);
     };

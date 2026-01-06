@@ -61,7 +61,7 @@ export default function AddressAutocomplete({
       const data = await res.json();
       setResults(data?.results || data?.features || []);
     } catch (e) {
-      console.log("Adresse autocomplete error:", e);
+      // console.log("Adresse autocomplete error:", e);
     } finally {
       setLoading(false);
     }

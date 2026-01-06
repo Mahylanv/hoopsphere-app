@@ -23,7 +23,7 @@ export const onPlayerDeleted = onDocumentDeleted(
 
     try {
       await admin.auth().deleteUser(uid);
-      console.log("✅ Auth supprimé (joueur) :", uid);
+      // console.log("✅ Auth supprimé (joueur) :", uid);
     } catch (error: any) {
       if (error.code === "auth/user-not-found") {
         console.warn("⚠️ Auth déjà supprimé (joueur) :", uid);
@@ -42,7 +42,7 @@ export const onClubDeleted = onDocumentDeleted(
 
     try {
       await admin.auth().deleteUser(uid);
-      console.log("✅ Auth supprimé (club) :", uid);
+      // console.log("✅ Auth supprimé (club) :", uid);
     } catch (error: any) {
       if (error.code === "auth/user-not-found") {
         console.warn("⚠️ Auth déjà supprimé (club) :", uid);
@@ -126,7 +126,7 @@ export const sendCandidatureReminders = onSchedule("every 24 hours", async () =>
         reminderSentAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      console.log("📧 Relance candidature envoyée pour", docSnap.ref.path);
+      // console.log("📧 Relance candidature envoyée pour", docSnap.ref.path);
     }
   }
 });
@@ -151,12 +151,12 @@ export const onAuthUserDeleted = authV1
 
       if (joueurSnap.exists) {
         await joueurRef.delete();
-        console.log("🧹 Joueur Firestore supprimé :", uid);
+      // console.log("🧹 Joueur Firestore supprimé :", uid);
       }
 
       if (clubSnap.exists) {
         await clubRef.delete();
-        console.log("🧹 Club Firestore supprimé :", uid);
+      // console.log("🧹 Club Firestore supprimé :", uid);
       }
     } catch (error) {
       console.error("❌ Erreur cleanup Firestore :", error);
@@ -184,7 +184,7 @@ export const onPlayerPostDeleted = onDocumentDeleted(
     try {
       // 🗑️ Supprimer le post global
       await db.doc(`posts/${postId}`).delete();
-      console.log(`🧹 Post global supprimé : ${postId}`);
+      // console.log(`🧹 Post global supprimé : ${postId}`);
 
       // 🗑️ Supprimer le média dans Storage
       if (data?.mediaUrl) {
@@ -193,7 +193,7 @@ export const onPlayerPostDeleted = onDocumentDeleted(
         );
 
         await bucket.file(decodedPath).delete();
-        console.log(`🧹 Media Storage supprimé : ${decodedPath}`);
+            // console.log(`🧹 Media Storage supprimé : ${decodedPath}`);
       }
     } catch (error) {
       console.error("❌ Erreur cleanup post :", error);
@@ -224,7 +224,7 @@ async function clearAllViewsForCollection(collectionName: "clubs" | "joueurs") {
       const batch = db.batch();
       viewsBatch.forEach((v) => batch.delete(v.ref));
       await batch.commit();
-      console.log(`🧹 ${collectionName}/${docSnap.id} : ${viewsBatch.size} vues supprimées`);
+      // console.log(`🧹 ${collectionName}/${docSnap.id} : ${viewsBatch.size} vues supprimées`);
     }
   }
 }
@@ -235,11 +235,11 @@ export const resetViewsMonthly = onSchedule(
     timeZone: "Europe/Paris",
   },
   async () => {
-    console.log("🧹 Démarrage reset mensuel des vues (joueurs & clubs)");
+    // console.log("🧹 Démarrage reset mensuel des vues (joueurs & clubs)");
     await Promise.all([
       clearAllViewsForCollection("clubs"),
       clearAllViewsForCollection("joueurs"),
     ]);
-    console.log("✅ Reset mensuel des vues terminé");
+    // console.log("✅ Reset mensuel des vues terminé");
   }
 );

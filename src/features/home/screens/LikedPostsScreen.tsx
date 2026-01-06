@@ -124,7 +124,7 @@ export default function LikedPostsScreen() {
             }
           }
         } catch (err) {
-          console.log("⚠️ Sous-collection likedPosts inaccessible :", err);
+          // console.log("⚠️ Sous-collection likedPosts inaccessible :", err);
           shouldFallback = true;
         }
 
@@ -160,7 +160,7 @@ export default function LikedPostsScreen() {
 
         setPosts(results);
       } catch (e) {
-        console.log("Erreur récupération posts likés :", e);
+        // console.log("Erreur récupération posts likés :", e);
       } finally {
         setLoading(false);
       }

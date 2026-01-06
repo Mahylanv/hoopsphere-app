@@ -135,7 +135,7 @@ export default function ClubPremiumScreen() {
       const snap = await getDoc(doc(db, "clubs", user.uid));
       setPremium(!!snap.data()?.premium);
     } catch (e) {
-      console.log("⚠️ Lecture premium club impossible", e);
+      // console.log("⚠️ Lecture premium club impossible", e);
       setPremium(false);
     }
   }, [db, user]);
@@ -184,7 +184,7 @@ export default function ClubPremiumScreen() {
         );
         setViewerProfiles(Object.fromEntries(profilesEntries));
       } catch (e) {
-        console.log("⚠️ Vues club non accessibles (permissions)", e);
+        // console.log("⚠️ Vues club non accessibles (permissions)", e);
         setViewsBlocked(true);
         setViews([]);
         setViewerProfiles({});
@@ -193,7 +193,7 @@ export default function ClubPremiumScreen() {
       // Posts likés par le club
       await fetchLikedPosts(user.uid);
     } catch (e) {
-      console.log("❌ Erreur chargement Premium club :", e);
+      // console.log("❌ Erreur chargement Premium club :", e);
     } finally {
       setLoading(false);
     }
@@ -249,7 +249,7 @@ export default function ClubPremiumScreen() {
         setLikedPosts([]);
       }
     } catch (e) {
-      console.log("❌ Maj premium club :", e);
+      // console.log("❌ Maj premium club :", e);
       setPremium(!value);
       Alert.alert("Erreur", "Impossible de mettre à jour le statut Premium.");
     }

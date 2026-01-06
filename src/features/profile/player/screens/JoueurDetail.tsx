@@ -104,56 +104,33 @@ export default function JoueurDetail() {
         // const viewerUid = auth.currentUser?.uid;
 
         // console.log("👤 viewerUid =", viewerUid, " | target =", uid);
-
         // if (viewerUid && viewerUid !== uid) {
-        //   console.log("--------------------------------------------------");
-        //   console.log("📌 Tentative d'enregistrement d'une visite...");
-        //   console.log("👤 viewerUid =", viewerUid);
-        //   console.log("🎯 profil visité =", uid);
-        //   console.log("📂 Chemin Firestore =", `joueurs/${uid}/views`);
-        //   console.log("--------------------------------------------------");
-
         //   try {
         //     const today = new Date();
         //     today.setHours(0, 0, 0, 0);
-
         //     const viewsRef = collection(db, "joueurs", uid, "views");
         //     const snaps = await getDocs(viewsRef);
-
         //     let alreadyVisitedToday = false;
-
         //     snaps.forEach((docSnap) => {
         //       const data = docSnap.data();
-        //       console.log("🔎 Doc existant dans views :", data);
-
         //       if (data.viewerUid === viewerUid && data.viewedAt?.toDate) {
         //         const visitDate = data.viewedAt.toDate();
         //         visitDate.setHours(0, 0, 0, 0);
-
         //         if (visitDate.getTime() === today.getTime()) {
         //           alreadyVisitedToday = true;
         //         }
         //       }
         //     });
-
         //     if (!alreadyVisitedToday) {
-        //       console.log(
-        //         "🆕 Nouvelle visite → tentative d'écriture Firestore..."
-        //       );
-
         //       await addDoc(viewsRef, {
         //         viewerUid,
         //         viewerType: "joueur",
         //         viewedAt: serverTimestamp(),
-        //         seen: true, // IMPORTANT
+        //         seen: true,
         //       });
-
-        //       console.log("✅ VISITE ENREGISTRÉE !");
-        //     } else {
-        //       console.log("⏳ Visite déjà enregistrée aujourd'hui");
         //     }
         //   } catch (e) {
-        //     console.log("❌ ERREUR GLOBALE ENREGISTREMENT VISITE :", e);
+        //     // console.log("❌ ERREUR GLOBALE ENREGISTREMENT VISITE :", e);
         //   }
         // }
 
@@ -162,7 +139,6 @@ export default function JoueurDetail() {
         const viewerUid = authInstance.currentUser?.uid;
 
         if (viewerUid && viewerUid !== uid) {
-          console.log("🔥 Appel saveProfileView depuis JoueurDetail");
           saveProfileView(uid);
         }
 
@@ -180,7 +156,7 @@ export default function JoueurDetail() {
         const finalRating = computePlayerRating(averages, raw.poste);
         setRating(finalRating);
       } catch (e) {
-        console.log("❌ Erreur fetch joueur :", e);
+        // console.log("❌ Erreur fetch joueur :", e);
       } finally {
         setLoading(false);
       }
@@ -270,7 +246,7 @@ export default function JoueurDetail() {
       const uri = await cardRef.current?.capture?.();
       return uri ?? null;
     } catch (e) {
-      console.log("❌ Erreur capture :", e);
+      // console.log("❌ Erreur capture :", e);
       return null;
     }
   };
