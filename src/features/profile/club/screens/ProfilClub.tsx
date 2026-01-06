@@ -39,11 +39,15 @@ export default function ProfilClub() {
 
   // club passé depuis Search (peut être undefined)
   const clubFromRoute = params?.club as any | undefined;
+  const openCreateOffer = params?.openCreateOffer ?? false;
 
   const [club, setClub] = useState<any>(clubFromRoute ?? null);
   const [loading, setLoading] = useState(!clubFromRoute); // si on a déjà le club, pas besoin de loader initial
   const [uploading, setUploading] = useState(false);
   const hasRecordedView = useRef(false);
+  const [triggerCreateOffer, setTriggerCreateOffer] = useState(
+    () => !!openCreateOffer
+  );
 
   const resetToLegacyHome = () => {
     const parentNav = (navigation as any)?.getParent?.();
@@ -308,7 +312,8 @@ export default function ProfilClub() {
         <Tab.Screen
           name="Offres"
           component={ClubOffers}
-          initialParams={{ club: safeClub }}
+          initialParams={{ club: safeClub, openCreateOffer }}
+          key={`offres-${triggerCreateOffer ? "open" : "default"}`}
         />
       </Tab.Navigator>
     </SafeAreaView>
