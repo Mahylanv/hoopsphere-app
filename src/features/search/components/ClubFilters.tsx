@@ -76,10 +76,10 @@ export default function ClubFilter({
     );
 
     return (
-        <Modal visible={visible} animationType="slide" transparent>
-            <View className="flex-1 bg-black/50 justify-end">
+        <Modal visible={visible} animationType="fade" transparent>
+            <View className="flex-1 bg-black/50 justify-end pb-4">
                 <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
-                <View className="bg-[#1a1b1f] p-5 rounded-t-3xl max-h-[90%] border-t border-gray-800">
+                <View className="bg-[#1a1b1f] p-5 pb-8 rounded-t-3xl max-h-[90%] border-t border-gray-800">
                     {/* Header */}
                     <View className="flex-row justify-between items-center mb-4">
                         <Text className="text-white text-xl font-bold">Filtres</Text>

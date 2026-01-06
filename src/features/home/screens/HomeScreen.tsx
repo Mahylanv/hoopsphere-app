@@ -435,7 +435,6 @@ export default function HomeScreen({ forClub = false }: Props) {
         <View className="mt-6 px-5">
           <View className="flex-row items-center justify-between">
             <Text className="text-white text-lg font-semibold">Actions</Text>
-            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
           </View>
           <View className="flex-row flex-wrap gap-3 mt-3">
             {quickActions.map((action) => (
