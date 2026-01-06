@@ -172,6 +172,27 @@ service cloud.firestore {
             request.auth.uid == clubUid;
         }
       }
+
+      match /views/{viewId} {
+        // Enregistrement des vues de profil club
+        allow create: if
+          request.auth != null &&
+          request.resource.data.viewerUid == request.auth.uid;
+
+        // Lecture réservée au club propriétaire
+        allow read: if
+          request.auth != null &&
+          request.auth.uid == clubUid;
+
+        allow update, delete: if false;
+      }
+
+      match /likedPosts/{postId} {
+        allow read, create, delete: if
+          request.auth != null &&
+          request.auth.uid == clubUid;
+        allow update: if false;
+      }
     }
 
     match /{path=**}/offres/{offerId} {

@@ -148,6 +148,7 @@ export type MainTabParamListClub = {
   SearchJoueur: undefined;
   ProfilClub: undefined;
   SearchJoueurTabs: undefined;
+  ClubPremium: undefined;
 };
 
 // AUTRES TYPES (optionnels)

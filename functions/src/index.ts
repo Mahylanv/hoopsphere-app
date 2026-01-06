@@ -7,6 +7,7 @@ import * as admin from "firebase-admin";
 ===================================================== */
 import { auth as authV1 } from "firebase-functions/v1";
 import { setGlobalOptions } from "firebase-functions/v2";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onDocumentDeleted } from "firebase-functions/v2/firestore";
 
 /* =====================================================
@@ -135,5 +136,48 @@ export const onPlayerPostDeleted = onDocumentDeleted(
     } catch (error) {
       console.error("❌ Erreur cleanup post :", error);
     }
+  }
+);
+
+/* =====================================================
+   🧹 RESET MENSUEL DES VUES (Joueurs & Clubs)
+   - Exécuté chaque 1er du mois à 02:00 (Europe/Paris)
+   - Supprime toutes les vues stockées pour repartir de zéro
+===================================================== */
+
+async function clearAllViewsForCollection(collectionName: "clubs" | "joueurs") {
+  const parentSnap = await db.collection(collectionName).get();
+
+  for (const docSnap of parentSnap.docs) {
+    const viewsRef = docSnap.ref.collection("views");
+    let hasMore = true;
+
+    while (hasMore) {
+      const viewsBatch = await viewsRef.limit(300).get();
+      if (viewsBatch.empty) {
+        hasMore = false;
+        break;
+      }
+
+      const batch = db.batch();
+      viewsBatch.forEach((v) => batch.delete(v.ref));
+      await batch.commit();
+      console.log(`🧹 ${collectionName}/${docSnap.id} : ${viewsBatch.size} vues supprimées`);
+    }
+  }
+}
+
+export const resetViewsMonthly = onSchedule(
+  {
+    schedule: "0 2 1 * *", // 1er du mois à 02:00
+    timeZone: "Europe/Paris",
+  },
+  async () => {
+    console.log("🧹 Démarrage reset mensuel des vues (joueurs & clubs)");
+    await Promise.all([
+      clearAllViewsForCollection("clubs"),
+      clearAllViewsForCollection("joueurs"),
+    ]);
+    console.log("✅ Reset mensuel des vues terminé");
   }
 );

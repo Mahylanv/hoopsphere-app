@@ -1,5 +1,5 @@
 // src/Profil/Clubs/ProfilClub.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   Pressable,
   Text,
@@ -8,6 +8,7 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  DeviceEventEmitter,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
@@ -20,10 +21,11 @@ import { RootStackParamList } from "../../../../types";
 import ClubPresentation from "./ClubPresentation";
 import ClubTeamsList from "./ClubTeamsList";
 import ClubOffers from "./ClubOffers";
+import { signOut } from "firebase/auth";
 
 // Firebase
 import { auth, db } from "../../../../config/firebaseConfig";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, setDoc, serverTimestamp, getDocs } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 type ClubProfileNavProp = NativeStackNavigationProp<RootStackParamList, "ProfilClub">;
@@ -41,6 +43,16 @@ export default function ProfilClub() {
   const [club, setClub] = useState<any>(clubFromRoute ?? null);
   const [loading, setLoading] = useState(!clubFromRoute); // si on a déjà le club, pas besoin de loader initial
   const [uploading, setUploading] = useState(false);
+  const hasRecordedView = useRef(false);
+
+  const resetToLegacyHome = () => {
+    const parentNav = (navigation as any)?.getParent?.();
+    const rootNav = parentNav?.getParent?.() ?? parentNav;
+    (rootNav ?? navigation).reset({
+      index: 0,
+      routes: [{ name: "Home" }],
+    });
+  };
 
   // Si aucun club passé par la route, on tente de charger le club du user connecté
   useEffect(() => {
@@ -60,6 +72,33 @@ export default function ProfilClub() {
     setLoading(true);
     fetchClub();
   }, [clubFromRoute]);
+
+  // Enregistrement d'une vue sur le club (pour premium)
+  useEffect(() => {
+    const recordClubView = async () => {
+      if (!club || hasRecordedView.current) return;
+      const viewerUid = auth.currentUser?.uid;
+      if (!viewerUid || (club.uid && viewerUid === club.uid)) return;
+      try {
+        const clubId = club.uid || club.id;
+        const viewDocId = `${viewerUid}_${Date.now()}`;
+        console.log("📌 Enregistrement vue club", { clubId, viewerUid, viewDocId });
+        await setDoc(
+          doc(db, "clubs", clubId, "views", viewDocId),
+          {
+            viewerUid,
+            viewedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+        console.log("✅ Vue club enregistrée en BDD", { clubId, viewerUid, viewDocId });
+        hasRecordedView.current = true;
+      } catch (e) {
+        console.log("⚠️ Impossible d'enregistrer la vue club :", e);
+      }
+    };
+    recordClubView();
+  }, [club]);
 
   const isOwner = useMemo(() => {
     const uid = auth.currentUser?.uid;
@@ -116,6 +155,30 @@ export default function ProfilClub() {
     }
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      "Déconnexion",
+      "Voulez-vous vraiment vous déconnecter ?",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Se déconnecter",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await signOut(auth);
+              resetToLegacyHome();
+            } catch (err) {
+              console.error("Erreur logout :", err);
+              Alert.alert("Erreur", "Impossible de vous déconnecter pour le moment.");
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-black">
@@ -133,7 +196,7 @@ export default function ProfilClub() {
         </Text>
   
         <Pressable
-          onPress={() => navigation.navigate("Home")}
+          onPress={resetToLegacyHome}
           className="bg-orange-500 px-6 py-3 rounded-xl mt-2"
         >
           <Text className="text-white font-bold text-base">
@@ -174,14 +237,23 @@ export default function ProfilClub() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </Pressable>
 
-        {/* Bouton édition profil (navigation vers page d’édition) — tu peux le cacher si !isOwner */}
+        {/* Boutons propriétaire : édition + déconnexion */}
         {isOwner && (
-          <Pressable
-            onPress={() => navigation.navigate("EditClubProfile")}
-            className="absolute right-4 top-6 p-2"
-          >
-            <Ionicons name="create-outline" size={22} color="#fff" />
-          </Pressable>
+          <View className="absolute right-4 top-6 items-end space-y-2">
+            <Pressable
+              onPress={() => navigation.navigate("EditClubProfile")}
+              className="p-2"
+            >
+              <Ionicons name="create-outline" size={22} color="#fff" />
+            </Pressable>
+
+            <Pressable
+              onPress={handleLogout}
+              className="p-2"
+            >
+              <Ionicons name="log-out-outline" size={22} color="#fff" />
+            </Pressable>
+          </View>
         )}
 
         <View className="relative">
