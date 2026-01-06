@@ -14,6 +14,15 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+} from "firebase/firestore";
 
 import usePlayerRanking from "../hooks/usePlayerRanking";
 import WeeklyRanking from "../components/WeeklyRanking";
@@ -22,6 +31,8 @@ import VideoCarouselPreview from "../components/VideoCarouselPreview";
 import RankingPlayerPanel from "../components/RankingPlayerPanel";
 import { RankingPlayer } from "../hooks/usePlayerRanking";
 import { VideoItem } from "../../../types";
+import { db, auth } from "../../../config/firebaseConfig";
+import { usePremiumStatus } from "../../../shared/hooks/usePremiumStatus";
 
 type Props = {
   forClub?: boolean;
@@ -29,6 +40,8 @@ type Props = {
 
 export default function HomeScreen({ forClub = false }: Props) {
   const navigation = useNavigation<any>();
+  const { isPremium } = usePremiumStatus();
+  const [clubPremium, setClubPremium] = useState(false);
   const { ranking, loading } = usePlayerRanking();
   const { posts, loading: postsLoading } = useAllPosts({
     includeClubVisibility: forClub,
@@ -39,6 +52,11 @@ export default function HomeScreen({ forClub = false }: Props) {
     null
   );
   const [panelVisible, setPanelVisible] = useState(false);
+  const [visitors, setVisitors] = useState<
+    { uid: string; name: string; avatar?: string | null; type: "player" | "club" }
+  >([]);
+  const [visitorsLoading, setVisitorsLoading] = useState(false);
+  const allowedPremium = forClub ? clubPremium : isPremium;
 
   // -------------------------------
   // ⭐ Animations Header / Ranking / Videos
@@ -86,6 +104,84 @@ export default function HomeScreen({ forClub = false }: Props) {
     }
   }, [postsLoading]);
 
+  useEffect(() => {
+    const loadClubPremium = async () => {
+      if (!forClub) return;
+      const uid = auth.currentUser?.uid;
+      if (!uid) {
+        setClubPremium(false);
+        return;
+      }
+      try {
+        const snap = await getDoc(doc(db, "clubs", uid));
+        setClubPremium(!!snap.data()?.premium);
+      } catch (e) {
+        console.log("Erreur chargement premium club :", e);
+        setClubPremium(false);
+      }
+    };
+    loadClubPremium();
+  }, [forClub]);
+
+  useEffect(() => {
+    const fetchVisitors = async () => {
+      if (!allowedPremium) {
+        setVisitors([]);
+        return;
+      }
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
+      setVisitorsLoading(true);
+      try {
+        const basePath = forClub ? ["clubs", uid] : ["joueurs", uid];
+        const ref = collection(db, ...basePath, "views");
+        const q = query(ref, orderBy("viewedAt", "desc"), limit(8));
+        const snap = await getDocs(q);
+
+        const map = new Map<string, { uid: string; name: string; avatar?: string | null }>();
+        for (const d of snap.docs) {
+          const data: any = d.data();
+          const visitorUid = data.viewerUid;
+          if (!visitorUid || map.has(visitorUid)) continue;
+          // essaie profil joueur puis club
+          let name = "Visiteur";
+          let avatar: string | null = null;
+          let type: "player" | "club" = "player";
+
+          const joueurSnap = await getDoc(doc(db, "joueurs", visitorUid));
+          if (joueurSnap.exists()) {
+            const jd = joueurSnap.data() as any;
+            name = `${jd.prenom ?? ""} ${jd.nom ?? ""}`.trim() || "Visiteur";
+            avatar = jd.avatar ?? null;
+          } else {
+            const clubSnap = await getDoc(doc(db, "clubs", visitorUid));
+            if (clubSnap.exists()) {
+              const cd = clubSnap.data() as any;
+              name = cd.nom ?? cd.name ?? "Club";
+              avatar = cd.logo ?? null;
+              type = "club";
+            }
+          }
+
+          map.set(visitorUid, {
+            uid: visitorUid,
+            name,
+            avatar,
+            type,
+          });
+        }
+
+        setVisitors(Array.from(map.values()));
+      } catch (e) {
+        console.log("Erreur chargement visiteurs :", e);
+      } finally {
+        setVisitorsLoading(false);
+      }
+    };
+
+    fetchVisitors();
+  }, [allowedPremium, forClub]);
+
   const videoItems: VideoItem[] = posts.map((post) => ({
     id: post.id,
     url: post.url,
@@ -98,8 +194,6 @@ export default function HomeScreen({ forClub = false }: Props) {
     createdAt: post.createdAt,
     skills: post.skills ?? [],
   }));
-
-  const storyPlayers = ranking.slice(0, 8);
 
   const brand = {
     orange: "#F97316",
@@ -243,74 +337,95 @@ export default function HomeScreen({ forClub = false }: Props) {
           </LinearGradient>
         </Animated.View>
 
-        {/* Stories façon Instagram */}
-        {!loading && storyPlayers.length > 0 && (
-          <View className="mt-6 px-5">
-            <View className="flex-row items-center justify-between">
+        {/* Visiteurs récents (remplace stories) */}
+        <View className="mt-6 px-5">
+          <View className="flex-row items-center justify-between">
+            <View>
               <Text className="text-white text-lg font-semibold">
-                Stories premium
+                Visiteurs récents
               </Text>
-              <View className="flex-row items-center">
-                <View className="w-2 h-2 rounded-full bg-emerald-400 mr-2" />
-                <Text className="text-gray-400 text-xs">
-                  Inspiration rapide
-                </Text>
-              </View>
+              <Text className="text-gray-400 text-xs mt-1">
+                Derniers profils qui ont consulté ta page
+              </Text>
             </View>
+            {!allowedPremium && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate("Payment")}
+                className="flex-row items-center bg-orange-500/20 px-3 py-1.5 rounded-full border border-orange-500/40"
+              >
+                <Ionicons name="lock-closed" size={14} color={brand.orange} />
+                <Text className="text-orange-200 text-xs ml-1">Premium</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
+          {allowedPremium ? (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               className="mt-4"
               contentContainerStyle={{ paddingRight: 24 }}
             >
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => navigation.navigate("CreatePost")}
-                className="mr-4 items-center"
-              >
-                <LinearGradient
-                  colors={[brand.orange, brand.blue]}
-                  style={{ padding: 2, borderRadius: 9999 }}
-                >
-                  <View className="w-16 h-16 rounded-full bg-black items-center justify-center">
-                    <Ionicons name="add" size={26} color="#f3f4f6" />
-                  </View>
-                </LinearGradient>
-                <Text className="text-gray-300 text-xs mt-2">Ta story</Text>
-              </TouchableOpacity>
+              {visitorsLoading && (
+                <View className="mr-4 items-center justify-center w-16 h-16">
+                  <ActivityIndicator size="small" color={brand.orange} />
+                </View>
+              )}
 
-              {storyPlayers.map((player) => (
-                <View key={player.uid} className="mr-4 items-center">
-                  <LinearGradient
-                    colors={[brand.orange, brand.blueDark, brand.blue]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={{ padding: 2, borderRadius: 9999 }}
-                  >
-                    <View className="w-16 h-16 rounded-full bg-black items-center justify-center overflow-hidden">
-                      <Image
-                        source={{
-                          uri:
-                            player.avatar && player.avatar.trim() !== ""
-                              ? player.avatar
-                              : "https://via.placeholder.com/200.png",
-                        }}
-                        className="w-full h-full"
-                      />
-                    </View>
-                  </LinearGradient>
-                  <Text
-                    className="text-gray-200 text-xs mt-2 w-16 text-center"
-                    numberOfLines={1}
-                  >
-                    {player.prenom}
+              {!visitorsLoading && visitors.length === 0 && (
+                <View className="mr-4 items-center justify-center">
+                  <Text className="text-gray-400 text-xs">
+                    Aucun visiteur récent
                   </Text>
                 </View>
-              ))}
+              )}
+
+              {!visitorsLoading &&
+                visitors.map((visitor) => (
+                  <TouchableOpacity
+                    key={visitor.uid}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      if (visitor.type === "club") {
+                        navigation.navigate("ProfilClub", {
+                          club: { uid: visitor.uid, id: visitor.uid },
+                        });
+                      } else {
+                        navigation.navigate("JoueurDetail", { uid: visitor.uid });
+                      }
+                    }}
+                    className="mr-4 items-center"
+                  >
+                    <LinearGradient
+                      colors={[brand.orange, brand.blueDark, brand.blue]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{ padding: 2, borderRadius: 9999 }}
+                    >
+                      <View className="w-16 h-16 rounded-full bg-black items-center justify-center overflow-hidden">
+                        <Image
+                          source={{
+                            uri:
+                              visitor.avatar && visitor.avatar.trim() !== ""
+                                ? visitor.avatar
+                                : "https://via.placeholder.com/200.png",
+                          }}
+                          className="w-full h-full"
+                        />
+                      </View>
+                    </LinearGradient>
+                    <Text
+                      className="text-gray-200 text-xs mt-2 w-16 text-center"
+                      numberOfLines={1}
+                    >
+                      {visitor.name || "Visiteur"}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
             </ScrollView>
-          </View>
-        )}
+          ) : null}
+        </View>
 
         {/* Actions rapides */}
         <View className="mt-6 px-5">
