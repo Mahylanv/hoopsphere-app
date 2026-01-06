@@ -313,6 +313,7 @@ export default function ProfilClub() {
           name="Offres"
           component={ClubOffers}
           initialParams={{ club: safeClub, openCreateOffer }}
+          key={`offres-${triggerCreateOffer ? "open" : "default"}`}
         />
       </Tab.Navigator>
     </SafeAreaView>
