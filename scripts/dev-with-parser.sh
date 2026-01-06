@@ -3,10 +3,10 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PORT="${PARSER_PORT:-8000}"
-EXPO_CMD="${EXPO_CMD:-npx expo start}"
+EXPO_CMD="${EXPO_CMD:-npx expo start --tunnel}"
 UVICORN_CMD="${UVICORN_CMD:-python3 -m uvicorn server:app --host 0.0.0.0 --port ${PORT}}"
 ENV_FILE="${ENV_FILE:-$ROOT/.env}"
-NGROK_LOG="${NGROK_LOG:-$ROOT/.ngrok.log}"
+NGROK_LOG="${NGROK_LOG:-/dev/null}"
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then

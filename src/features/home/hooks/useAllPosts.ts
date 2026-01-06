@@ -87,8 +87,6 @@ export default function useAllPosts({ includeClubVisibility = false }: { include
   useEffect(() => {
     if (includeClubVisibility && !authReady) return;
 
-    console.log("👂 Écoute temps réel des posts HOME");
-
     const constraints: any[] = [where("mediaType", "==", "video")];
 
     if (includeClubVisibility && isClub) {
@@ -164,7 +162,6 @@ export default function useAllPosts({ includeClubVisibility = false }: { include
         // Prefetch des premières vidéos pour démarrage immédiat
         const withCache = await prefetchTopVideos(sorted);
 
-        console.log("🔄 Feed HOME mis à jour :", sorted.length);
         setPosts(withCache);
         setLoading(false);
       },

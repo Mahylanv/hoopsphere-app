@@ -285,11 +285,15 @@ export default function HomeScreen({ forClub = false }: Props) {
           >
             <View
               className="absolute -right-10 -top-10 w-48 h-48 rounded-full"
-              style={{ backgroundColor: "rgba(249,115,22,0.12)" }}
+              style={{ backgroundColor: "rgba(249,115,22,0.16)" }}
             />
             <View
               className="absolute -left-14 bottom-0 w-40 h-40 rounded-full"
-              style={{ backgroundColor: "rgba(37,99,235,0.12)" }}
+              style={{ backgroundColor: "rgba(37,99,235,0.16)" }}
+            />
+            <View
+              className="absolute -right-6 top-16 w-24 h-24 rounded-full"
+              style={{ backgroundColor: "rgba(249,115,22,0.35)" }}
             />
 
             <Text className="text-xs font-semibold text-orange-300 uppercase tracking-[0.5px]">
