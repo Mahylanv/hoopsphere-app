@@ -213,7 +213,7 @@ export default function HomeScreen({ forClub = false }: Props) {
 
   const quickActions = [
     {
-      title: forClub ? "Partager une offre" : "Partager un highlight",
+      title: forClub ? "Partager une offre de recrutement" : "Partager un highlight",
       subtitle: forClub
         ? "Publie une nouvelle opportunité"
         : "Montre ton dernier move",
