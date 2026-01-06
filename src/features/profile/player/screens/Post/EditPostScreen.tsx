@@ -110,7 +110,7 @@ export default function EditPostScreen() {
          1️⃣ SI NOUVELLE VIDÉO
       =============================== */
       if (newMediaUri && newMediaType === "video") {
-        console.log("🎥 Upload nouvelle vidéo");
+        // console.log("🎥 Upload nouvelle vidéo");
 
         // ➜ récupérer le fichier
         const response = await fetch(newMediaUri);
@@ -149,13 +149,13 @@ export default function EditPostScreen() {
         payload.mediaType = "video";
       }
 
-      console.log("💾 updatePost payload final :", payload);
+      // console.log("💾 updatePost payload final :", payload);
 
       await updatePost(post.id, payload);
 
       navigation.goBack();
     } catch (e) {
-      console.log("❌ Erreur sauvegarde :", e);
+      // console.log("❌ Erreur sauvegarde :", e);
     } finally {
       setIsSaving(false);
     }
@@ -181,7 +181,7 @@ export default function EditPostScreen() {
 
               navigation.goBack();
             } catch (e) {
-              console.log("❌ Erreur suppression :", e);
+              // console.log("❌ Erreur suppression :", e);
             } finally {
               setIsSaving(false);
             }

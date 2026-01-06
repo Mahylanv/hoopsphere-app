@@ -53,7 +53,7 @@ export default function HomeScreen({ forClub = false }: Props) {
   );
   const [panelVisible, setPanelVisible] = useState(false);
   const [visitors, setVisitors] = useState<
-    { uid: string; name: string; avatar?: string | null; type: "player" | "club" }
+    { uid: string; name: string; avatar?: string | null; type: "player" | "club"; premium?: boolean }
   >([]);
   const [visitorsLoading, setVisitorsLoading] = useState(false);
   const allowedPremium = forClub ? clubPremium : isPremium;
@@ -116,7 +116,7 @@ export default function HomeScreen({ forClub = false }: Props) {
         const snap = await getDoc(doc(db, "clubs", uid));
         setClubPremium(!!snap.data()?.premium);
       } catch (e) {
-        console.log("Erreur chargement premium club :", e);
+        // console.log("Erreur chargement premium club :", e);
         setClubPremium(false);
       }
     };
@@ -138,7 +138,10 @@ export default function HomeScreen({ forClub = false }: Props) {
         const q = query(ref, orderBy("viewedAt", "desc"), limit(8));
         const snap = await getDocs(q);
 
-        const map = new Map<string, { uid: string; name: string; avatar?: string | null }>();
+        const map = new Map<
+          string,
+          { uid: string; name: string; avatar?: string | null; type: "player" | "club"; premium?: boolean }
+        >();
         for (const d of snap.docs) {
           const data: any = d.data();
           const visitorUid = data.viewerUid;
@@ -147,12 +150,14 @@ export default function HomeScreen({ forClub = false }: Props) {
           let name = "Visiteur";
           let avatar: string | null = null;
           let type: "player" | "club" = "player";
+          let premium = false;
 
           const joueurSnap = await getDoc(doc(db, "joueurs", visitorUid));
           if (joueurSnap.exists()) {
             const jd = joueurSnap.data() as any;
             name = `${jd.prenom ?? ""} ${jd.nom ?? ""}`.trim() || "Visiteur";
             avatar = jd.avatar ?? null;
+            premium = !!jd.premium;
           } else {
             const clubSnap = await getDoc(doc(db, "clubs", visitorUid));
             if (clubSnap.exists()) {
@@ -160,6 +165,7 @@ export default function HomeScreen({ forClub = false }: Props) {
               name = cd.nom ?? cd.name ?? "Club";
               avatar = cd.logo ?? null;
               type = "club";
+              premium = !!cd.premium;
             }
           }
 
@@ -168,12 +174,13 @@ export default function HomeScreen({ forClub = false }: Props) {
             name,
             avatar,
             type,
+            premium,
           });
         }
 
         setVisitors(Array.from(map.values()));
       } catch (e) {
-        console.log("Erreur chargement visiteurs :", e);
+        // console.log("Erreur chargement visiteurs :", e);
       } finally {
         setVisitorsLoading(false);
       }
@@ -300,7 +307,7 @@ export default function HomeScreen({ forClub = false }: Props) {
               Fil HoopSphere
             </Text>
             <Text className="text-3xl font-bold text-white tracking-tight mt-2">
-              Bienvenue 👋
+              Bienvenue 
             </Text>
             <Text className="text-gray-300 mt-1 text-base">
               Ton aperçu express du moment : joueurs en feu et vidéos qui tournent.
@@ -419,12 +426,22 @@ export default function HomeScreen({ forClub = false }: Props) {
                         />
                       </View>
                     </LinearGradient>
-                    <Text
-                      className="text-gray-200 text-xs mt-2 w-16 text-center"
-                      numberOfLines={1}
-                    >
-                      {visitor.name || "Visiteur"}
-                    </Text>
+                    <View className="flex-row items-center justify-center mt-2 w-16">
+                      <Text
+                        className="text-gray-200 text-xs text-center"
+                        numberOfLines={1}
+                      >
+                        {visitor.name || "Visiteur"}
+                      </Text>
+                      {visitor.premium && (
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={14}
+                          color="#38bdf8"
+                          style={{ marginLeft: 3 }}
+                        />
+                      )}
+                    </View>
                   </TouchableOpacity>
                 ))}
             </ScrollView>
@@ -435,7 +452,6 @@ export default function HomeScreen({ forClub = false }: Props) {
         <View className="mt-6 px-5">
           <View className="flex-row items-center justify-between">
             <Text className="text-white text-lg font-semibold">Actions</Text>
-            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
           </View>
           <View className="flex-row flex-wrap gap-3 mt-3">
             {quickActions.map((action) => (

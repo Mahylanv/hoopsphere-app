@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../types";
@@ -55,6 +56,13 @@ type FirestoreClub = {
   createdAt?: any;
   updatedAt?: any;
 };
+
+const brand = {
+  orange: "#F97316",
+  orangeLight: "#fb923c",
+  blue: "#2563EB",
+  surface: "#0E0D0D",
+} as const;
 
 // Helpers pour le filtre/label des équipes
 const normalize = (s: string) =>
@@ -329,84 +337,91 @@ function ClubsTab({ isPremium, onUpgrade }: PremiumProps) {
               (x): x is string => typeof x === "string" && x.length > 0
             );
             return (
-              <Pressable
-                onPress={() =>
-                  navigation.navigate("ProfilClub", { club: item as any })
-                }
-                className="bg-[#1a1b1f] rounded-2xl p-4 mb-3 border border-gray-800"
+              <LinearGradient
+                colors={[brand.blue, brand.surface]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ borderRadius: 18, padding: 1.5, marginBottom: 12 }}
               >
-                <View className="flex-row items-center justify-between">
-                  {/* CONTENU CLUB */}
-                  <View className="flex-row items-center flex-1">
-                    {item.logo ? (
-                      <Image
-                        source={{ uri: item.logo }}
-                        className="w-16 h-16 rounded-lg mr-4"
-                      />
-                    ) : (
-                      <View className="w-16 h-16 rounded-lg mr-4 bg-gray-700 items-center justify-center">
-                        <Ionicons name="image" size={20} color="#bbb" />
-                      </View>
-                    )}
+                <Pressable
+                  onPress={() =>
+                    navigation.navigate("ProfilClub", { club: item as any })
+                  }
+                  className="bg-[#0E0D0D] rounded-[16px] p-4"
+                >
+                  <View className="flex-row items-center justify-between">
+                    {/* CONTENU CLUB */}
+                    <View className="flex-row items-center flex-1">
+                      {item.logo ? (
+                        <Image
+                          source={{ uri: item.logo }}
+                          className="w-16 h-16 rounded-lg mr-4"
+                        />
+                      ) : (
+                        <View className="w-16 h-16 rounded-lg mr-4 bg-gray-700 items-center justify-center">
+                          <Ionicons name="image" size={20} color="#bbb" />
+                        </View>
+                      )}
 
-                    <View className="flex-1">
-                      <Text className="text-white text-lg font-semibold">
-                        {item.name || "Club sans nom"}
-                      </Text>
+                      <View className="flex-1">
+                        <Text className="text-white text-lg font-semibold">
+                          {item.name || "Club sans nom"}
+                        </Text>
 
-                      <Text className="text-gray-400">{item.city || "—"}</Text>
+                        <Text className="text-gray-400">{item.city || "—"}</Text>
 
-                      {/* Équipes : sexe / fallback */}
-                      <Text className="text-gray-400">
-                        {sexLabel
-                          ? `Équipes : ${sexLabel}`
-                          : typeof item.teams === "number"
-                            ? `Équipes : ${item.teams}`
-                            : cats.length
-                              ? `${cats.length} catégories`
-                              : "—"}
-                      </Text>
+                        {/* Équipes : sexe / fallback */}
+                        <Text className="text-gray-400">
+                          {sexLabel
+                            ? `Équipes : ${sexLabel}`
+                            : typeof item.teams === "number"
+                              ? `Équipes : ${item.teams}`
+                              : cats.length
+                                ? `${cats.length} catégories`
+                                : "—"}
+                        </Text>
 
-                      <View className="flex-row flex-wrap mt-1">
-                        {cats.slice(0, 6).map((c) => (
-                          <View
-                            key={`${item.id}-${c}`}
-                            className="px-2 py-0.5 mr-2 mb-1 bg-gray-700 rounded-full"
-                          >
-                            <Text className="text-xs text-gray-300">{c}</Text>
-                          </View>
-                        ))}
+                        <View className="flex-row flex-wrap mt-1">
+                          {cats.slice(0, 6).map((c) => (
+                            <View
+                              key={`${item.id}-${c}`}
+                              className="px-2 py-0.5 mr-2 mb-1 bg-gray-700 rounded-full"
+                            >
+                              <Text className="text-xs text-gray-300">{c}</Text>
+                            </View>
+                          ))}
+                        </View>
                       </View>
                     </View>
-                  </View>
 
-                  {/* ⭐ FAVORI */}
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (!isPremium) {
-                        Alert.alert(
-                          "Favoris Premium",
-                          "Ajoute des clubs en favori en passant en Premium.",
-                          [
-                            { text: "Annuler", style: "cancel" },
-                            { text: "Passer Premium", onPress: onUpgrade },
-                          ]
-                        );
-                        return;
-                      }
-                      toggleFavorite(item.id);
-                    }}
-                    hitSlop={10}
-                    className="ml-3"
-                  >
-                    <Ionicons
-                      name={isFavorite(item.id) ? "star" : "star-outline"}
-                      size={22}
-                      color={isFavorite(item.id) ? "#FACC15" : "#9ca3af"}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </Pressable>
+                    {/* ⭐ FAVORI */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (!isPremium) {
+                          Alert.alert(
+                            "Favoris Premium",
+                            "Ajoute des clubs en favori en passant en Premium.",
+                            [
+                              { text: "Annuler", style: "cancel" },
+                              { text: "Passer Premium", onPress: onUpgrade },
+                            ]
+                          );
+                          return;
+                        }
+                        toggleFavorite(item.id);
+                      }}
+                      hitSlop={10}
+                      className="ml-3"
+                    >
+                      <Ionicons
+                        name={isFavorite(item.id) ? "star" : "star-outline"}
+                        size={22}
+                        color={isFavorite(item.id) ? "#FACC15" : "#9ca3af"}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </Pressable>
+              </LinearGradient>
             );
           }}
           ListFooterComponent={
@@ -567,14 +582,14 @@ function OffersFilter({
   );
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View className="flex-1 bg-black/50 justify-end">
+    <Modal visible={visible} animationType="fade" transparent>
+      <View className="flex-1 bg-black/50 justify-end pb-4">
         <TouchableOpacity
           style={{ flex: 1 }}
           activeOpacity={1}
           onPress={onClose}
         />
-        <View className="bg-[#1a1b1f] p-5 rounded-t-3xl max-h-[90%] border-t border-gray-800">
+        <View className="bg-[#1a1b1f] p-5 pb-8 rounded-t-3xl max-h-[90%] border-t border-gray-800">
           {/* Header */}
           <View className="flex-row justify-between items-center mb-4">
             <Text className="text-white text-xl font-bold">Filtres</Text>
@@ -930,93 +945,100 @@ function OffersTab({ isPremium, onUpgrade }: PremiumProps) {
             </Text>
           }
           renderItem={({ item }) => (
-            <Pressable
-              onPress={() =>
-                navigation.navigate("OfferDetail", {
-                  offer: { ...item } as any,
-                })
-              }
-              className="bg-[#1a1b1f] rounded-2xl p-4 mb-3 border border-gray-800"
+            <LinearGradient
+              colors={[brand.orange, brand.surface]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ borderRadius: 18, padding: 1.5, marginBottom: 12 }}
             >
-              <View className="flex-row justify-between items-center mb-1">
-                <Text
-                  className="text-white text-lg font-semibold flex-1"
-                  numberOfLines={1}
-                >
-                  {item.title || "Offre"}
-                </Text>
-                {!!item.publishedAt && (
-                  <Text className="text-gray-500 text-xs">
-                    {item.publishedAt}
+              <Pressable
+                onPress={() =>
+                  navigation.navigate("OfferDetail", {
+                    offer: { ...item } as any,
+                  })
+                }
+                className="bg-[#0E0D0D] rounded-[16px] p-4"
+              >
+                <View className="flex-row justify-between items-center mb-1">
+                  <Text
+                    className="text-white text-lg font-semibold flex-1"
+                    numberOfLines={1}
+                  >
+                    {item.title || "Offre"}
+                  </Text>
+                  {!!item.publishedAt && (
+                    <Text className="text-gray-500 text-xs">
+                      {item.publishedAt}
+                    </Text>
+                  )}
+                </View>
+
+                {!!item.location && (
+                  <View className="flex-row items-center mb-2">
+                    <Ionicons
+                      name="location-outline"
+                      size={16}
+                      color="#D1D5DB" // équivalent text-gray-300
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text className="text-gray-300">{item.location}</Text>
+                  </View>
+                )}
+
+                {!!item.description && (
+                  <Text className="text-gray-300 mb-3" numberOfLines={3}>
+                    {item.description}
                   </Text>
                 )}
-              </View>
 
-              {!!item.location && (
-                <View className="flex-row items-center mb-2">
-                  <Ionicons
-                    name="location-outline"
-                    size={16}
-                    color="#D1D5DB" // équivalent text-gray-300
-                    style={{ marginRight: 6 }}
-                  />
-                  <Text className="text-gray-300">{item.location}</Text>
-                </View>
-              )}
-
-              {!!item.description && (
-                <Text className="text-gray-300 mb-3" numberOfLines={3}>
-                  {item.description}
-                </Text>
-              )}
-
-              <View className="flex-row flex-wrap gap-2">
-                {!!item.position && (
-                  <View className="bg-orange-600/80 px-3 py-1 rounded-full">
-                    <Text className="text-white text-xs">{item.position}</Text>
-                  </View>
-                )}
-                {!!item.gender && (
-                  <View className="bg-blue-600/80 px-3 py-1 rounded-full">
-                    <Text className="text-white text-xs">{item.gender}</Text>
-                  </View>
-                )}
-                {!!item.team && (
-                  <View className="bg-green-600/80 px-3 py-1 rounded-full">
-                    <Text className="text-white text-xs">{item.team}</Text>
-                  </View>
-                )}
-                {!!item.category && (
-                  <View className="bg-purple-600/80 px-3 py-1 rounded-full">
-                    <Text className="text-white text-xs">{item.category}</Text>
-                  </View>
-                )}
-                {!!item.championship && (
-                  <View className="bg-indigo-600/80 px-3 py-1 rounded-full">
-                    <Text className="text-white text-xs">
-                      {item.championship}
-                    </Text>
-                  </View>
-                )}
-                {!!item.ageRange && (
-                  <View className="bg-gray-700 px-3 py-1 rounded-full">
-                    <Text className="text-white text-xs">{item.ageRange}</Text>
-                  </View>
-                )}
-                {/* Département effectif pour affichage (offre ou club) */}
-                {(() => {
-                  const effDept =
-                    item.department ||
-                    clubsIndex[item.clubUid]?.department ||
-                    "";
-                  return effDept ? (
-                    <View className="bg-gray-700 px-3 py-1 rounded-full">
-                      <Text className="text-white text-xs">{effDept}</Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {!!item.position && (
+                    <View className="bg-orange-600/80 px-3 py-1 rounded-full">
+                      <Text className="text-white text-xs">{item.position}</Text>
                     </View>
-                  ) : null;
-                })()}
-              </View>
-            </Pressable>
+                  )}
+                  {!!item.gender && (
+                    <View className="bg-blue-600/80 px-3 py-1 rounded-full">
+                      <Text className="text-white text-xs">{item.gender}</Text>
+                    </View>
+                  )}
+                  {!!item.team && (
+                    <View className="bg-green-600/80 px-3 py-1 rounded-full">
+                      <Text className="text-white text-xs">{item.team}</Text>
+                    </View>
+                  )}
+                  {!!item.category && (
+                    <View className="bg-purple-600/80 px-3 py-1 rounded-full">
+                      <Text className="text-white text-xs">{item.category}</Text>
+                    </View>
+                  )}
+                  {!!item.championship && (
+                    <View className="bg-indigo-600/80 px-3 py-1 rounded-full">
+                      <Text className="text-white text-xs">
+                        {item.championship}
+                      </Text>
+                    </View>
+                  )}
+                  {!!item.ageRange && (
+                    <View className="bg-gray-700 px-3 py-1 rounded-full">
+                      <Text className="text-white text-xs">{item.ageRange}</Text>
+                    </View>
+                  )}
+                  {/* Département effectif pour affichage (offre ou club) */}
+                  {(() => {
+                    const effDept =
+                      item.department ||
+                      clubsIndex[item.clubUid]?.department ||
+                      "";
+                    return effDept ? (
+                      <View className="bg-gray-700 px-3 py-1 rounded-full">
+                        <Text className="text-white text-xs">{effDept}</Text>
+                      </View>
+                    ) : null;
+                  })()}
+                </View>
+              </Pressable>
+            </LinearGradient>
           )}
           ListFooterComponent={
             visibleCount < filtered.length ? (
@@ -1058,7 +1080,7 @@ export default function Search() {
     (navigation as any).navigate("Payment");
   };
   return (
-    <SafeAreaView className="flex-1 bg-black">
+    <SafeAreaView className="flex-1 bg-black" edges={["top", "left", "right"]}>
       <Tab.Navigator
         screenOptions={{
           tabBarStyle: { backgroundColor: "#1f2937" },

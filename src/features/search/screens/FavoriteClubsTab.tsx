@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { useFavoriteClubs } from "../hooks/useFavoriteClubs";
 import { useClubs } from "../hooks/useClubs";
@@ -31,6 +32,13 @@ type FirestoreClub = {
 type FavoriteSort = "recent" | "name_asc" | "categories_count";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
+
+const brand = {
+  orange: "#F97316",
+  orangeLight: "#fb923c",
+  blue: "#2563EB",
+  surface: "#0E0D0D",
+} as const;
 
 export default function FavoriteClubsTab() {
   const navigation = useNavigation<NavProp>();
@@ -132,65 +140,72 @@ export default function FavoriteClubsTab() {
           const cats = (item.categories ?? []).slice(0, 6);
 
           return (
-            <Pressable
-              onPress={() =>
-                navigation.navigate("ProfilClub", { club: item as any })
-              }
-              className="bg-[#1a1b1f] rounded-2xl p-4 mb-3 border border-gray-800"
+            <LinearGradient
+              colors={[brand.blue, brand.surface]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ borderRadius: 18, padding: 1.5, marginBottom: 12 }}
             >
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center flex-1">
-                  {item.logo ? (
-                    <Image
-                      source={{ uri: item.logo }}
-                      className="w-16 h-16 rounded-lg mr-4"
-                    />
-                  ) : (
-                    <View className="w-16 h-16 rounded-lg mr-4 bg-gray-700 items-center justify-center">
-                      <Ionicons name="image" size={20} color="#bbb" />
-                    </View>
-                  )}
+              <Pressable
+                onPress={() =>
+                  navigation.navigate("ProfilClub", { club: item as any })
+                }
+                className="bg-[#0E0D0D] rounded-[16px] p-4"
+              >
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center flex-1">
+                    {item.logo ? (
+                      <Image
+                        source={{ uri: item.logo }}
+                        className="w-16 h-16 rounded-lg mr-4"
+                      />
+                    ) : (
+                      <View className="w-16 h-16 rounded-lg mr-4 bg-gray-700 items-center justify-center">
+                        <Ionicons name="image" size={20} color="#bbb" />
+                      </View>
+                    )}
 
-                  <View className="flex-1">
-                    <Text className="text-white text-lg font-semibold">
-                      {item.name || "Club sans nom"}
-                    </Text>
+                    <View className="flex-1">
+                      <Text className="text-white text-lg font-semibold">
+                        {item.name || "Club sans nom"}
+                      </Text>
 
-                    <Text className="text-gray-400">{item.city || "—"}</Text>
+                      <Text className="text-gray-400">{item.city || "—"}</Text>
 
-                    <View className="flex-row flex-wrap mt-1">
-                      {cats.map((c) => (
-                        <View
-                          key={`${item.id}-${c}`}
-                          className="px-2 py-0.5 mr-2 mb-1 bg-gray-700 rounded-full"
-                        >
-                          <Text className="text-xs text-gray-300">{c}</Text>
-                        </View>
-                      ))}
+                      <View className="flex-row flex-wrap mt-1">
+                        {cats.map((c) => (
+                          <View
+                            key={`${item.id}-${c}`}
+                            className="px-2 py-0.5 mr-2 mb-1 bg-gray-700 rounded-full"
+                          >
+                            <Text className="text-xs text-gray-300">{c}</Text>
+                          </View>
+                        ))}
+                      </View>
                     </View>
                   </View>
-                </View>
 
-                {/* ⭐ REMOVE FAVORI */}
-                <TouchableOpacity
-                  onPress={() => toggleFavorite(item.id)}
-                  hitSlop={10}
-                >
-                  <Ionicons name="star" size={22} color="#FACC15" />
-                </TouchableOpacity>
-              </View>
-            </Pressable>
+                  {/* ⭐ REMOVE FAVORI */}
+                  <TouchableOpacity
+                    onPress={() => toggleFavorite(item.id)}
+                    hitSlop={10}
+                  >
+                    <Ionicons name="star" size={22} color="#FACC15" />
+                  </TouchableOpacity>
+                </View>
+              </Pressable>
+            </LinearGradient>
           );
         }}
       />
 
       {/* ===== OPTIONS MODAL ===== */}
-      <Modal visible={optionsVisible} transparent animationType="slide">
+      <Modal visible={optionsVisible} transparent animationType="fade">
         <Pressable
-          className="flex-1 bg-black/60 justify-end"
+          className="flex-1 bg-black/60 justify-end pb-4"
           onPress={() => setOptionsVisible(false)}
         >
-          <View className="bg-[#1a1b1f] p-5 rounded-t-3xl border-t border-gray-800">
+          <View className="bg-[#1a1b1f] p-5 pb-8 rounded-t-3xl border-t border-gray-800">
             <Text className="text-white text-xl font-bold mb-4">Options</Text>
 
             <Text className="text-gray-400 mb-2">Trier par</Text>

@@ -8,7 +8,7 @@ export const addFavoriteClub = async (
   uid: string,
   clubUid: string
 ) => {
-  console.log("➕ addFavoriteClub", { uid, clubUid });
+  // console.log("➕ addFavoriteClub", { uid, clubUid });
 
   if (!uid) {
     throw new Error("addFavoriteClub: uid manquant");
@@ -29,7 +29,7 @@ export const removeFavoriteClub = async (
   uid: string,
   clubUid: string
 ) => {
-  console.log("🗑 removeFavoriteClub", { uid, clubUid });
+  // console.log("🗑 removeFavoriteClub", { uid, clubUid });
 
   if (!uid) {
     throw new Error("removeFavoriteClub: uid manquant");

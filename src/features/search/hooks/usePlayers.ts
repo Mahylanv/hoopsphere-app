@@ -11,7 +11,6 @@ export function usePlayers() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log("📡 Abonnement joueurs");
 
     const q = query(
       collection(db, "joueurs"),
@@ -26,7 +25,6 @@ export function usePlayers() {
           ...(doc.data() as Omit<Joueur, "uid">),
         }));
 
-        console.log("👤 Joueurs reçus:", list.length);
         setPlayers(list);
         setLoading(false);
       },
@@ -38,7 +36,7 @@ export function usePlayers() {
     );
 
     return () => {
-      console.log("🧹 Unsubscribe joueurs");
+      // console.log("🧹 Unsubscribe joueurs");
       unsub();
     };
   }, []);

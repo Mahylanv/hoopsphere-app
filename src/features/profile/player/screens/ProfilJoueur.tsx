@@ -175,7 +175,7 @@ export default function ProfilJoueur() {
       const uri = await cardRef.current?.capture?.();
       return uri ?? null;
     } catch (e) {
-      console.log("❌ Erreur capture:", e);
+      // console.log("❌ Erreur capture:", e);
       return null;
     }
   };
@@ -293,7 +293,6 @@ export default function ProfilJoueur() {
               padding: 1,
             }}
           >
-            <View className="bg-[#0E0D0D] rounded-[14px] border border-white/10 p-4 shadow-lg shadow-black/40">
               <BioSection
                 editMode={false}
                 onToggleEdit={openEditModal}
@@ -326,7 +325,6 @@ export default function ProfilJoueur() {
                 bio={fields.description}
                 setBio={(v) => setEditField("description", v)}
               />
-            </View>
           </LinearGradient>
         </View>
         {user?.premium ? (

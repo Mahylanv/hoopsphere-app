@@ -100,7 +100,7 @@ export default function ProfilClub() {
       try {
         const clubId = club.uid || club.id;
         const viewDocId = `${viewerUid}_${Date.now()}`;
-        console.log("📌 Enregistrement vue club", { clubId, viewerUid, viewDocId });
+        // console.log("📌 Enregistrement vue club", { clubId, viewerUid, viewDocId });
         await setDoc(
           doc(db, "clubs", clubId, "views", viewDocId),
           {
@@ -109,10 +109,10 @@ export default function ProfilClub() {
           },
           { merge: true }
         );
-        console.log("✅ Vue club enregistrée en BDD", { clubId, viewerUid, viewDocId });
+        // console.log("✅ Vue club enregistrée en BDD", { clubId, viewerUid, viewDocId });
         hasRecordedView.current = true;
       } catch (e) {
-        console.log("⚠️ Impossible d'enregistrer la vue club :", e);
+        // console.log("⚠️ Impossible d'enregistrer la vue club :", e);
       }
     };
     recordClubView();

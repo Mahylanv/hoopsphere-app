@@ -17,8 +17,6 @@ export function useClubs() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log("📡 Abonnement clubs");
-
     const q = query(collection(db, "clubs"));
 
     const unsub = onSnapshot(
@@ -29,7 +27,6 @@ export function useClubs() {
           ...(doc.data() as Omit<FirestoreClub, "id">),
         }));
 
-        console.log("🏀 Clubs reçus:", data.length);
         setClubs(data);
         setLoading(false);
       },

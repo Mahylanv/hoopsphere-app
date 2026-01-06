@@ -159,7 +159,7 @@ export default function PostLikesScreen() {
               const likesSnap = await getDocs(likesRef);
               likedBy = likesSnap.docs.map((d) => d.id);
             } catch (err) {
-              console.log("⚠️ Impossible de lire la sous-collection likes (permissions)", err);
+              // console.log("⚠️ Impossible de lire la sous-collection likes (permissions)", err);
               setPermissionBlocked(true);
             }
           }
@@ -178,7 +178,7 @@ export default function PostLikesScreen() {
 
         setPosts(enriched);
       } catch (e) {
-        console.log("❌ Erreur chargement likes posts :", e);
+        // console.log("❌ Erreur chargement likes posts :", e);
       } finally {
         setLoading(false);
       }

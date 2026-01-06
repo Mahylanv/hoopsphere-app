@@ -76,7 +76,7 @@ export default function useAllPosts({ includeClubVisibility = false }: { include
           await asset.downloadAsync();
           p.cachedUrl = asset.localUri ?? asset.uri ?? p.url;
         } catch (e) {
-          console.log("⚠️ Prefetch vidéo échoué :", e);
+          // console.log("⚠️ Prefetch vidéo échoué :", e);
           p.cachedUrl = p.url;
         }
       })
@@ -120,7 +120,6 @@ export default function useAllPosts({ includeClubVisibility = false }: { include
               }
             }
 
-            // ❤️ est-ce que moi j'ai liké ce post ?
             let isLikedByMe = false;
             if (uid) {
               const likeSnap = await getDoc(

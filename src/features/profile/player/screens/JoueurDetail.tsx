@@ -42,6 +42,7 @@ import { usePremiumStatus } from "../../../../shared/hooks/usePremiumStatus";
 import usePlayerPosts from "../hooks/usePlayerPosts";
 import PostGridSection from "../components/PostGridSection";
 import { Video, ResizeMode } from "expo-av";
+import { LinearGradient } from "expo-linear-gradient";
 
 const CARD_WIDTH = Dimensions.get("window").width * 0.9;
 const CARD_HEIGHT = CARD_WIDTH * 1.3;
@@ -104,56 +105,33 @@ export default function JoueurDetail() {
         // const viewerUid = auth.currentUser?.uid;
 
         // console.log("👤 viewerUid =", viewerUid, " | target =", uid);
-
         // if (viewerUid && viewerUid !== uid) {
-        //   console.log("--------------------------------------------------");
-        //   console.log("📌 Tentative d'enregistrement d'une visite...");
-        //   console.log("👤 viewerUid =", viewerUid);
-        //   console.log("🎯 profil visité =", uid);
-        //   console.log("📂 Chemin Firestore =", `joueurs/${uid}/views`);
-        //   console.log("--------------------------------------------------");
-
         //   try {
         //     const today = new Date();
         //     today.setHours(0, 0, 0, 0);
-
         //     const viewsRef = collection(db, "joueurs", uid, "views");
         //     const snaps = await getDocs(viewsRef);
-
         //     let alreadyVisitedToday = false;
-
         //     snaps.forEach((docSnap) => {
         //       const data = docSnap.data();
-        //       console.log("🔎 Doc existant dans views :", data);
-
         //       if (data.viewerUid === viewerUid && data.viewedAt?.toDate) {
         //         const visitDate = data.viewedAt.toDate();
         //         visitDate.setHours(0, 0, 0, 0);
-
         //         if (visitDate.getTime() === today.getTime()) {
         //           alreadyVisitedToday = true;
         //         }
         //       }
         //     });
-
         //     if (!alreadyVisitedToday) {
-        //       console.log(
-        //         "🆕 Nouvelle visite → tentative d'écriture Firestore..."
-        //       );
-
         //       await addDoc(viewsRef, {
         //         viewerUid,
         //         viewerType: "joueur",
         //         viewedAt: serverTimestamp(),
-        //         seen: true, // IMPORTANT
+        //         seen: true,
         //       });
-
-        //       console.log("✅ VISITE ENREGISTRÉE !");
-        //     } else {
-        //       console.log("⏳ Visite déjà enregistrée aujourd'hui");
         //     }
         //   } catch (e) {
-        //     console.log("❌ ERREUR GLOBALE ENREGISTREMENT VISITE :", e);
+        //     // console.log("❌ ERREUR GLOBALE ENREGISTREMENT VISITE :", e);
         //   }
         // }
 
@@ -162,7 +140,6 @@ export default function JoueurDetail() {
         const viewerUid = authInstance.currentUser?.uid;
 
         if (viewerUid && viewerUid !== uid) {
-          console.log("🔥 Appel saveProfileView depuis JoueurDetail");
           saveProfileView(uid);
         }
 
@@ -180,7 +157,7 @@ export default function JoueurDetail() {
         const finalRating = computePlayerRating(averages, raw.poste);
         setRating(finalRating);
       } catch (e) {
-        console.log("❌ Erreur fetch joueur :", e);
+        // console.log("❌ Erreur fetch joueur :", e);
       } finally {
         setLoading(false);
       }
@@ -270,7 +247,7 @@ export default function JoueurDetail() {
       const uri = await cardRef.current?.capture?.();
       return uri ?? null;
     } catch (e) {
-      console.log("❌ Erreur capture :", e);
+      // console.log("❌ Erreur capture :", e);
       return null;
     }
   };
@@ -404,115 +381,145 @@ export default function JoueurDetail() {
         </Animated.View>
 
         {/* 🔥 Infos joueur */}
-        <View className="px-5 mt-4">
-          <Text className="text-white text-xl font-semibold mb-2">
+        <View className="px-4 mt-6">
+          <Text className="text-white text-xl font-semibold mb-3">
             Informations personnelles
           </Text>
 
-          <View className="bg-[#111] rounded-2xl p-5 border border-gray-800 shadow-lg shadow-black/40">
-            <InfoRow icon="mail" label="Email" value={joueur.email} />
-            {/* ➕ Numéro du joueur */}
-            <InfoRow
-              icon="phone-portrait"
-              label="Numéro"
-              value={joueur.phone}
-            />
-            <InfoRow icon="calendar" label="Naissance" value={joueur.dob} />
-            <InfoRow
-              icon="location"
-              label="Département"
-              value={joueur.departement}
-            />
-            <InfoRow icon="basketball" label="Club" value={joueur.club} />
-            <InfoRow icon="body" label="Taille" value={joueur.taille} />
-            <InfoRow icon="barbell" label="Poids" value={joueur.poids} />
-            <InfoRow icon="male-female" label="Genre" value={joueur.genre} />
-            <InfoRow
-              icon="hand-left-outline"
-              label="Main"
-              value={joueur.main}
-            />
-          </View>
+          <LinearGradient
+            colors={["#2563EB", "#0E0D0D"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ borderRadius: 18, padding: 1.5 }}
+          >
+            <View className="bg-[#0E0D0D] rounded-[16px] p-5">
+              <View className="absolute -right-10 -top-8 w-28 h-28 rounded-full" style={{ backgroundColor: "rgba(249,115,22,0.14)" }} />
+              <View className="absolute -left-12 bottom-0 w-24 h-24 rounded-full" style={{ backgroundColor: "rgba(37,99,235,0.14)" }} />
+
+              <InfoRow icon="mail" label="Email" value={joueur.email} />
+              <InfoRow
+                icon="phone-portrait"
+                label="Numéro"
+                value={joueur.phone}
+              />
+              <InfoRow icon="calendar" label="Naissance" value={joueur.dob} />
+              <InfoRow
+                icon="location"
+                label="Département"
+                value={joueur.departement}
+              />
+              <InfoRow icon="basketball" label="Club" value={joueur.club} />
+              <InfoRow icon="body" label="Taille" value={joueur.taille} />
+              <InfoRow icon="barbell" label="Poids" value={joueur.poids} />
+              <InfoRow icon="male-female" label="Genre" value={joueur.genre} />
+              <InfoRow
+                icon="hand-left-outline"
+                label="Main"
+                value={joueur.main}
+              />
+            </View>
+          </LinearGradient>
         </View>
 
         {/* PUBLICATIONS */}
-        <View className="px-4 mb-10 mt-6">
-          <View className="flex-row items-center mb-3">
-            <Ionicons name="play-outline" size={22} color="white" />
-            <Text className="text-white text-xl font-bold ml-2">
-              Publications
-            </Text>
-            <View className="ml-2 bg-white/10 px-3 py-1 rounded-full">
-              <Text className="text-white text-xs font-semibold">
-                {playerPosts.length}
-              </Text>
-            </View>
-          </View>
+        <View className="px-4 mb-10 mt-8">
+          <LinearGradient
+            colors={["#F97316", "#0E0D0D"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ borderRadius: 18, padding: 1.5 }}
+          >
+            <View className="bg-[#0E0D0D] rounded-[16px] p-4">
+              <View
+                className="absolute -right-10 -top-8 w-28 h-28 rounded-full"
+                style={{ backgroundColor: "rgba(249,115,22,0.12)" }}
+              />
+              <View
+                className="absolute -left-12 bottom-0 w-24 h-24 rounded-full"
+                style={{ backgroundColor: "rgba(37,99,235,0.1)" }}
+              />
 
-          {postsLoading ? (
-            <View className="py-10 items-center">
-              <ActivityIndicator size="small" color="#F97316" />
-            </View>
-          ) : playerPosts.length === 0 ? (
-            <Text className="text-gray-400">Aucune publication.</Text>
-          ) : (
-            <FlatList
-              data={playerPosts}
-              keyExtractor={(item) => item.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={ITEM_WIDTH + 14}
-              decelerationRate="fast"
-              contentContainerStyle={{ paddingVertical: 6, paddingRight: 14 }}
-              ItemSeparatorComponent={() => <View style={{ width: 14 }} />}
-              renderItem={({ item, index }) => (
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={() =>
-                    navigation.navigate("VideoFeed", {
-                      videos: playerPosts.map((p) => ({
-                        id: p.id,
-                        url: p.mediaUrl,
-                        cachedUrl: (p as any).cachedUrl ?? undefined,
-                        playerUid: p.playerUid ?? uid,
-                        likeCount: p.likeCount ?? 0,
-                        isLikedByMe: false,
-                        thumbnailUrl: p.thumbnailUrl ?? null,
-                        description: p.description ?? "",
-                        location: p.location ?? null,
-                        skills: p.skills ?? [],
-                        createdAt: p.createdAt,
-                      })),
-                      startIndex: index,
-                    })
-                  }
-                  style={{
-                    width: ITEM_WIDTH,
-                    height: ITEM_HEIGHT,
-                    borderRadius: 18,
-                    overflow: "hidden",
-                    backgroundColor: "#0f1115",
+              <View className="flex-row items-center mb-3">
+                <Ionicons name="play-outline" size={22} color="white" />
+                <Text className="text-white text-xl font-bold ml-2">
+                  Publications
+                </Text>
+                <View className="ml-2 bg-white/10 px-3 py-1 rounded-full">
+                  <Text className="text-white text-xs font-semibold">
+                    {playerPosts.length}
+                  </Text>
+                </View>
+              </View>
+
+              {postsLoading ? (
+                <View className="py-10 items-center">
+                  <ActivityIndicator size="small" color="#F97316" />
+                </View>
+              ) : playerPosts.length === 0 ? (
+                <Text className="text-gray-400">Aucune publication.</Text>
+              ) : (
+                <FlatList
+                  data={playerPosts}
+                  keyExtractor={(item) => item.id}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  snapToInterval={ITEM_WIDTH + 14}
+                  decelerationRate="fast"
+                  contentContainerStyle={{
+                    paddingVertical: 6,
+                    paddingRight: 14,
                   }}
-                >
-                  {item.mediaType === "image" ? (
-                    <Image
-                      source={{ uri: item.mediaUrl }}
-                      style={{ width: "100%", height: "100%" }}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <Video
-                      source={{ uri: item.mediaUrl }}
-                      style={{ width: "100%", height: "100%" }}
-                      resizeMode={ResizeMode.COVER}
-                      shouldPlay={false}
-                      isMuted
-                    />
+                  ItemSeparatorComponent={() => <View style={{ width: 14 }} />}
+                  renderItem={({ item, index }) => (
+                    <TouchableOpacity
+                      activeOpacity={0.9}
+                      onPress={() =>
+                        navigation.navigate("VideoFeed", {
+                          videos: playerPosts.map((p) => ({
+                            id: p.id,
+                            url: p.mediaUrl,
+                            cachedUrl: (p as any).cachedUrl ?? undefined,
+                            playerUid: p.playerUid ?? uid,
+                            likeCount: p.likeCount ?? 0,
+                            isLikedByMe: false,
+                            thumbnailUrl: p.thumbnailUrl ?? null,
+                            description: p.description ?? "",
+                            location: p.location ?? null,
+                            skills: p.skills ?? [],
+                            createdAt: p.createdAt,
+                          })),
+                          startIndex: index,
+                        })
+                      }
+                      style={{
+                        width: ITEM_WIDTH,
+                        height: ITEM_HEIGHT,
+                        borderRadius: 18,
+                        overflow: "hidden",
+                        backgroundColor: "#0f1115",
+                      }}
+                    >
+                      {item.mediaType === "image" ? (
+                        <Image
+                          source={{ uri: item.mediaUrl }}
+                          style={{ width: "100%", height: "100%" }}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <Video
+                          source={{ uri: item.mediaUrl }}
+                          style={{ width: "100%", height: "100%" }}
+                          resizeMode={ResizeMode.COVER}
+                          shouldPlay={false}
+                          isMuted
+                        />
+                      )}
+                    </TouchableOpacity>
                   )}
-                </TouchableOpacity>
+                />
               )}
-            />
-          )}
+            </View>
+          </LinearGradient>
         </View>
 
         {/* CONTACT */}

@@ -81,7 +81,7 @@ export default function AddPlayersModal({
       setInputs([{ prenom: "", nom: "" }]);
       onClose();
     } catch (err) {
-      console.log("Erreur ajout joueurs :", err);
+      // console.log("Erreur ajout joueurs :", err);
       alert("Erreur lors de l'ajout des joueurs.");
     }
   };

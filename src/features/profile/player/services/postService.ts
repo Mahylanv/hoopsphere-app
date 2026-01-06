@@ -59,7 +59,7 @@ export const createPost = async (payload: CreatePostPayload) => {
   if (!user) throw new Error("Utilisateur non authentifié");
 
   try {
-    console.log("🟡 CREATE POST");
+    // console.log("🟡 CREATE POST");
 
     /* ---------- UPLOAD MEDIA ---------- */
     const mediaResponse = await fetch(payload.mediaUri);
@@ -119,7 +119,7 @@ export const createPost = async (payload: CreatePostPayload) => {
 
     await batch.commit();
 
-    console.log("✅ POST CRÉÉ :", postRef.id);
+    // console.log("✅ POST CRÉÉ :", postRef.id);
     return postRef.id;
   } catch (e) {
     console.error("❌ createPost error:", e);
@@ -139,7 +139,7 @@ export const updatePost = async (
   if (!user) throw new Error("Utilisateur non authentifié");
 
   try {
-    console.log("🟡 UPDATE POST :", postId);
+    // console.log("🟡 UPDATE POST :", postId);
 
     const cleanUpdates = {
       description: updates.description,
@@ -164,7 +164,7 @@ export const updatePost = async (
 
     await batch.commit();
 
-    console.log("✅ POST MIS À JOUR :", postId);
+    // console.log("✅ POST MIS À JOUR :", postId);
   } catch (e) {
     console.error("❌ updatePost error:", e);
     throw e;
@@ -184,7 +184,7 @@ export const deletePost = async (
   if (!user) throw new Error("Utilisateur non authentifié");
 
   try {
-    console.log("🟡 DELETE POST :", postId);
+    // console.log("🟡 DELETE POST :", postId);
 
     const batch = writeBatch(db);
 
@@ -193,19 +193,19 @@ export const deletePost = async (
 
     await batch.commit();
 
-    console.log("🧹 Firestore OK");
+    // console.log("🧹 Firestore OK");
 
     if (mediaUrl) {
       await deleteObject(ref(storage, mediaUrl));
-      console.log("🧹 Media supprimé");
+      // console.log("🧹 Media supprimé");
     }
 
     if (thumbnailUrl) {
       await deleteObject(ref(storage, thumbnailUrl));
-      console.log("🧹 Miniature supprimée");
+      // console.log("🧹 Miniature supprimée");
     }
 
-    console.log("✅ POST SUPPRIMÉ PARTOUT :", postId);
+    // console.log("✅ POST SUPPRIMÉ PARTOUT :", postId);
   } catch (e) {
     console.error("❌ deletePost error:", e);
     throw e;
