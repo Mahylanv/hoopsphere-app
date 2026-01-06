@@ -60,10 +60,9 @@ export default function ProfilClub() {
 
   // Si aucun club passé par la route, on tente de charger le club du user connecté
   useEffect(() => {
-    if (clubFromRoute) return; // déjà fourni
-    const fetchClub = async () => {
+    const fetchClub = async (targetUid?: string) => {
       try {
-        const uid = auth.currentUser?.uid;
+        const uid = targetUid || auth.currentUser?.uid;
         if (!uid) return;
         const snap = await getDoc(doc(db, "clubs", uid));
         if (snap.exists()) setClub({ id: snap.id, ...snap.data() });
@@ -73,8 +72,23 @@ export default function ProfilClub() {
         setLoading(false);
       }
     };
-    setLoading(true);
-    fetchClub();
+
+    // Cas 1 : aucun param => charge le club courant
+    if (!clubFromRoute) {
+      setLoading(true);
+      fetchClub();
+      return;
+    }
+
+    // Cas 2 : param minimal (ex: depuis visiteurs) => on fetch pour hydrater
+    const hasName =
+      !!(clubFromRoute as any)?.nom ||
+      !!(clubFromRoute as any)?.name ||
+      !!(clubFromRoute as any)?.logo;
+    if (!hasName) {
+      setLoading(true);
+      fetchClub(clubFromRoute.uid || (clubFromRoute as any)?.id);
+    }
   }, [clubFromRoute]);
 
   // Enregistrement d'une vue sur le club (pour premium)

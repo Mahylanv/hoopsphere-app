@@ -68,7 +68,7 @@ export default function WeeklyRanking({
                 Classement de la semaine
               </Text>
               <View className="flex-row items-center mt-2 space-x-2">
-                <Ionicons name="trophy-outline" size={18} color={accent.orange} />
+                <Ionicons name="trophy-outline" className="mr-2" size={18} color={accent.orange} />
                 <Text className="text-gray-400 text-sm">
                   Top 5 des performances Premium
                 </Text>
