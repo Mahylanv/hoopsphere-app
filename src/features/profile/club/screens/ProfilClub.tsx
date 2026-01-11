@@ -315,7 +315,19 @@ export default function ProfilClub() {
       )}
 
       {/* HEADER */}
-      <View className="items-center px-4 py-6 border-b border-gray-700 relative">
+      <View className="items-center px-4 py-6 border-b border-gray-700 relative overflow-hidden">
+        <View
+          className="absolute -right-12 -top-10 w-40 h-40 rounded-full"
+          style={{ backgroundColor: "rgba(249,115,22,0.16)" }}
+        />
+        <View
+          className="absolute -left-16 bottom-0 w-32 h-32 rounded-full"
+          style={{ backgroundColor: "rgba(37,99,235,0.16)" }}
+        />
+        <View
+          className="absolute right-6 bottom-3 w-20 h-20 rounded-full"
+          style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
+        />
         <Pressable
           onPress={() => navigation.goBack()}
           className="absolute left-4 top-6 p-2"

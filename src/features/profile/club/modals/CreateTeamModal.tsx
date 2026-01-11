@@ -130,13 +130,13 @@ export default function CreateTeamModal({
           <Text className="text-white mb-2 font-semibold">Joueurs</Text>
 
           {players.map((p, i) => (
-            <View key={i} className="flex-row items-center space-x-2 mb-2">
+            <View key={i} className="flex-row items-center mb-3">
               <TextInput
                 value={p.prenom}
                 onChangeText={(v) => updateInput(i, "prenom", v)}
                 placeholder="Prénom"
                 placeholderTextColor="#888"
-                className="flex-1 bg-gray-800 text-white rounded-lg px-3 py-2"
+                className="flex-1 bg-gray-800 text-white rounded-lg px-3 py-2 mr-2"
               />
 
               <TextInput
@@ -144,7 +144,7 @@ export default function CreateTeamModal({
                 onChangeText={(v) => updateInput(i, "nom", v)}
                 placeholder="Nom"
                 placeholderTextColor="#888"
-                className="flex-1 bg-gray-800 text-white rounded-lg px-3 py-2"
+                className="flex-1 bg-gray-800 text-white rounded-lg px-3 py-2 mr-2"
               />
 
               {players.length > 1 && (
@@ -167,7 +167,7 @@ export default function CreateTeamModal({
           </Pressable>
 
           {/* Actions */}
-          <View className="flex-row justify-end space-x-3 mt-4">
+          <View className="flex-row justify-end mt-4">
             <TouchableOpacity
               onPress={loading ? undefined : onClose}
               className="px-4 py-2 bg-gray-700 rounded-lg"
@@ -178,7 +178,7 @@ export default function CreateTeamModal({
             <TouchableOpacity
               onPress={createTeam}
               disabled={loading}
-              className="px-4 py-2 bg-orange-600 rounded-lg flex-row items-center"
+              className="px-4 py-2 bg-orange-600 rounded-lg flex-row items-center ml-3"
             >
               {loading ? (
                 <ActivityIndicator size="small" color="#fff" />

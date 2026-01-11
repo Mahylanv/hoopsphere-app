@@ -10,6 +10,7 @@ import {
   Animated,
   Image,
   TouchableOpacity,
+  Dimensions,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -63,6 +64,7 @@ export default function HomeScreen({ forClub = false }: Props) {
   // -------------------------------
   const fadeHeader = useRef(new Animated.Value(0)).current;
   const slideHeader = useRef(new Animated.Value(-20)).current;
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const fadeRanking = useRef(new Animated.Value(0)).current;
   const fadePosts = useRef(new Animated.Value(0)).current;
@@ -210,10 +212,11 @@ export default function HomeScreen({ forClub = false }: Props) {
     surface: "#0E0D0D",
     card: "#111827",
   } as const;
+  const PREVIEW_WIDTH = Math.min(Dimensions.get("window").width * 0.72, 360);
 
   const quickActions = [
     {
-      title: forClub ? "Partager une offre de recrutement" : "Partager un highlight",
+      title: forClub ? "Partager une offre" : "Partager un highlight",
       subtitle: forClub
         ? "Publie une nouvelle opportunité"
         : "Montre ton dernier move",
@@ -247,6 +250,8 @@ export default function HomeScreen({ forClub = false }: Props) {
   const scrollRef = useRef<ScrollView>(null);
   const [rankingOffset, setRankingOffset] = useState(0);
   const [videosOffset, setVideosOffset] = useState(0);
+  const [visibleVideoCount, setVisibleVideoCount] = useState(3);
+  const VIDEO_LOAD_STEP = 3;
 
   const handleScrollToRanking = () => {
     scrollRef.current?.scrollTo({
@@ -265,10 +270,15 @@ export default function HomeScreen({ forClub = false }: Props) {
   return (
     <View className="flex-1 bg-[#0E0D0D]">
       {/* --- CONTENU SCROLLABLE --- */}
-      <ScrollView
+      <Animated.ScrollView
         ref={scrollRef}
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 24 }}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
       >
         {/* HEADER / HERO */}
         <Animated.View
@@ -527,7 +537,12 @@ export default function HomeScreen({ forClub = false }: Props) {
           {/* VIDÉOS POPULAIRES */}
           {!postsLoading && posts.length > 0 && (
             <Animated.View style={{ opacity: fadePosts }}>
-              <VideoCarouselPreview videos={videoItems} />
+              <VideoCarouselPreview
+                videos={videoItems}
+                visibleCount={visibleVideoCount}
+                scrollY={scrollY}
+                sectionOffset={videosOffset}
+              />
             </Animated.View>
           )}
 
@@ -536,8 +551,28 @@ export default function HomeScreen({ forClub = false }: Props) {
               <Text className="text-gray-400">Aucune vidéo pour le moment.</Text>
             </View>
           )}
+
+          {!postsLoading && visibleVideoCount < videoItems.length && (
+            <View className="px-5 mt-4">
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() =>
+                  setVisibleVideoCount((prev) =>
+                    Math.min(prev + VIDEO_LOAD_STEP, videoItems.length)
+                  )
+                }
+                className="flex-row items-center justify-center bg-white/5 border border-white/10 rounded-full px-4 py-3 self-center"
+                style={{ width: PREVIEW_WIDTH }}
+              >
+                <Ionicons name="add-circle-outline" size={18} color="#fff" />
+                <Text className="text-white font-semibold ml-2">
+                  Charger plus de vidéos
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* --- PANEL FLUTANT (AU-DESSUS DU SCROLLVIEW) --- */}
       <RankingPlayerPanel

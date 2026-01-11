@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Alert,
+  StatusBar,
 } from "react-native";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "../../../config/firebaseConfig";
@@ -18,11 +19,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../types";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import JoueurFilter, { JoueurFiltre } from "../components/JoueurFilter";
 import { useFavoritePlayers } from "../hooks/useFavoritePlayers";
 import { usePremiumStatus } from "../../../shared/hooks/usePremiumStatus";
 import PremiumBadge from "../../../shared/components/PremiumBadge";
+import { LinearGradient } from "expo-linear-gradient";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "SearchJoueur">;
 
@@ -153,59 +155,66 @@ export default function SearchJoueur() {
     }
   };
 
-  const insets = useSafeAreaInsets();
+  const brand = {
+    orange: "#F97316",
+    blue: "#2563EB",
+    surface: "#0E0D0D",
+  } as const;
 
   return (
-    <View
-      className="flex-1 bg-[#0e0e10] px-4"
-      style={{ paddingTop: insets.top + 22 }}
-    >
-      <View className="flex-row items-center justify-between mb-5">
-        <View className="flex-row items-center">
-          <Ionicons name="search-outline" size={22} color="#F97316" />
-          <Text className="text-white text-2xl font-bold ml-2">
-            Rechercher un joueur
-          </Text>
+    <SafeAreaView className="flex-1 bg-black">
+      <StatusBar barStyle="light-content" />
+      <View className="px-4 pb-2">
+        <View className="flex-row items-center justify-between mb-4">
+          <View className="flex-row items-center">
+            <Ionicons name="search-outline" size={22} color="#F97316" />
+            <Text className="text-white text-2xl font-bold ml-2">
+              Rechercher un joueur
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => {
+              if (!isPremium) {
+                Alert.alert(
+                  "Réservé aux membres Premium",
+                  "Active le Premium pour utiliser les filtres de recherche avancés."
+                );
+                return;
+              }
+              setFilterVisible(true);
+            }}
+            className="p-2 rounded-xl"
+          >
+            <Ionicons name="filter-outline" size={26} color="#F97316" />
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          onPress={() => {
-            if (!isPremium) {
-              Alert.alert(
-                "Réservé aux membres Premium",
-                "Active le Premium pour utiliser les filtres de recherche avancés."
-              );
-              return;
-            }
-            setFilterVisible(true);
-          }}
-          className="p-2 rounded-xl"
-        >
-          <Ionicons name="filter-outline" size={26} color="#F97316" />
-        </TouchableOpacity>
-      </View>
+        {/* Barre de recherche */}
+        <View className="relative mb-4">
+          <Ionicons
+            name="person-outline"
+            size={18}
+            color="#9ca3af"
+            style={{ position: "absolute", left: 14, top: 15 }}
+          />
 
-      {/* Barre de recherche */}
-      <View className="relative mb-6">
-        <Ionicons
-          name="person-outline"
-          size={20}
-          color="#9ca3af"
-          style={{ position: "absolute", left: 14, top: 15 }}
-        />
-
-        <TextInput
-          className="bg-gray-900 text-white rounded-2xl pl-10 pr-4 py-3 border border-gray-800"
-          placeholder="Nom, club ou département..."
-          placeholderTextColor="#9ca3af"
-          value={search}
-          onChangeText={setSearch}
-        />
+          <TextInput
+            className="bg-gray-900 text-white rounded-2xl pl-10 pr-4 py-3 border border-gray-800"
+            placeholder="Nom, club ou département..."
+            placeholderTextColor="#9ca3af"
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
       </View>
 
       {/* Liste */}
       {loading ? (
-        <ActivityIndicator size="large" color="#F97316" className="mt-10" />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#F97316" />
+          <Text className="text-gray-400 mt-3">Chargement des joueurs…</Text>
+        </View>
       ) : (
         <FlatList
           data={filtered.slice(0, visibleCount)}
@@ -213,92 +222,94 @@ export default function SearchJoueur() {
           showsVerticalScrollIndicator={false}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.3}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 24, paddingHorizontal: 16 }}
           ListEmptyComponent={
             <Text className="text-gray-500 text-center mt-10">
               Aucun joueur trouvé
             </Text>
           }
           renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate("JoueurDetail", { uid: item.uid })
-              }
-              activeOpacity={0.85}
-              className="relative flex-row items-center bg-[#1a1b1f] rounded-2xl p-4 mb-4 border border-gray-800"
+            <LinearGradient
+              colors={[brand.blue, brand.surface]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ borderRadius: 18, padding: 1.5, marginBottom: 12 }}
             >
-              {/* ⭐ FAVORI — coin haut droit */}
               <TouchableOpacity
-                onPress={() => {
-                  if (!isPremium) {
-                    Alert.alert(
-                      "Favoris Premium",
-                      "Ajoute des joueurs en favori en passant en Premium."
-                    );
-                    return;
-                  }
-                  toggleFavorite(item.uid);
-                }}
-                hitSlop={10}
-                className="absolute top-2 right-2 z-10"
+                onPress={() =>
+                  navigation.navigate("JoueurDetail", { uid: item.uid })
+                }
+                activeOpacity={0.85}
+                className="bg-[#0E0D0D] rounded-[16px] p-4"
               >
-                <Ionicons
-                  name={isFavorite(item.uid) ? "star" : "star-outline"}
-                  size={22}
-                  color={isFavorite(item.uid) ? "#FACC15" : "#9ca3af"}
-                />
-              </TouchableOpacity>
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center flex-1">
+                    <Image
+                      source={{
+                        uri: item.avatar || "https://i.pravatar.cc/150?img=3",
+                      }}
+                      className="w-16 h-16 rounded-full mr-4 border border-gray-700"
+                    />
 
-              {/* AVATAR */}
-              <Image
-                source={{
-                  uri: item.avatar || "https://i.pravatar.cc/150?img=3",
-                }}
-                className="w-20 h-20 rounded-full mr-4 border border-gray-700"
-              />
+                    <View className="flex-1">
+                      <View className="flex-row items-center">
+                        <Text className="text-white font-semibold text-lg">
+                          {item.prenom} {item.nom}
+                        </Text>
+                        {item.premium && (
+                          <View className="ml-2">
+                            <PremiumBadge compact />
+                          </View>
+                        )}
+                      </View>
 
-              {/* INFOS JOUEUR */}
-              <View className="flex-1">
-                <View className="flex-row items-center mb-1">
-                  <Text className="text-white font-bold text-lg">
-                    {item.prenom} {item.nom}
-                  </Text>
-                  {item.premium && (
-                    <View className="ml-2">
-                      <PremiumBadge compact />
+                      <Text className="text-gray-400">
+                        {item?.club ?? "Sans club"}
+                      </Text>
+
+                      <View className="flex-row flex-wrap mt-1">
+                        {!!item.poste && (
+                          <View className="px-2 py-0.5 mr-2 mb-1 bg-gray-700 rounded-full">
+                            <Text className="text-xs text-gray-300">
+                              {item.poste}
+                            </Text>
+                          </View>
+                        )}
+                        {!!item.departement && (
+                          <View className="px-2 py-0.5 mr-2 mb-1 bg-gray-700 rounded-full">
+                            <Text className="text-xs text-gray-300">
+                              {item.departement}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
-                  )}
-                </View>
+                  </View>
 
-                <View className="flex-row items-center mb-1">
-                  <Ionicons name="home-outline" size={14} color="#9ca3af" />
-                  <Text className="text-gray-400 ml-1 text-sm">
-                    {item?.club ?? "Sans club"}
-                  </Text>
+                  {/* ⭐ FAVORI */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (!isPremium) {
+                        Alert.alert(
+                          "Favoris Premium",
+                          "Ajoute des joueurs en favori en passant en Premium."
+                        );
+                        return;
+                      }
+                      toggleFavorite(item.uid);
+                    }}
+                    hitSlop={10}
+                    className="ml-3"
+                  >
+                    <Ionicons
+                      name={isFavorite(item.uid) ? "star" : "star-outline"}
+                      size={22}
+                      color={isFavorite(item.uid) ? "#FACC15" : "#9ca3af"}
+                    />
+                  </TouchableOpacity>
                 </View>
-
-                <View className="flex-row items-center">
-                  <Ionicons
-                    name="basketball-outline"
-                    size={14}
-                    color="#9ca3af"
-                  />
-                  <Text className="text-gray-400 ml-1 text-sm">
-                    {item?.poste ?? "Poste inconnu"}
-                  </Text>
-
-                  <Ionicons
-                    name="location-outline"
-                    size={14}
-                    color="#9ca3af"
-                    style={{ marginLeft: 10 }}
-                  />
-                  <Text className="text-gray-400 ml-1 text-sm">
-                    {item?.departement ?? "Département inconnu"}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </LinearGradient>
           )}
           ListFooterComponent={
             visibleCount < filtered.length ? (
@@ -322,6 +333,6 @@ export default function SearchJoueur() {
         onClose={() => setFilterVisible(false)}
         onApply={(f) => setFilters(f)}
       />
-    </View>
+    </SafeAreaView>
   );
 }

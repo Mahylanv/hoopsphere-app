@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { LinearGradient } from "expo-linear-gradient";
 
 import type { RootStackParamList } from "../../../types";
 import { useFavoritePlayers } from "../hooks/useFavoritePlayers";
@@ -39,6 +40,11 @@ export default function FavoriteJoueursTab() {
 
   const [optionsVisible, setOptionsVisible] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey>("recent");
+  const brand = {
+    orange: "#F97316",
+    blue: "#2563EB",
+    surface: "#0E0D0D",
+  } as const;
 
   /* ============================
      FAVORITES + SORT
@@ -111,31 +117,27 @@ export default function FavoriteJoueursTab() {
   return (
     <SafeAreaView className="flex-1 bg-black">
       {/* ===== HEADER ===== */}
-      <View className="px-4 pt-4 pb-2 flex-row items-center justify-between">
+      <View className="px-4 pt-4 pb-3 flex-row items-center justify-between">
         <View className="flex-row items-center">
           <Text className="text-white text-2xl font-bold mr-3">
             Joueurs favoris
           </Text>
+          <View className="bg-orange-500 px-2 py-0.5 rounded-full">
+            <Text className="text-white font-bold text-sm">
+              {favoritesCount}
+            </Text>
+          </View>
         </View>
 
         {/* OPTIONS BUTTON + BADGE */}
         <TouchableOpacity
           onPress={() => setOptionsVisible(true)}
-          className="relative"
         >
           <Ionicons
             name="options-outline"
-            size={24}
+            size={26}
             color="#F97316"
           />
-
-          {favoritesCount > 0 && (
-            <View className="absolute -top-2 -right-2 bg-orange-500 w-5 h-5 rounded-full items-center justify-center">
-              <Text className="text-white text-xs font-bold">
-                {favoritesCount}
-              </Text>
-            </View>
-          )}
         </TouchableOpacity>
       </View>
 
@@ -146,57 +148,66 @@ export default function FavoriteJoueursTab() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16 }}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("JoueurDetail", { uid: item.uid })
-            }
-            activeOpacity={0.85}
-            className="bg-[#1a1b1f] rounded-2xl p-4 mb-3 border border-gray-800"
+          <LinearGradient
+            colors={[brand.blue, brand.surface]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ borderRadius: 18, padding: 1.5, marginBottom: 12 }}
           >
-            <View className="flex-row items-center">
-              <Image
-                source={{
-                  uri:
-                    item.avatar ||
-                    "https://i.pravatar.cc/150?img=3",
-                }}
-                className="w-16 h-16 rounded-full mr-4 border border-gray-700"
-              />
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate("JoueurDetail", { uid: item.uid })
+              }
+              activeOpacity={0.85}
+              className="bg-[#0E0D0D] rounded-[16px] p-4"
+            >
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center flex-1">
+                  <Image
+                    source={{
+                      uri:
+                        item.avatar ||
+                        "https://i.pravatar.cc/150?img=3",
+                    }}
+                    className="w-16 h-16 rounded-full mr-4 border border-gray-700"
+                  />
 
-              <View className="flex-1">
-                <View className="flex-row items-center">
-                  <Text className="text-white font-semibold text-lg">
-                    {item.prenom} {item.nom}
-                  </Text>
-                  {item.premium && (
-                    <View className="ml-2">
-                      <PremiumBadge compact />
+                  <View className="flex-1">
+                    <View className="flex-row items-center">
+                      <Text className="text-white font-semibold text-lg">
+                        {item.prenom} {item.nom}
+                      </Text>
+                      {item.premium && (
+                        <View className="ml-2">
+                          <PremiumBadge compact />
+                        </View>
+                      )}
                     </View>
-                  )}
+
+                    <Text className="text-gray-400 text-sm">
+                      {item.poste || "Poste inconnu"}
+                    </Text>
+
+                    <Text className="text-gray-500 text-sm">
+                      {item.club || "Sans club"}
+                    </Text>
+                  </View>
                 </View>
 
-                <Text className="text-gray-400 text-sm">
-                  {item.poste || "Poste inconnu"}
-                </Text>
-
-                <Text className="text-gray-500 text-sm">
-                  {item.club || "Sans club"}
-                </Text>
+                {/* ⭐ REMOVE FAVORITE */}
+                <TouchableOpacity
+                  onPress={() => toggleFavorite(item.uid)}
+                  hitSlop={10}
+                >
+                  <Ionicons
+                    name="star"
+                    size={22}
+                    color="#FACC15"
+                  />
+                </TouchableOpacity>
               </View>
-
-              {/* ⭐ REMOVE FAVORITE */}
-              <TouchableOpacity
-                onPress={() => toggleFavorite(item.uid)}
-                hitSlop={10}
-              >
-                <Ionicons
-                  name="star"
-                  size={22}
-                  color="#FACC15"
-                />
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </LinearGradient>
         )}
       />
 
@@ -204,7 +215,7 @@ export default function FavoriteJoueursTab() {
       <Modal
         visible={optionsVisible}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setOptionsVisible(false)}
       >
         <Pressable

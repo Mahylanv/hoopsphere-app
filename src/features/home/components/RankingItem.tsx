@@ -72,18 +72,16 @@ export default function RankingItem({
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
       <LinearGradient
-        colors={["rgba(37,99,235,0.12)", "rgba(14,14,15,0.9)"]}
+        colors={["#2563EB", "#0E0D0D"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{
           borderRadius: 18,
-          padding: 1,
+          padding: 1.5,
           marginBottom: 12,
-          borderWidth: 1,
-          borderColor: "rgba(249,115,22,0.22)",
         }}
       >
-        <View className="flex-row items-center rounded-[16px] px-4 py-3 bg-[#0E0D0D]">
+        <View className="flex-row items-center rounded-[16px] px-4 py-3 bg-[#0E0D0D] border border-gray-800">
           <View className="w-10 h-10 rounded-full items-center justify-center mr-3"
             style={{ backgroundColor: "rgba(249,115,22,0.14)" }}
           >
