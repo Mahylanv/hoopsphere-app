@@ -17,7 +17,7 @@ import {
 import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+// import { LinearGradient } from "expo-linear-gradient";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList, Club as ClubType } from "../../../../types";
 
@@ -29,6 +29,7 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
+import { LinearGradient } from "expo-linear-gradient";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "ProfilClub">;
 type ProfileRoute = RouteProp<RootStackParamList, "ProfilClub">;
@@ -82,6 +83,16 @@ export default function ClubOffers() {
 
   const POSTES = ["Meneur", "Arrière", "Ailier", "Ailier fort", "Pivot"];
   const GENRES: ("Homme" | "Femme" | "Mixte")[] = ["Homme", "Femme", "Mixte"];
+  const normalizePositions = (val: any): string[] =>
+    Array.isArray(val) ? val.filter(Boolean) : val ? [String(val)] : [];
+  const brand = {
+    orange: "#F97316",
+    orangeLight: "#fb923c",
+    blue: "#2563EB",
+    blueDark: "#1D4ED8",
+    surface: "#0E0D0D",
+    card: "#111827",
+  } as const;
 
   const togglePoste = (poste: string) => {
     setPositions((prev) =>
@@ -110,6 +121,7 @@ export default function ClubOffers() {
         const data = snap.docs.map((d) => ({
           id: d.id,
           ...(d.data() as Offer),
+          position: normalizePositions((d.data() as any)?.position),
         }));
         setOffers(data);
         setLoading(false);
@@ -195,6 +207,8 @@ export default function ClubOffers() {
     );
   }
 
+  const isMyClub = auth.currentUser?.uid === clubUid;
+
   return (
     <View className="flex-1 bg-[#0E0D0D]">
       <StatusBar barStyle="light-content" />
@@ -228,14 +242,77 @@ export default function ClubOffers() {
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100 }}
         data={offers}
         keyExtractor={(o) => o.id || Math.random().toString()}
+        ListHeaderComponent={
+          <View className="px-5 pt-4 mb-2">
+            <LinearGradient
+              colors={[brand.blue, "#0D1324", brand.surface]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                borderRadius: 18,
+                padding: 14,
+                borderWidth: 1,
+                borderColor: "rgba(37,99,235,0.25)",
+                overflow: "hidden",
+              }}
+            >
+              <View
+                className="absolute -right-12 -top-12 w-40 h-40 rounded-full"
+                style={{ backgroundColor: "rgba(249,115,22,0.16)" }}
+              />
+              <View
+                className="absolute -left-10 bottom-0 w-32 h-32 rounded-full"
+                style={{ backgroundColor: "rgba(37,99,235,0.14)" }}
+              />
+              <View
+                className="absolute right-4 top-10 w-14 h-14 rounded-full"
+                style={{ backgroundColor: "rgba(249,115,22,0.24)" }}
+              />
+
+              <View className="flex-row items-center justify-between">
+                <View className="" />
+                <View className="flex-row items-center bg-white/10 px-3 py-1.5 rounded-full border border-white/15">
+                  <Ionicons name="trophy-outline" size={16} color="#e5e7eb" />
+                  <Text className="text-white text-sm font-semibold ml-2">
+                    {offers.length} publiées
+                  </Text>
+                </View>
+              </View>
+
+              <Text className="text-xl font-bold text-white tracking-tight mt-2">
+                Recrute tes prochains talents
+              </Text>
+              <Text className="text-gray-200 mt-1 text-sm leading-relaxed">
+                Mets en avant tes besoins par équipe et attire les bons profils avec des offres claires.
+              </Text>
+
+              {isMyClub && (
+                <TouchableOpacity
+                  onPress={() => setModalVisible(true)}
+                  activeOpacity={0.9}
+                  className="mt-4 self-start px-4 py-2.5 rounded-full border border-orange-400 bg-orange-500/20 flex-row items-center"
+                >
+                  <Ionicons name="add-circle-outline" size={18} color="#ffedd5" />
+                  <Text className="text-white font-semibold text-sm ml-2">
+                    Créer une offre
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </LinearGradient>
+          </View>
+        }
         ListEmptyComponent={
-          <Text className="text-gray-500 text-center mt-10 text-base">
-            Aucune offre publiée pour le moment.
-          </Text>
+          <View className="items-center px-6 mt-10">
+            <View className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 items-center justify-center mb-3">
+              <Ionicons name="newspaper-outline" size={26} color={brand.orange} />
+            </View>
+            <Text className="text-white text-lg font-semibold">Aucune offre</Text>
+            <Text className="text-gray-400 text-center mt-2">
+              Publie ta première offre pour attirer les joueurs.
+            </Text>
+          </View>
         }
         renderItem={({ item }) => {
-          const isMyClub = auth.currentUser?.uid === clubUid;
-
           const onOpen = () => {
             if (isMyClub) {
               navigation.navigate("EditOffer", { offer: item });

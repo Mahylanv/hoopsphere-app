@@ -72,7 +72,7 @@ export default function ClubPresentation() {
       if (!displayedUid) return;
       await updateDoc(doc(db, "clubs", displayedUid), { [field]: value });
       setClub((prev: any) => ({ ...prev, [field]: value }));
-      Alert.alert("✅ Succès", "Informations mises à jour !");
+      Alert.alert("Succès", "Informations mises à jour !");
     } catch (err) {
       console.error("Erreur update club :", err);
       Alert.alert("Erreur", "Impossible de mettre à jour les informations.");

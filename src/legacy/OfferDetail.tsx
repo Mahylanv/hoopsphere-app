@@ -397,7 +397,7 @@ export default function OfferDetail() {
                                 <Ionicons name="information-circle-outline" size={18} color="#fff" />
                                 <Text className="text-white font-semibold ml-2">Détails de l’offre</Text>
                             </View>
-                            <Row icon="basketball-outline" label="Poste recherché" value={offer.position || "—"} />
+                            {/* <Row icon="basketball-outline" label="Poste recherché" value={offer.position || "—"} /> */}
                             <Row icon="people-outline" label="Équipe / Niveau" value={offer.team || offer.category || "—"} />
                             <Row icon="male-female-outline" label="Genre" value={offer.gender || "—"} />
                             <Row icon="calendar-outline" label="Tranche d’âge" value={offer.ageRange || "—"} />

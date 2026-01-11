@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { View, Text, ActivityIndicator, FlatList, TouchableOpacity, Image, TextInput } from "react-native";
+import { View, Text, ActivityIndicator, FlatList, TouchableOpacity, Image, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -13,16 +13,17 @@ import {
 import { RootStackParamList } from "../../../../types";
 import { db } from "../../../../config/firebaseConfig";
 import { LinearGradient } from "expo-linear-gradient";
+import { toggleLikePost } from "../../../home/services/likeService";
 
-type NavProp = NativeStackNavigationProp<RootStackParamList, "ClubLikedVideos">;
+type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ClubLikedVideosScreen() {
   const navigation = useNavigation<NavProp>();
   const [loading, setLoading] = useState(true);
   const [posts, setPosts] = useState<any[]>([]);
-  const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<"recent" | "likes">("recent");
   const [filterType, setFilterType] = useState<"all" | "video" | "image">("all");
+  const [profiles, setProfiles] = useState<Record<string, { name: string; avatar?: string }>>({});
 
   const brand = {
     orange: "#F97316",
@@ -42,16 +43,38 @@ export default function ClubLikedVideosScreen() {
       const likedSnap = await getDocs(likedRef);
       const likedIds = likedSnap.docs.map((d) => (d.data()?.postId as string) || d.id).filter(Boolean);
       const results: any[] = [];
+      const playerUids = new Set<string>();
       for (const postId of likedIds) {
         try {
           const snap = await getDoc(doc(db, "posts", postId));
           if (!snap.exists()) continue;
-          results.push({ id: snap.id, ...snap.data() });
+          const data = snap.data() as any;
+          if (data?.playerUid) playerUids.add(data.playerUid);
+          results.push({ id: snap.id, ...data });
         } catch {}
+      }
+      if (playerUids.size) {
+        const entries = await Promise.all(
+          Array.from(playerUids).map(async (uid) => {
+            try {
+              const userSnap = await getDoc(doc(db, "joueurs", uid));
+              if (!userSnap.exists()) return [uid, { name: "Joueur inconnu" } as const];
+              const u = userSnap.data() as any;
+              const name = [u.prenom, u.nom].filter(Boolean).join(" ").trim() || "Joueur";
+              return [uid, { name, avatar: u.avatar }] as const;
+            } catch {
+              return [uid, { name: "Joueur inconnu" }] as const;
+            }
+          })
+        );
+        setProfiles(Object.fromEntries(entries));
+      } else {
+        setProfiles({});
       }
       setPosts(results);
     } catch (e) {
       setPosts([]);
+      setProfiles({});
     } finally {
       setLoading(false);
     }
@@ -64,14 +87,6 @@ export default function ClubLikedVideosScreen() {
         filterType === "video" ? p.mediaType === "video" : p.mediaType === "image"
       );
     }
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      data = data.filter(
-        (p) =>
-          (p.description || "").toLowerCase().includes(q) ||
-          (p.playerName || "").toLowerCase().includes(q)
-      );
-    }
     if (sortKey === "likes") {
       data.sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0));
     } else {
@@ -82,7 +97,18 @@ export default function ClubLikedVideosScreen() {
       });
     }
     return data;
-  }, [posts, filterType, search, sortKey]);
+  }, [posts, filterType, sortKey]);
+
+  const handleUnlike = async (postId: string, ownerUid?: string) => {
+    const previous = posts;
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    try {
+      await toggleLikePost(postId, ownerUid || "");
+    } catch (e) {
+      console.log("❌ toggleLikePost error:", e);
+      setPosts(previous);
+    }
+  };
 
   useEffect(() => {
     fetchLiked();
@@ -177,68 +203,74 @@ export default function ClubLikedVideosScreen() {
                 </LinearGradient>
               </View>
 
-              <View className="px-5 mt-5">
-                <View className="bg-[#111827] border border-white/10 rounded-2xl p-4 shadow-lg shadow-black/30">
-                  <View className="bg-white/5 rounded-xl px-3 py-2.5 flex-row items-center">
-                    <Ionicons name="search" size={18} color="#9ca3af" />
-                    <TextInput
-                      placeholder="Rechercher un descriptif..."
-                      placeholderTextColor="#9ca3af"
-                      value={search}
-                      onChangeText={setSearch}
-                      className="flex-1 text-white ml-2"
-                    />
-                  </View>
+              <View className="px-5 mt-5 mb-5">
+                <LinearGradient
+                  colors={[brand.blue, "#0E0D0D"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{ borderRadius: 18, padding: 1.5 }}
+                >
+                  <View className="bg-[#0E0D0D] rounded-[16px] p-4 shadow-lg shadow-black/30">
+                    <Text className="text-white font-semibold text-base mb-3">
+                      Filtres rapides
+                    </Text>
 
-                  <View className="flex-row flex-wrap gap-2 mt-3">
-                    {[
-                      { key: "recent", label: "Récents" },
-                      { key: "likes", label: "Populaires" },
-                    ].map((item) => {
-                      const active = sortKey === item.key;
-                      return (
-                        <TouchableOpacity
-                          key={item.key}
-                          onPress={() => setSortKey(item.key as any)}
-                          activeOpacity={0.9}
-                          className="px-3 py-1.5 rounded-full border"
-                          style={{
-                            borderColor: active ? "rgba(249,115,22,0.65)" : "rgba(255,255,255,0.12)",
-                            backgroundColor: active ? "rgba(249,115,22,0.18)" : "rgba(255,255,255,0.06)",
-                          }}
-                        >
-                          <Text className="text-white text-xs font-semibold">
-                            {item.label}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ gap: 10, paddingRight: 6 }}
+                    >
+                      {[
+                        { key: "recent", label: "Récents", type: "sort", icon: "time-outline" },
+                        { key: "likes", label: "Populaires", type: "sort", icon: "flame-outline" },
+                        { key: "all", label: "Tout", type: "filter", icon: "layers-outline" },
+                        { key: "video", label: "Vidéos", type: "filter", icon: "play" },
+                        { key: "image", label: "Images", type: "filter", icon: "image-outline" },
+                      ].map((item) => {
+                        const active =
+                          item.type === "sort" ? sortKey === item.key : filterType === item.key;
+                        const onPress =
+                          item.type === "sort"
+                            ? () => setSortKey(item.key as any)
+                            : () => setFilterType(item.key as any);
+                        const borderColor =
+                          item.type === "sort"
+                            ? active
+                              ? "rgba(249,115,22,0.65)"
+                              : "rgba(255,255,255,0.14)"
+                            : active
+                            ? "rgba(37,99,235,0.65)"
+                            : "rgba(255,255,255,0.14)";
+                        const bgColor =
+                          item.type === "sort"
+                            ? active
+                              ? "rgba(249,115,22,0.18)"
+                              : "rgba(255,255,255,0.05)"
+                            : active
+                            ? "rgba(37,99,235,0.18)"
+                            : "rgba(255,255,255,0.05)";
 
-                    {[
-                      { key: "all", label: "Tout" },
-                      { key: "video", label: "Vidéos" },
-                      { key: "image", label: "Images" },
-                    ].map((item) => {
-                      const active = filterType === item.key;
-                      return (
-                        <TouchableOpacity
-                          key={item.key}
-                          onPress={() => setFilterType(item.key as any)}
-                          activeOpacity={0.9}
-                          className="px-3 py-1.5 rounded-full border"
-                          style={{
-                            borderColor: active ? "rgba(37,99,235,0.65)" : "rgba(255,255,255,0.12)",
-                            backgroundColor: active ? "rgba(37,99,235,0.20)" : "rgba(255,255,255,0.06)",
-                          }}
-                        >
-                          <Text className="text-white text-xs font-semibold">
-                            {item.label}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
+                        return (
+                          <TouchableOpacity
+                            key={item.key}
+                            onPress={onPress}
+                            activeOpacity={0.9}
+                            className="px-4 py-2 rounded-full border flex-row items-center"
+                            style={{
+                              borderColor,
+                              backgroundColor: bgColor,
+                            }}
+                          >
+                            <Ionicons name={item.icon as any} size={16} color="#e5e7eb" />
+                            <Text className="text-white text-sm font-semibold ml-2">
+                              {item.label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
                   </View>
-                </View>
+                </LinearGradient>
               </View>
 
               {filteredPosts.length === 0 && (
@@ -303,18 +335,43 @@ export default function ClubLikedVideosScreen() {
                 <Text className="text-white font-semibold text-base" numberOfLines={2}>
                   {item.description || "Post liké"}
                 </Text>
-                <View className="flex-row items-center justify-between mt-3">
-                  <View className="flex-row items-center">
-                    <Ionicons name="person-circle-outline" size={18} color="#e5e7eb" />
-                    <Text className="text-gray-300 text-xs ml-1.5" numberOfLines={1}>
-                      {item.playerName || "Joueur inconnu"}
-                    </Text>
-                  </View>
-                  <View className="flex-row items-center px-3 py-1 rounded-full bg-white/5 border border-white/10">
-                    <Ionicons name="flame" size={14} color={brand.orange} />
-                    <Text className="text-white text-xs font-semibold ml-1">
-                      Populaire
-                    </Text>
+                <View className="flex-row items-center justify-between mt-3 gap-2">
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate("JoueurDetail", { uid: item.playerUid })}
+                    className="flex-row items-center"
+                    activeOpacity={0.85}
+                  >
+                    <View className="w-10 h-10 rounded-full overflow-hidden bg-gray-800 border border-white/10">
+                      {profiles[item.playerUid]?.avatar ? (
+                        <Image source={{ uri: profiles[item.playerUid]?.avatar }} className="w-full h-full" />
+                      ) : (
+                        <Ionicons name="person-circle-outline" size={36} color="#e5e7eb" />
+                      )}
+                    </View>
+                    <View className="ml-2">
+                      <Text className="text-white text-sm font-semibold" numberOfLines={1}>
+                        {profiles[item.playerUid]?.name || item.playerName || "Joueur"}
+                      </Text>
+                      <Text className="text-gray-400 text-xs">Voir profil</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <View className="flex-row items-center gap-2">
+                    <View className="flex-row items-center bg-white/5 px-3 py-1 rounded-full border border-white/10">
+                      <Ionicons name="heart" size={14} color={brand.orange} />
+                      <Text className="text-white text-xs ml-1">
+                        {item.likeCount ?? 0}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => handleUnlike(item.id, item.playerUid)}
+                      activeOpacity={0.85}
+                      className="flex-row items-center bg-black/60 px-3 py-1.5 rounded-full border border-white/15"
+                    >
+                      <Ionicons name="heart-dislike-outline" size={16} color="#f97316" />
+                      <Text className="text-orange-300 text-xs ml-1.5 font-semibold">
+                        Retirer
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>

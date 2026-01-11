@@ -611,7 +611,7 @@ export default function JoueurDetail() {
         )}
 
         {/* CONTACT */}
-        <View className="px-5 mt-2 mb-7">
+        <View className="px-5 mt-7 mb-7">
           <TouchableOpacity
             onPress={openContactSheet}
             activeOpacity={0.85}

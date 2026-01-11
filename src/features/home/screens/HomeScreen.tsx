@@ -239,10 +239,23 @@ export default function HomeScreen({ forClub = false }: Props) {
       title: "Vidéos likées",
       subtitle: "Revois tes coups de cœur",
       icon: "heart-outline" as const,
-      colors: [brand.orange, brand.blue] as const,
-      onPress: () => navigation.navigate("LikedPosts"),
+      colors: (forClub && clubPremium
+        ? [brand.orange, brand.orangeLight]
+        : [brand.orange, brand.blue]) as const,
+      onPress: () =>
+        navigation.navigate(forClub ? ("ClubLikedVideos" as never) : ("LikedPosts" as never)),
     },
   ];
+
+  if (forClub && clubPremium) {
+    quickActions.push({
+      title: "Consultations profil",
+      subtitle: "Voir qui a visité le club",
+      icon: "eye-outline" as const,
+      colors: [brand.blue, brand.blueDark] as const,
+      onPress: () => navigation.navigate("ClubVisitors" as never),
+    });
+  }
 
   // -------------------------------
   // ⭐ UI

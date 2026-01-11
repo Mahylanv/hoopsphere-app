@@ -168,7 +168,7 @@ export default function ProfilClub() {
       await updateDoc(doc(db, "clubs", uid), { logo: downloadUrl });
       setClub((prev: any) => ({ ...prev, logo: downloadUrl }));
 
-      Alert.alert("Succès ✅", "Logo mis à jour avec succès !");
+      Alert.alert("Succès", "Logo mis à jour avec succès !");
     } catch (err) {
       console.error("Erreur upload logo :", err);
       Alert.alert("Erreur", "Impossible de mettre à jour le logo.");

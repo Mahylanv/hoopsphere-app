@@ -77,7 +77,7 @@ export default function InscriptionJoueur() {
         createdAt: new Date(),
       });
 
-      Alert.alert("Succès", "Compte créé avec succès ✅");
+      Alert.alert("Succès", "Compte créé avec succès");
 
       // 3️⃣ Redirection → MainTabs
       navigation.reset({
