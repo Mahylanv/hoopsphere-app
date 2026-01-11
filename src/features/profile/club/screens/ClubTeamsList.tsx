@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, Pressable, StatusBar, ActivityIndicator } from "react-native";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { RootStackParamList, Club as ClubType } from "../../../../types";
 
 import { auth, db } from "../../../../config/firebaseConfig";
@@ -99,83 +100,112 @@ export default function ClubTeamsList() {
     <View className="flex-1 bg-[#0E0D0D]">
       <StatusBar barStyle="light-content" />
 
+      <View className="px-5 pt-4">
+        <View className="flex-row items-center">
+          <View className="w-10 h-10 rounded-2xl bg-orange-600/20 items-center justify-center mr-3">
+            <Ionicons name="people-outline" size={20} color="#F97316" />
+          </View>
+          <View>
+            <Text className="text-white text-lg font-semibold">Équipes</Text>
+            <Text className="text-gray-400 text-xs">
+              {teams.length} équipe{teams.length > 1 ? "s" : ""}
+            </Text>
+          </View>
+        </View>
+      </View>
+
       {/* Création d’équipe seulement si c’est **son** club */}
       {auth.currentUser?.uid === clubUid && (
-        <Pressable onPress={() => setModalCreateTeam(true)} className="m-5 px-4 py-3 bg-orange-600 rounded-xl items-center">
-          <Text className="text-white font-semibold">+ Créer une équipe</Text>
+        <Pressable
+          onPress={() => setModalCreateTeam(true)}
+          className="mx-5 mt-4 mb-2 px-4 py-3 bg-orange-600 rounded-xl items-center flex-row justify-center"
+        >
+          <Ionicons name="add" size={18} color="#fff" />
+          <Text className="text-white font-semibold ml-2">Créer une équipe</Text>
         </Pressable>
       )}
 
       <FlatList
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24 }}
         data={teams}
         keyExtractor={(t) => t.id!}
         renderItem={({ item }) => {
           const open = expanded === item.id;
           const playersCount = playersByTeam[item.id!]?.length ?? 0;
           return (
-            <View className="mb-4 border border-gray-800 rounded-2xl overflow-hidden bg-gray-900">
-              <Pressable
-                onPress={() => toggle(item.id!)}
-                className="bg-gray-800/80 px-4 py-3 flex-row justify-between items-center"
+            <View className="mb-4">
+              <LinearGradient
+                colors={["#F97316", "#0E0D0D"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ borderRadius: 18, padding: 1.5 }}
               >
-                <View className="flex-row items-center">
-                  <View className="w-10 h-10 rounded-full bg-orange-600/20 items-center justify-center mr-3">
-                    <MaterialCommunityIcons name={getIcon(item.label) as any} size={22} color="#F97316" />
-                  </View>
-                  <View>
-                    <Text className="text-white text-lg font-semibold">{item.label}</Text>
-                    <Text className="text-gray-400 text-xs">
-                      {playersCount} joueur{playersCount > 1 ? "s" : ""}
-                    </Text>
-                  </View>
-                </View>
-                <Text className="text-white text-2xl">{open ? "−" : "+"}</Text>
-              </Pressable>
-
-              {open && (
-                <View className="bg-gray-900 px-4 py-3 border-t border-gray-800">
-                  {playersByTeam[item.id!]?.length ? (
-                    playersByTeam[item.id!].map((p) => (
-                      <View
-                        key={p.id}
-                        className="flex-row justify-between items-center bg-gray-800/60 border border-gray-800 rounded-lg px-3 py-2 mb-2"
-                      >
-                        <View className="flex-row items-center">
-                          <View className="w-7 h-7 rounded-full bg-orange-600/20 items-center justify-center mr-2">
-                            <Text className="text-orange-400 text-xs font-semibold">
-                              {getInitials(p)}
-                            </Text>
-                          </View>
-                          <Text className="text-gray-200">{p.prenom} {p.nom}</Text>
-                        </View>
-                        {auth.currentUser?.uid === clubUid && (
-                          <Pressable onPress={() => deletePlayer(item.id!, p.id)}>
-                            <Ionicons name="trash" size={18} color="#f87171" />
-                          </Pressable>
-                        )}
+                <View className="rounded-[16px] overflow-hidden bg-gray-900 border border-gray-800">
+                  <Pressable
+                    onPress={() => toggle(item.id!)}
+                    className="bg-gray-800/80 px-4 py-3 flex-row justify-between items-center"
+                  >
+                    <View className="flex-row items-center">
+                      <View className="w-10 h-10 rounded-full bg-orange-600/20 items-center justify-center mr-3">
+                        <MaterialCommunityIcons name={getIcon(item.label) as any} size={22} color="#F97316" />
                       </View>
-                    ))
-                  ) : (
-                    <Text className="text-gray-400 mb-2">Aucun joueur enregistré.</Text>
-                  )}
+                      <View>
+                        <Text className="text-white text-lg font-semibold">{item.label}</Text>
+                        <Text className="text-gray-400 text-xs">
+                          {playersCount} joueur{playersCount > 1 ? "s" : ""}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className="w-8 h-8 rounded-full bg-gray-700/70 items-center justify-center">
+                      <Ionicons name={open ? "chevron-up" : "chevron-down"} size={18} color="#fff" />
+                    </View>
+                  </Pressable>
 
-                  {auth.currentUser?.uid === clubUid && (
-                    <View className="flex-row justify-end space-x-2 mt-3">
-                      <Pressable
-                        onPress={() => { setCurrentTeamId(item.id!); setModalAddPlayers(true); }}
-                        className="bg-orange-600 px-3 py-2 rounded-lg"
-                      >
-                        <Text className="text-white font-semibold">+ Ajouter joueurs</Text>
-                      </Pressable>
+                  {open && (
+                    <View className="bg-gray-900 px-4 py-3 border-t border-gray-800">
+                      {playersByTeam[item.id!]?.length ? (
+                        playersByTeam[item.id!].map((p) => (
+                          <View
+                            key={p.id}
+                            className="flex-row justify-between items-center bg-gray-800/60 border border-gray-800 rounded-lg px-3 py-2 mb-2"
+                          >
+                            <View className="flex-row items-center">
+                              <View className="w-7 h-7 rounded-full bg-orange-600/20 items-center justify-center mr-2">
+                                <Text className="text-orange-400 text-xs font-semibold">
+                                  {getInitials(p)}
+                                </Text>
+                              </View>
+                              <Text className="text-gray-200">{p.prenom} {p.nom}</Text>
+                            </View>
+                            {auth.currentUser?.uid === clubUid && (
+                              <Pressable onPress={() => deletePlayer(item.id!, p.id)}>
+                                <Ionicons name="trash" size={18} color="#f87171" />
+                              </Pressable>
+                            )}
+                          </View>
+                        ))
+                      ) : (
+                        <Text className="text-gray-400 mb-2">Aucun joueur enregistré.</Text>
+                      )}
 
-                      <Pressable onPress={() => deleteTeam(item.id)} className="bg-red-600 px-3 py-2 rounded-lg ml-2">
-                        <Text className="text-white font-semibold">Supprimer</Text>
-                      </Pressable>
+                      {auth.currentUser?.uid === clubUid && (
+                        <View className="flex-row justify-end space-x-2 mt-3">
+                          <Pressable
+                            onPress={() => { setCurrentTeamId(item.id!); setModalAddPlayers(true); }}
+                            className="bg-orange-600 px-3 py-2 rounded-lg"
+                          >
+                            <Text className="text-white font-semibold">+ Ajouter joueurs</Text>
+                          </Pressable>
+
+                          <Pressable onPress={() => deleteTeam(item.id)} className="bg-red-600 px-3 py-2 rounded-lg ml-2">
+                            <Text className="text-white font-semibold">Supprimer</Text>
+                          </Pressable>
+                        </View>
+                      )}
                     </View>
                   )}
                 </View>
-              )}
+              </LinearGradient>
             </View>
           );
         }}

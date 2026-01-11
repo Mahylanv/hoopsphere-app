@@ -50,17 +50,30 @@ export default function WeeklyRanking({
   return (
     <View className="w-full mt-6 px-5">
       <LinearGradient
-        colors={["rgba(37,99,235,0.08)", "rgba(14,14,15,0.9)"]}
+        colors={["#F97316", "#0E0D0D"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{
           borderRadius: 20,
-          padding: 1,
-          borderWidth: 1,
-          borderColor: "rgba(249,115,22,0.25)",
+          padding: 1.5,
         }}
       >
-        <View className="bg-[#0E0D0D] rounded-[18px] p-4 shadow-lg shadow-black/40">
+        <View className="bg-[#0E0D0D] rounded-[18px] p-4 shadow-lg shadow-black/40 overflow-hidden border border-gray-800">
+          <View
+            pointerEvents="none"
+            className="absolute -right-8 -top-6 w-28 h-28 rounded-full"
+            style={{ backgroundColor: "rgba(249,115,22,0.14)" }}
+          />
+          <View
+            pointerEvents="none"
+            className="absolute -left-10 bottom-2 w-24 h-24 rounded-full"
+            style={{ backgroundColor: "rgba(37,99,235,0.16)" }}
+          />
+          <View
+            pointerEvents="none"
+            className="absolute right-6 bottom-6 w-16 h-16 rounded-full"
+            style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
+          />
           {/* HEADER */}
           <View className="flex-row justify-between items-start mb-4">
             <View className="flex-1">
