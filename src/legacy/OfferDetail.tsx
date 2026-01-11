@@ -16,6 +16,7 @@ import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import * as MailComposer from "expo-mail-composer";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { RootStackParamList, Offer as OfferType } from "../types";
 import { auth, db } from "../config/firebaseConfig";
@@ -75,6 +76,16 @@ export default function OfferDetail() {
     const clubName = useMemo(() => club?.nom || club?.name || "Club", [club]);
     const clubCity = useMemo(() => club?.ville || club?.city || "", [club]);
     const clubDept = useMemo(() => displayDepartment(club?.department), [club]);
+    const offerBadges = useMemo(() => {
+        const list = [
+            offer.position,
+            offer.team,
+            offer.category,
+            offer.gender,
+            offer.ageRange,
+        ].filter(Boolean) as string[];
+        return Array.from(new Set(list));
+    }, [offer.position, offer.team, offer.category, offer.gender, offer.ageRange]);
 
     // Chargement du club
     useEffect(() => {
@@ -243,8 +254,22 @@ export default function OfferDetail() {
 
     const Badge = ({ label }: { label?: string }) =>
         label ? (
-            <View className="bg-gray-700 px-3 py-1 rounded-full mr-2 mb-2">
-                <Text className="text-gray-200 text-xs">{label}</Text>
+            <View className="bg-[#0b0f19] border border-gray-700 px-3 py-1 rounded-full mr-2 mb-2">
+                <Text className="text-gray-200 text-xs font-semibold">{label}</Text>
+            </View>
+        ) : null;
+
+    const MetaPill = ({
+        icon,
+        label,
+    }: {
+        icon: keyof typeof Ionicons.glyphMap;
+        label?: string;
+    }) =>
+        label ? (
+            <View className="flex-row items-center bg-black/30 border border-gray-800 px-3 py-1 rounded-full mr-2 mb-2">
+                <Ionicons name={icon} size={14} color="#F97316" />
+                <Text className="text-gray-200 text-xs ml-1">{label}</Text>
             </View>
         ) : null;
 
@@ -264,116 +289,190 @@ export default function OfferDetail() {
 
             <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
                 {/* Bandeau club */}
-                <View className="bg-[#151a28] rounded-2xl p-4 border border-gray-800 mb-4">
-                    <Text className="text-gray-400 text-xs mb-3">Offre publiée par</Text>
+                <LinearGradient
+                    colors={["#2563EB", "#0E0D0D"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{ borderRadius: 18, padding: 1.5, marginBottom: 16 }}
+                >
+                    <View className="bg-[#121826] rounded-[16px] p-4 overflow-hidden">
+                        <View
+                            className="absolute -right-10 -top-8 w-24 h-24 rounded-full"
+                            style={{ backgroundColor: "rgba(37,99,235,0.15)" }}
+                        />
+                        <View
+                            className="absolute -left-12 bottom-0 w-24 h-24 rounded-full"
+                            style={{ backgroundColor: "rgba(249,115,22,0.1)" }}
+                        />
 
-                    {clubLoading ? (
-                        <View className="flex-row items-center">
-                            <ActivityIndicator color="#F97316" />
-                            <Text className="text-gray-400 ml-2">Chargement du club…</Text>
-                        </View>
-                    ) : (
-                        <View className="flex-row items-center">
-                            <Image
-                                source={{ uri: club?.logo || "https://via.placeholder.com/80x80.png?text=Club" }}
-                                className="w-12 h-12 rounded-full mr-3 border border-gray-700"
-                            />
-                            <View className="flex-1">
-                                <Text className="text-white font-semibold">{clubName}</Text>
-                                <Text className="text-gray-400 text-xs">
-                                    {clubCity || clubDept ? `${clubCity}${clubDept ? " • " + clubDept : ""}` : "—"}
-                                </Text>
-                                {!!club?.email && (
-                                    <Text className="text-gray-500 text-xs mt-1">{club.email}</Text>
+                        <Text className="text-gray-400 text-xs mb-3">Offre publiée par</Text>
+
+                        {clubLoading ? (
+                            <View className="flex-row items-center">
+                                <ActivityIndicator color="#F97316" />
+                                <Text className="text-gray-400 ml-2">Chargement du club…</Text>
+                            </View>
+                        ) : (
+                            <View className="flex-row items-center">
+                                <Image
+                                    source={{ uri: club?.logo || "https://via.placeholder.com/80x80.png?text=Club" }}
+                                    className="w-12 h-12 rounded-full mr-3 border border-gray-700"
+                                />
+                                <View className="flex-1">
+                                    <Text className="text-white font-semibold">{clubName}</Text>
+                                    <Text className="text-gray-400 text-xs">
+                                        {clubCity || clubDept ? `${clubCity}${clubDept ? " • " + clubDept : ""}` : "—"}
+                                    </Text>
+                                    {!!club?.email && (
+                                        <Text className="text-gray-500 text-xs mt-1">{club.email}</Text>
+                                    )}
+                                </View>
+
+                                {club && (
+                                    <Pressable onPress={goToClub} className="px-3 py-2 bg-orange-600 rounded-xl">
+                                        <Text className="text-white text-sm font-semibold">Voir le club</Text>
+                                    </Pressable>
                                 )}
                             </View>
-
-                            {club && (
-                                <Pressable onPress={goToClub} className="px-3 py-2 bg-orange-600 rounded-xl">
-                                    <Text className="text-white text-sm font-semibold">Voir le club</Text>
-                                </Pressable>
-                            )}
-                        </View>
-                    )}
-                </View>
+                        )}
+                    </View>
+                </LinearGradient>
 
                 {/* Carte détails offre */}
-                <View className="bg-[#1b1f2a] rounded-2xl p-5 border border-gray-800">
-                    {/* Titre + métadonnées */}
-                    <Text className="text-white text-xl font-bold mb-2">
-                        {offer.title || "Offre sans titre"}
-                    </Text>
+                <LinearGradient
+                    colors={["#F97316", "#0E0D0D"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{ borderRadius: 20, padding: 1.5 }}
+                >
+                    <View className="bg-[#111827] rounded-[18px] p-5 overflow-hidden">
+                        <View
+                            className="absolute -right-10 -top-8 w-28 h-28 rounded-full"
+                            style={{ backgroundColor: "rgba(249,115,22,0.14)" }}
+                        />
+                        <View
+                            className="absolute -left-12 bottom-0 w-24 h-24 rounded-full"
+                            style={{ backgroundColor: "rgba(37,99,235,0.12)" }}
+                        />
 
-                    {/* Métadonnées */}
-                    <View className="mb-3">
-                        {offer.location ? <Text className="text-gray-300">📍 {offer.location}</Text> : null}
-                        {offer.publishedAt ? (
-                            <Text className="text-gray-400 text-xs mt-1">Publiée le {offer.publishedAt}</Text>
-                        ) : null}
-                    </View>
-
-                    {/* Description */}
-                    {!!offer.description && (
-                        <>
-                            <Text className="text-white font-semibold mb-1">Description</Text>
-                            <Text className="text-gray-200 leading-6 mb-6">{offer.description}</Text>
-                        </>
-                    )}
-
-                    {/* Récap compact */}
-                    <View className="bg-[#0e1320] border border-gray-700 rounded-xl p-3 mb-6">
-                        <Row label="Poste recherché" value={offer.position || "—"} />
-                        <Row label="Équipe / Niveau" value={offer.team || offer.category || "—"} />
-                        <Row label="Genre" value={offer.gender || "—"} />
-                        <Row label="Tranche d’âge" value={offer.ageRange || "—"} />
-                        <Row label="Championnat" value={offer.category || "—"} />
-                        <Row label="Localisation" value={offer.location || "—"} />
-                    </View>
-
-                    {/* Formulaire candidature — visible uniquement si pas le club */}
-                    {!isClubOwner && (
-                        <View className="mt-2">
-                            <Text className="text-white font-semibold mb-2">Message (optionnel)</Text>
-                            <TextInput
-                                placeholder="Quelques mots de motivation, ton profil, tes dispos…"
-                                placeholderTextColor="#6b7280"
-                                value={motivation}
-                                onChangeText={setMotivation}
-                                className="bg-[#0e1320] text-white rounded-2xl px-4 py-3 text-[15px] border border-gray-700 min-h-[110px] mb-4"
-                                multiline
-                            />
-
-                            <Pressable
-                                onPress={handleApply}
-                                disabled={sending}
-                                className={`py-4 rounded-xl items-center ${sending ? "bg-gray-600" : "bg-orange-600"
-                                    }`}
-                            >
-                                {sending ? (
-                                    <ActivityIndicator color="#fff" />
-                                ) : (
-                                    <Text className="text-white font-semibold">Postuler</Text>
-                                )}
-                            </Pressable>
+                        {/* Titre + badge */}
+                        <View className="flex-row items-start justify-between mb-3">
+                            <Text className="text-white text-xl font-bold flex-1 pr-3">
+                                {offer.title || "Offre sans titre"}
+                            </Text>
+                            <View className="bg-orange-600/20 border border-orange-500/30 px-2 py-1 rounded-full">
+                                <Text className="text-orange-300 text-xs font-semibold">Recrutement</Text>
+                            </View>
                         </View>
-                    )}
 
-                    {/* Info club propriétaire */}
-                    {isClubOwner && (
-                        <Text className="text-gray-400 italic mt-2">
-                            Vous êtes le club propriétaire de cette offre.
-                        </Text>
-                    )}
-                </View>
+                        {!!offerBadges.length && (
+                            <View className="flex-row flex-wrap mb-2">
+                                {offerBadges.map((tag) => (
+                                    <Badge key={tag} label={tag} />
+                                ))}
+                            </View>
+                        )}
+
+                        <View className="flex-row flex-wrap mb-4">
+                            <MetaPill icon="location-outline" label={offer.location} />
+                            {offer.publishedAt ? (
+                                <MetaPill icon="calendar-outline" label={`Publiée le ${offer.publishedAt}`} />
+                            ) : null}
+                        </View>
+
+                        {/* Description */}
+                        {!!offer.description && (
+                            <View className="bg-[#0b0f19] border border-gray-800 rounded-xl p-4 mb-5">
+                                <View className="flex-row items-center mb-2">
+                                    <Ionicons name="document-text-outline" size={18} color="#fff" />
+                                    <Text className="text-white font-semibold ml-2">Description</Text>
+                                </View>
+                                <Text className="text-gray-200 leading-6">{offer.description}</Text>
+                            </View>
+                        )}
+
+                        {/* Récap compact */}
+                        <View className="bg-[#0b0f19] border border-gray-700 rounded-xl p-3 mb-6">
+                            <View className="flex-row items-center mb-2">
+                                <Ionicons name="information-circle-outline" size={18} color="#fff" />
+                                <Text className="text-white font-semibold ml-2">Détails de l’offre</Text>
+                            </View>
+                            <Row icon="basketball-outline" label="Poste recherché" value={offer.position || "—"} />
+                            <Row icon="people-outline" label="Équipe / Niveau" value={offer.team || offer.category || "—"} />
+                            <Row icon="male-female-outline" label="Genre" value={offer.gender || "—"} />
+                            <Row icon="calendar-outline" label="Tranche d’âge" value={offer.ageRange || "—"} />
+                            <Row icon="trophy-outline" label="Championnat" value={offer.category || "—"} />
+                            <Row icon="location-outline" label="Localisation" value={offer.location || "—"} />
+                        </View>
+
+                        {/* Formulaire candidature — visible uniquement si pas le club */}
+                        {!isClubOwner && (
+                            <View className="mt-2">
+                                <View className="flex-row items-center mb-2">
+                                    <Ionicons name="mail-outline" size={18} color="#fff" />
+                                    <Text className="text-white font-semibold ml-2">Message (optionnel)</Text>
+                                </View>
+                                <TextInput
+                                    placeholder="Quelques mots de motivation, ton profil, tes dispos…"
+                                    placeholderTextColor="#6b7280"
+                                    value={motivation}
+                                    onChangeText={setMotivation}
+                                    className="bg-[#0b0f19] text-white rounded-2xl px-4 py-3 text-[15px] border border-gray-700 min-h-[110px] mb-4"
+                                    multiline
+                                />
+
+                                <Pressable
+                                    onPress={handleApply}
+                                    disabled={sending}
+                                    className={`py-4 rounded-xl items-center flex-row justify-center ${sending ? "bg-gray-600" : "bg-orange-600"
+                                        }`}
+                                >
+                                    {sending ? (
+                                        <ActivityIndicator color="#fff" />
+                                    ) : (
+                                        <>
+                                            <Ionicons name="send-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
+                                            <Text className="text-white font-semibold">Postuler</Text>
+                                        </>
+                                    )}
+                                </Pressable>
+                            </View>
+                        )}
+
+                        {/* Info club propriétaire */}
+                        {isClubOwner && (
+                            <View className="bg-[#0b0f19] border border-gray-800 rounded-xl p-3">
+                                <Text className="text-gray-400 italic">
+                                    Vous êtes le club propriétaire de cette offre.
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                </LinearGradient>
             </ScrollView>
         </SafeAreaView>
     );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+    label,
+    value,
+    icon,
+}: {
+    label: string;
+    value: string;
+    icon?: keyof typeof Ionicons.glyphMap;
+}) {
     return (
-        <View className="flex-row justify-between items-center py-1">
-            <Text className="text-gray-400">{label}</Text>
+        <View className="flex-row justify-between items-center py-2">
+            <View className="flex-row items-center flex-1">
+                {icon && (
+                    <View className="w-7 h-7 rounded-full bg-gray-800 items-center justify-center mr-2">
+                        <Ionicons name={icon} size={14} color="#F97316" />
+                    </View>
+                )}
+                <Text className="text-gray-400">{label}</Text>
+            </View>
             <Text className="text-gray-200 font-medium ml-4">{value}</Text>
         </View>
     );

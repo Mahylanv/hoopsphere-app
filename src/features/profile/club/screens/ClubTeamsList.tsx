@@ -79,6 +79,12 @@ export default function ClubTeamsList() {
 
   const icons = ["basketball", "trophy", "shield-star-outline", "account-group", "lightning-bolt", "medal"];
   const getIcon = (label: string) => icons[label.charCodeAt(0) % icons.length];
+  const getInitials = (player: Player) => {
+    const prenom = (player.prenom || "").trim();
+    const nom = (player.nom || "").trim();
+    const initials = `${prenom ? prenom[0] : ""}${nom ? nom[0] : ""}`.toUpperCase();
+    return initials || "?";
+  };
 
   if (loading) {
     return (
@@ -106,22 +112,43 @@ export default function ClubTeamsList() {
         keyExtractor={(t) => t.id!}
         renderItem={({ item }) => {
           const open = expanded === item.id;
+          const playersCount = playersByTeam[item.id!]?.length ?? 0;
           return (
-            <View className="mb-4 border border-gray-700 rounded-xl overflow-hidden">
-              <Pressable onPress={() => toggle(item.id!)} className="bg-gray-800 px-4 py-3 flex-row justify-between items-center">
+            <View className="mb-4 border border-gray-800 rounded-2xl overflow-hidden bg-gray-900">
+              <Pressable
+                onPress={() => toggle(item.id!)}
+                className="bg-gray-800/80 px-4 py-3 flex-row justify-between items-center"
+              >
                 <View className="flex-row items-center">
-                  <MaterialCommunityIcons name={getIcon(item.label) as any} size={28} color="#F97316" style={{ marginRight: 8 }} />
-                  <Text className="text-white text-lg font-semibold">{item.label}</Text>
+                  <View className="w-10 h-10 rounded-full bg-orange-600/20 items-center justify-center mr-3">
+                    <MaterialCommunityIcons name={getIcon(item.label) as any} size={22} color="#F97316" />
+                  </View>
+                  <View>
+                    <Text className="text-white text-lg font-semibold">{item.label}</Text>
+                    <Text className="text-gray-400 text-xs">
+                      {playersCount} joueur{playersCount > 1 ? "s" : ""}
+                    </Text>
+                  </View>
                 </View>
                 <Text className="text-white text-2xl">{open ? "−" : "+"}</Text>
               </Pressable>
 
               {open && (
-                <View className="bg-gray-800 px-4 py-3">
+                <View className="bg-gray-900 px-4 py-3 border-t border-gray-800">
                   {playersByTeam[item.id!]?.length ? (
                     playersByTeam[item.id!].map((p) => (
-                      <View key={p.id} className="flex-row justify-between items-center border-b border-gray-700 py-1">
-                        <Text className="text-gray-300">{p.prenom} {p.nom}</Text>
+                      <View
+                        key={p.id}
+                        className="flex-row justify-between items-center bg-gray-800/60 border border-gray-800 rounded-lg px-3 py-2 mb-2"
+                      >
+                        <View className="flex-row items-center">
+                          <View className="w-7 h-7 rounded-full bg-orange-600/20 items-center justify-center mr-2">
+                            <Text className="text-orange-400 text-xs font-semibold">
+                              {getInitials(p)}
+                            </Text>
+                          </View>
+                          <Text className="text-gray-200">{p.prenom} {p.nom}</Text>
+                        </View>
                         {auth.currentUser?.uid === clubUid && (
                           <Pressable onPress={() => deletePlayer(item.id!, p.id)}>
                             <Ionicons name="trash" size={18} color="#f87171" />
@@ -142,7 +169,7 @@ export default function ClubTeamsList() {
                         <Text className="text-white font-semibold">+ Ajouter joueurs</Text>
                       </Pressable>
 
-                      <Pressable onPress={() => deleteTeam(item.id)} className="bg-red-600 px-3 py-2 rounded-lg">
+                      <Pressable onPress={() => deleteTeam(item.id)} className="bg-red-600 px-3 py-2 rounded-lg ml-2">
                         <Text className="text-white font-semibold">Supprimer</Text>
                       </Pressable>
                     </View>

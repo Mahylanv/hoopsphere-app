@@ -276,21 +276,31 @@ export default function VideoFeedScreen({ route }: Props) {
           offset: height * index,
           index,
         })}
-        renderItem={({ item, index }) => (
+        renderItem={({ item, index }) => {
+          const isImage = item.mediaType === "image";
+          return (
           <View style={{ height, width }}>
             <TouchableWithoutFeedback onPress={() => handleVideoTap(index)}>
               <View style={{ width: "100%", height: "100%" }}>
-                <Video
-                  ref={(ref) => {
-                    videoRefs.current[index] = ref;
-                  }}
-                  source={{ uri: item.cachedUrl || item.url }}
-                  style={{ width: "100%", height: "100%" }}
-                  resizeMode={ResizeMode.COVER}
-                  isLooping
-                  shouldPlay={index === activeIndex} // 🔥 AUTOPLAY
-                  isMuted={false}
-                />
+                {isImage ? (
+                  <Image
+                    source={{ uri: item.url }}
+                    style={{ width: "100%", height: "100%" }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Video
+                    ref={(ref) => {
+                      videoRefs.current[index] = ref;
+                    }}
+                    source={{ uri: item.cachedUrl || item.url }}
+                    style={{ width: "100%", height: "100%" }}
+                    resizeMode={ResizeMode.COVER}
+                    isLooping
+                    shouldPlay={index === activeIndex} // 🔥 AUTOPLAY
+                    isMuted={false}
+                  />
+                )}
 
                 {isPaused && index === activeIndex && (
                   <Animated.View
@@ -381,7 +391,8 @@ export default function VideoFeedScreen({ route }: Props) {
               skills={item.skills}
             />
           </View>
-        )}
+        );
+        }}
       />
     </View>
   );
