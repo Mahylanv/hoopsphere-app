@@ -205,7 +205,10 @@ export default function ProfilJoueur() {
 
   if (loading || !user) {
     return (
-      <SafeAreaView className="flex-1 bg-black justify-center items-center">
+      <SafeAreaView
+        className="flex-1 bg-black justify-center items-center"
+        edges={["top", "left", "right"]}
+      >
         <Text className="text-white text-lg">Chargement...</Text>
       </SafeAreaView>
     );
@@ -216,7 +219,11 @@ export default function ProfilJoueur() {
   };
 
   return (
-    <SafeAreaView key={focusKey} className="flex-1 bg-[#0E0D0D]">
+    <SafeAreaView
+      key={focusKey}
+      className="flex-1 bg-[#0E0D0D]"
+      edges={["top", "left", "right"]}
+    >
       <Animated.ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}

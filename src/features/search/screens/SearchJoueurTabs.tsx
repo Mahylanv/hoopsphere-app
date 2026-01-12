@@ -22,7 +22,10 @@ export default function SearchJoueurTabs() {
   const goToPremium = () => (navigation as any).navigate("Payment");
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0E0D0D]">
+    <SafeAreaView
+      className="flex-1 bg-[#0E0D0D]"
+      edges={["top", "left", "right"]}
+    >
       <View className="px-4 pt-5 pb-2">
         <LinearGradient
           colors={["#2563EB", "#0D1324", "#0E0D0D"]}

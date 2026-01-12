@@ -255,7 +255,10 @@ export default function ProfilClub() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0E0D0D]">
+    <SafeAreaView
+      className="flex-1 bg-[#0E0D0D]"
+      edges={["top", "left", "right"]}
+    >
       <StatusBar barStyle="light-content" />
 
       {isOwner && (

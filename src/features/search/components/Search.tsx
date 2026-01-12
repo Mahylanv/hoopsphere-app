@@ -262,10 +262,7 @@ function ClubsTab({ isPremium, onUpgrade }: PremiumProps) {
   };
 
   return (
-    <SafeAreaView
-      className="flex-1 bg-black"
-      edges={["left", "right", "bottom"]}
-    >
+    <SafeAreaView className="flex-1 bg-black" edges={["left", "right"]}>
       <StatusBar barStyle="light-content" />
       <View className="px-4 pb-2">
         {/* Titre + bouton filtres */}
@@ -878,10 +875,7 @@ function OffersTab({ isPremium, onUpgrade }: PremiumProps) {
   };
 
   return (
-    <SafeAreaView
-      className="flex-1 bg-black"
-      edges={["left", "right", "bottom"]}
-    >
+    <SafeAreaView className="flex-1 bg-black" edges={["left", "right"]}>
       <StatusBar barStyle="light-content" />
       <View className="px-4 pb-2">
         {/* Titre + bouton filtres */}

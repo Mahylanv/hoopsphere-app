@@ -83,7 +83,7 @@ export default function FavoriteJoueursTab() {
     return (
       <SafeAreaView
         className="flex-1 bg-black items-center justify-center"
-        edges={["left", "right", "bottom"]}
+        edges={["left", "right"]}
       >
         <Ionicons name="hourglass-outline" size={32} color="#777" />
         <Text className="text-gray-400 mt-3">Chargement…</Text>
@@ -107,7 +107,7 @@ export default function FavoriteJoueursTab() {
     return (
       <SafeAreaView
         className="flex-1 bg-black items-center justify-center"
-        edges={["left", "right", "bottom"]}
+        edges={["left", "right"]}
       >
         <Ionicons name="star-outline" size={48} color="#555" />
         <Text className="text-gray-400 mt-3">
@@ -121,10 +121,7 @@ export default function FavoriteJoueursTab() {
      UI
   ============================ */
   return (
-    <SafeAreaView
-      className="flex-1 bg-black"
-      edges={["left", "right", "bottom"]}
-    >
+    <SafeAreaView className="flex-1 bg-black" edges={["left", "right"]}>
       {/* ===== HEADER ===== */}
       <View className="px-4 pt-4 pb-3 flex-row items-center justify-between">
         <View className="flex-row items-center">

@@ -85,7 +85,7 @@ export default function FavoriteClubsTab() {
     return (
       <SafeAreaView
         className="flex-1 bg-black items-center justify-center"
-        edges={["left", "right", "bottom"]}
+        edges={["left", "right"]}
       >
         <ActivityIndicator size="large" color="#F97316" />
       </SafeAreaView>
@@ -105,7 +105,7 @@ export default function FavoriteClubsTab() {
     return (
       <SafeAreaView
         className="flex-1 bg-black items-center justify-center"
-        edges={["left", "right", "bottom"]}
+        edges={["left", "right"]}
       >
         <Ionicons name="star-outline" size={48} color="#555" />
         <Text className="text-gray-400 mt-3">Aucun club en favori</Text>
@@ -117,10 +117,7 @@ export default function FavoriteClubsTab() {
      UI
   ============================ */
   return (
-    <SafeAreaView
-      className="flex-1 bg-black"
-      edges={["left", "right", "bottom"]}
-    >
+    <SafeAreaView className="flex-1 bg-black" edges={["left", "right"]}>
       {/* ===== HEADER ===== */}
       <View className="px-4 pt-4 pb-3 flex-row items-center justify-between">
         <View className="flex-row items-center">
