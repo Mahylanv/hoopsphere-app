@@ -81,7 +81,10 @@ export default function FavoriteJoueursTab() {
   ============================ */
   if (premiumLoading || loading) {
     return (
-      <SafeAreaView className="flex-1 bg-black items-center justify-center">
+      <SafeAreaView
+        className="flex-1 bg-black items-center justify-center"
+        edges={["left", "right", "bottom"]}
+      >
         <Ionicons name="hourglass-outline" size={32} color="#777" />
         <Text className="text-gray-400 mt-3">Chargement…</Text>
       </SafeAreaView>
@@ -102,7 +105,10 @@ export default function FavoriteJoueursTab() {
   ============================ */
   if (favoritePlayers.length === 0) {
     return (
-      <SafeAreaView className="flex-1 bg-black items-center justify-center">
+      <SafeAreaView
+        className="flex-1 bg-black items-center justify-center"
+        edges={["left", "right", "bottom"]}
+      >
         <Ionicons name="star-outline" size={48} color="#555" />
         <Text className="text-gray-400 mt-3">
           Aucun joueur en favori
@@ -115,7 +121,10 @@ export default function FavoriteJoueursTab() {
      UI
   ============================ */
   return (
-    <SafeAreaView className="flex-1 bg-black">
+    <SafeAreaView
+      className="flex-1 bg-black"
+      edges={["left", "right", "bottom"]}
+    >
       {/* ===== HEADER ===== */}
       <View className="px-4 pt-4 pb-3 flex-row items-center justify-between">
         <View className="flex-row items-center">

@@ -162,7 +162,10 @@ export default function SearchJoueur() {
   } as const;
 
   return (
-    <SafeAreaView className="flex-1 bg-black">
+    <SafeAreaView
+      className="flex-1 bg-black"
+      edges={["left", "right", "bottom"]}
+    >
       <StatusBar barStyle="light-content" />
       <View className="px-4 pb-2">
         <View className="flex-row items-center justify-between mb-4">
