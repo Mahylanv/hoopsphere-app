@@ -1,5 +1,5 @@
 // src/features/profile/club/screens/ClubPremiumScreen.tsx
-// Espace Premium Club : activation + vues profil (30j) + posts likés
+// Espace Premium Club : activation + vues profil (30j) + posts aimés
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
@@ -190,7 +190,7 @@ export default function ClubPremiumScreen() {
         setViewerProfiles({});
       }
 
-      // Posts likés par le club
+      // Posts aimés par le club
       await fetchLikedPosts(user.uid);
     } catch (e) {
       // console.log("❌ Erreur chargement Premium club :", e);
@@ -229,7 +229,7 @@ export default function ClubPremiumScreen() {
       await toggleLikePost(postId, ownerUid);
     } catch (e) {
       setLikedPosts(previous);
-      Alert.alert("Erreur", "Impossible de retirer le like pour le moment.");
+      Alert.alert("Erreur", "Impossible de retirer le j'aime pour le moment.");
     }
   };
 
@@ -349,7 +349,7 @@ export default function ClubPremiumScreen() {
           <View className="px-4 py-2 mt-2">
             <View className="flex-row items-center justify-between mb-3">
               <View>
-                <Text className="text-white text-lg font-bold">Vidéos likées</Text>
+                <Text className="text-white text-lg font-bold">Vidéos aimées</Text>
                 <Text className="text-blue-300 text-sm">{totalLikes} au total</Text>
               </View>
               <View className="px-3 py-1 rounded-full bg-orange-500/20 border border-orange-500/40">
@@ -358,7 +358,7 @@ export default function ClubPremiumScreen() {
             </View>
 
             {likedPosts.length === 0 ? (
-              <Text className="text-gray-400">Aucune vidéo likée pour le moment.</Text>
+              <Text className="text-gray-400">Aucune vidéo aimée pour le moment.</Text>
             ) : (
               <ScrollView
                 horizontal
@@ -417,10 +417,10 @@ export default function ClubPremiumScreen() {
                     </View>
                     <View className="p-3">
                       <Text className="text-white font-semibold" numberOfLines={1}>
-                        {item.description || "Post liké"}
+                        {item.description || "Post aimé"}
                       </Text>
                       <Text className="text-gray-400 text-xs mt-1">
-                        Likes : {item.likeCount ?? 0}
+                        J'aime : {item.likeCount ?? 0}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -432,7 +432,7 @@ export default function ClubPremiumScreen() {
       ) : (
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-gray-400 text-center mb-3">
-            Activez Premium pour voir vos vues et vos posts likés.
+            Activez Premium pour voir vos vues et vos posts aimés.
           </Text>
           <View className="flex-row items-center bg-[#1A1A1A] px-4 py-2 rounded-xl border border-white/10">
             <Text className="text-white font-semibold mr-2">Activer</Text>

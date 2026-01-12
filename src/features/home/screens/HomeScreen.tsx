@@ -1,6 +1,3 @@
-// src/features/home/screens/HomeScreen.tsx
-// Écran d'accueil avec classement hebdomadaire et vidéos populaires
-
 import React, { useRef, useEffect, useState } from "react";
 import {
   View,
@@ -39,10 +36,19 @@ type Props = {
   forClub?: boolean;
 };
 
+type Visitor = {
+  uid: string;
+  name: string;
+  avatar?: string | null;
+  type: "player" | "club";
+  premium?: boolean;
+};
+
 export default function HomeScreen({ forClub = false }: Props) {
   const navigation = useNavigation<any>();
   const { isPremium } = usePremiumStatus();
   const [clubPremium, setClubPremium] = useState(false);
+  const currentUid = auth.currentUser?.uid;
   const { ranking, loading } = usePlayerRanking();
   const { posts, loading: postsLoading } = useAllPosts({
     includeClubVisibility: forClub,
@@ -53,9 +59,7 @@ export default function HomeScreen({ forClub = false }: Props) {
     null
   );
   const [panelVisible, setPanelVisible] = useState(false);
-  const [visitors, setVisitors] = useState<
-    { uid: string; name: string; avatar?: string | null; type: "player" | "club"; premium?: boolean }
-  >([]);
+  const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [visitorsLoading, setVisitorsLoading] = useState(false);
   const allowedPremium = forClub ? clubPremium : isPremium;
 
@@ -82,7 +86,7 @@ export default function HomeScreen({ forClub = false }: Props) {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeHeader, slideHeader]);
 
   useEffect(() => {
     if (!loading && ranking.length > 0) {
@@ -93,7 +97,7 @@ export default function HomeScreen({ forClub = false }: Props) {
         useNativeDriver: true,
       }).start();
     }
-  }, [loading]);
+  }, [fadeRanking, loading, ranking.length]);
 
   useEffect(() => {
     if (!postsLoading && posts.length > 0) {
@@ -104,12 +108,12 @@ export default function HomeScreen({ forClub = false }: Props) {
         useNativeDriver: true,
       }).start();
     }
-  }, [postsLoading]);
+  }, [fadePosts, posts.length, postsLoading]);
 
   useEffect(() => {
     const loadClubPremium = async () => {
       if (!forClub) return;
-      const uid = auth.currentUser?.uid;
+      const uid = currentUid;
       if (!uid) {
         setClubPremium(false);
         return;
@@ -123,7 +127,7 @@ export default function HomeScreen({ forClub = false }: Props) {
       }
     };
     loadClubPremium();
-  }, [forClub]);
+  }, [currentUid, forClub]);
 
   useEffect(() => {
     const fetchVisitors = async () => {
@@ -131,19 +135,20 @@ export default function HomeScreen({ forClub = false }: Props) {
         setVisitors([]);
         return;
       }
-      const uid = auth.currentUser?.uid;
+      const uid = currentUid;
       if (!uid) return;
       setVisitorsLoading(true);
       try {
-        const basePath = forClub ? ["clubs", uid] : ["joueurs", uid];
-        const ref = collection(db, ...basePath, "views");
+        const ref = collection(
+          db,
+          forClub ? "clubs" : "joueurs",
+          uid,
+          "views"
+        );
         const q = query(ref, orderBy("viewedAt", "desc"), limit(8));
         const snap = await getDocs(q);
 
-        const map = new Map<
-          string,
-          { uid: string; name: string; avatar?: string | null; type: "player" | "club"; premium?: boolean }
-        >();
+        const map = new Map<string, Visitor>();
         for (const d of snap.docs) {
           const data: any = d.data();
           const visitorUid = data.viewerUid;
@@ -180,7 +185,7 @@ export default function HomeScreen({ forClub = false }: Props) {
           });
         }
 
-        setVisitors(Array.from(map.values()));
+        setVisitors([...map.values()]);
       } catch (e) {
         // console.log("Erreur chargement visiteurs :", e);
       } finally {
@@ -189,7 +194,7 @@ export default function HomeScreen({ forClub = false }: Props) {
     };
 
     fetchVisitors();
-  }, [allowedPremium, forClub]);
+  }, [allowedPremium, currentUid, forClub]);
 
   const videoItems: VideoItem[] = posts.map((post) => ({
     id: post.id,
@@ -236,11 +241,12 @@ export default function HomeScreen({ forClub = false }: Props) {
       onPress: () => navigation.navigate(forClub ? "SearchJoueurTabs" : "Search"),
     },
     {
-      title: "Vidéos likées",
+      title: "Vidéos aimées",
       subtitle: "Revois tes coups de cœur",
       icon: "heart-outline" as const,
       colors: [brand.orange, brand.blue] as const,
-      onPress: () => navigation.navigate("LikedPosts"),
+      onPress: () =>
+        navigation.navigate(forClub ? "ClubLikedVideos" : "LikedPosts"),
     },
   ];
 

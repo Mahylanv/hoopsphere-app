@@ -21,8 +21,8 @@ export default function MainTabNavigatorJoueur() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: "#1f2937",
-          borderTopColor: "#111827",
+          backgroundColor: "#0E0D0D",
+          borderTopColor: "#0E0D0D",
           height: 70,
           paddingBottom: 8,
         },
