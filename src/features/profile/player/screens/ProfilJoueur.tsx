@@ -93,7 +93,7 @@ export default function ProfilJoueur() {
       onPress: () => navigation.navigate("Search"),
     },
     {
-      title: "Vidéos likées",
+      title: "Vidéos aimées",
       subtitle: "Revois tes coups de cœur",
       icon: "heart-outline" as const,
       colors: [brand.orange, brand.blue] as const,
