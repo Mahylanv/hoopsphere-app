@@ -87,6 +87,7 @@ export default function usePlayerProfile() {
     experience: "",
     description: "",
     avatar: "",
+    cardStyle: "normal",
   });
 
   const [editFields, setEditFields] = useState(fields);
@@ -136,6 +137,7 @@ export default function usePlayerProfile() {
           experience: data.experience || "",
           description: data.description || "",
           avatar: data.avatar || "",
+          cardStyle: data.cardStyle || "normal",
           premium: data.premium ?? false,
         };
 

@@ -2,12 +2,12 @@
 
 import { NavigatorScreenParams } from "@react-navigation/native";
 
-export type Joueur = {
-  uid: string;
-  prenom: string;
-  nom: string;
-  email: string;
-  dob: string;
+  export type Joueur = {
+    uid: string;
+    prenom: string;
+    nom: string;
+    email: string;
+    dob: string;
   taille?: string;
   poids?: string;
   poste?: string;
@@ -15,10 +15,11 @@ export type Joueur = {
   club?: string;
   genre?: string;
   departement?: string;
-  avatar?: string;
-  createdAt?: string;
-  premium?: boolean;
-};
+    avatar?: string;
+    createdAt?: string;
+    premium?: boolean;
+    cardStyle?: "normal" | "premium";
+  };
 
 export type Club = {
   id: string;
