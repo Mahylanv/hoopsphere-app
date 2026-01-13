@@ -10,10 +10,11 @@ import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 
 import CreateTeamModal from "../modals/CreateTeamModal";
 import AddPlayersModal from "../modals/AddPlayersModal";
+import EditPlayerModal from "../modals/EditPlayerModal";
 
 type ClubProfileRouteProp = RouteProp<RootStackParamList, "ProfilClub">;
 
-type Player = { id?: string; prenom: string; nom: string };
+type Player = { id?: string; prenom: string; nom: string; poste?: string };
 type Team = { id?: string; label: string; createdAt?: string };
 
 export default function ClubTeamsList() {
@@ -29,6 +30,10 @@ export default function ClubTeamsList() {
   const [modalCreateTeam, setModalCreateTeam] = useState(false);
   const [modalAddPlayers, setModalAddPlayers] = useState(false);
   const [currentTeamId, setCurrentTeamId] = useState<string | null>(null);
+  const [editPayload, setEditPayload] = useState<{
+    teamId: string | null;
+    player: Player | null;
+  }>({ teamId: null, player: null });
 
   const toggle = (id: string) => setExpanded((prev) => (prev === id ? null : id));
 
@@ -64,6 +69,15 @@ export default function ClubTeamsList() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const updatePlayer = (teamId: string, player: Player) => {
+    setPlayersByTeam((prev) => ({
+      ...prev,
+      [teamId]: (prev[teamId] || []).map((p) =>
+        p.id === player.id ? { ...p, ...player } : p
+      ),
+    }));
   };
 
   const deleteTeam = async (id?: string) => {
@@ -165,8 +179,12 @@ export default function ClubTeamsList() {
                     <View className="bg-gray-900 px-4 py-3 border-t border-gray-800">
                       {playersByTeam[item.id!]?.length ? (
                         playersByTeam[item.id!].map((p) => (
-                          <View
+                          <Pressable
                             key={p.id}
+                            onPress={() => {
+                              if (auth.currentUser?.uid !== clubUid) return;
+                              setEditPayload({ teamId: item.id!, player: p });
+                            }}
                             className="flex-row justify-between items-center bg-gray-800/60 border border-gray-800 rounded-lg px-3 py-2 mb-2"
                           >
                             <View className="flex-row items-center">
@@ -175,14 +193,19 @@ export default function ClubTeamsList() {
                                   {getInitials(p)}
                                 </Text>
                               </View>
-                              <Text className="text-gray-200">{p.prenom} {p.nom}</Text>
+                              <View>
+                                <Text className="text-gray-200">{p.prenom} {p.nom}</Text>
+                                {!!p.poste && (
+                                  <Text className="text-gray-400 text-xs">{p.poste}</Text>
+                                )}
+                              </View>
                             </View>
                             {auth.currentUser?.uid === clubUid && (
                               <Pressable onPress={() => deletePlayer(item.id!, p.id)}>
                                 <Ionicons name="trash" size={18} color="#f87171" />
                               </Pressable>
                             )}
-                          </View>
+                          </Pressable>
                         ))
                       ) : (
                         <Text className="text-gray-400 mb-2">Aucun joueur enregistré.</Text>
@@ -231,6 +254,16 @@ export default function ClubTeamsList() {
                 ...prev,
                 [teamId]: [...(prev[teamId] || []), ...newPlayers],
               }));
+            }}
+          />
+          <EditPlayerModal
+            visible={!!editPayload.player}
+            teamId={editPayload.teamId}
+            player={editPayload.player}
+            onClose={() => setEditPayload({ teamId: null, player: null })}
+            onUpdated={(teamId, player) => {
+              updatePlayer(teamId, player);
+              setEditPayload({ teamId: null, player: null });
             }}
           />
         </>
