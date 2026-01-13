@@ -100,6 +100,7 @@ export default function JoueurDetail() {
           poids: raw.poids ?? "-",
           genre: raw.genre ?? "-",
           main: raw.main ?? "-",
+          cardStyle: raw.cardStyle ?? "normal",
         });
 
         /* -----------------------------------------------------
@@ -374,6 +375,7 @@ export default function JoueurDetail() {
                 club: joueur.club,
                 description: joueur.description,
                 premium: joueur.premium,
+                cardStyle: joueur.cardStyle,
               }}
               onEditAvatar={async () => {}}
               avatarLoading={false}

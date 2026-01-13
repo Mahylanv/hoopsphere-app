@@ -36,6 +36,10 @@ export default function JoueurCard({
 
   // ⭐ Total Réussites
   const TR = twoInt + twoExt + threes;
+  const cardSource =
+    joueur.premium && joueur.cardStyle === "premium"
+      ? require("../../../assets/CARD-PRENIUM.png")
+      : require("../../../assets/CARD-NORMAL-FOND.png");
 
   return (
     <View className="flex-1 items-center pt-4">
@@ -48,7 +52,7 @@ export default function JoueurCard({
       >
         {/* 🌌 Fond */}
         <Image
-          source={require("../../../assets/CARD-NORMAL-FOND.png")}
+          source={cardSource}
           className="absolute w-full h-full"
           resizeMode="contain"
         />
