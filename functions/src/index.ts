@@ -1,9 +1,11 @@
 import * as admin from "firebase-admin";
 import { auth as authV1 } from "firebase-functions/v1";
 import { setGlobalOptions } from "firebase-functions/v2";
+import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onDocumentDeleted } from "firebase-functions/v2/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import Stripe from "stripe";
 if (!admin.apps.length) {
   admin.initializeApp();
 }
@@ -14,6 +16,65 @@ const bucket = admin.storage().bucket();
 setGlobalOptions({
   region: "europe-west1",
 });
+
+const stripeSecret = process.env.STRIPE_SECRET_KEY || "";
+const stripe = stripeSecret
+  ? new Stripe(stripeSecret, { apiVersion: "2024-06-20" })
+  : null;
+
+export const createCheckoutSession = onRequest(
+  { cors: true, region: "europe-west1" },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).send("Method Not Allowed");
+      return;
+    }
+
+    if (!stripe) {
+      res.status(500).json({ error: "Stripe secret key is missing." });
+      return;
+    }
+
+    const priceId = req.body?.priceId;
+    if (!priceId) {
+      res.status(400).json({ error: "Missing priceId." });
+      return;
+    }
+
+    const successUrl = process.env.STRIPE_SUCCESS_URL || "";
+    const cancelUrl = process.env.STRIPE_CANCEL_URL || "";
+    if (!successUrl || !cancelUrl) {
+      res.status(500).json({ error: "Missing success/cancel URLs." });
+      return;
+    }
+
+    let uid: string | null = null;
+    const authHeader = req.headers.authorization || "";
+    if (authHeader.startsWith("Bearer ")) {
+      const token = authHeader.replace("Bearer ", "");
+      try {
+        const decoded = await admin.auth().verifyIdToken(token);
+        uid = decoded.uid;
+      } catch (e) {
+        // ignore auth errors, session can still be created
+      }
+    }
+
+    try {
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        metadata: uid ? { uid } : undefined,
+      });
+
+      res.status(200).json({ url: session.url });
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || "Stripe error." });
+    }
+  }
+);
 
 // 🔹 JOUEUR supprimé → AUTH supprimé
 export const onPlayerDeleted = onDocumentDeleted(
