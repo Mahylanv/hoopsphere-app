@@ -34,6 +34,7 @@ import MainTabNavigatorClub from "./src/navigation/tabs/ClubTabs";
 import ChatDetail from "./src/legacy/ChatDetail";
 import OfferDetail from "./src/legacy/OfferDetail";
 import Payment from "./src/legacy/Payment";
+import StripeCheckout from "./src/features/payments/screens/StripeCheckout";
 import EditOffer from "./src/features/profile/club/screens/EditOffer";
 import JoueurDetail from "./src/features/profile/player/screens/JoueurDetail";
 import EditClubProfile from "./src/features/profile/club/screens/EditClubProfile";
@@ -168,6 +169,7 @@ function RootNavigator() {
         <Stack.Screen name="TestPrenium" component={TestPrenium} />
         <Stack.Screen name="OfferDetail" component={OfferDetail} />
         <Stack.Screen name="Payment" component={Payment} />
+        <Stack.Screen name="StripeCheckout" component={StripeCheckout} />
         <Stack.Screen name="EditOffer" component={EditOffer} />
         <Stack.Screen name="JoueurDetail" component={JoueurDetail} />
         <Stack.Screen

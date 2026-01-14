@@ -1,0 +1,52 @@
+ public class SireneApi
+ {
+     #region PUBLIC METHODS
+
+     /// <summary>
+     /// Teste la méthode <see cref="MonApp.ExternalServices.Sirene.Managers.SireneApi.GetData(string)"/>
+     /// </summary>
+     /// <param name="sirenSiret">SIREN/T à tester</param>
+     /// <param name="status">Statut attendu</param>
+     /// <param name="zipCode">Code postal attendu</param>
+     [TestMethod]
+     [Ignore("Test à ne lancer qu'en local pour cause d'appel à une API externe")]
+     [DataRow("*******", "********")]
+     [DataRow("NoSiren", null)]
+     public void GetData(
+         string sirenSiret,
+         ExternalServices.Sirene.Models.Status status,
+         string zipCode)
+     {
+         MonApp.ExternalServices.Sirene.Managers.SireneApi api = new ExternalServices.Sirene.Managers.SireneApi(null);
+         ExternalServices.Sirene.Models.Result result = api.GetData(sirenSiret, null, null, null);
+
+         Assert.IsNotNull(result);
+         Assert.AreEqual(status, result.Status);
+         Assert.IsNotNull(result.Company);
+         Assert.AreEqual(zipCode, result.Company.ZipCode);
+     }
+
+     /// <summary>
+     /// Teste la méthode <see cref="MonApp.ExternalServices.Sirene.Managers.EnterpriseApi.GetData(string)"/>
+     /// </summary>
+     /// <param name="sirenSiret">SIREN/T à tester</param>
+     /// <param name="status">Statut attendu</param>
+     [TestMethod]
+     [Ignore("Test à ne lancer qu'en local pour cause d'appel à une API externe")]
+     [DataRow("", ExternalServices.Sirene.Models.Status.ErrorInvalidDemandNoSirenSiret)]
+     [DataRow("*******", ExternalServices.Sirene.Models.Status.ErrorInvalidDemandInvalidSirenSiret)]
+     [DataRow("*******", ExternalServices.Sirene.Models.Status.ErrorInvalidDemandInvalidSirenSiret)]
+     public void GetData_Error(
+         string sirenSiret,
+         ExternalServices.Sirene.Models.Status status)
+     {
+         MonApp.ExternalServices.Sirene.Managers.SireneApi api = new ExternalServices.Sirene.Managers.SireneApi(null);
+         ExternalServices.Sirene.Models.Result result = api.GetData(sirenSiret, null, null, null);
+
+         Assert.IsNotNull(result);
+         Assert.AreEqual(status, result.Status);
+         Assert.IsNull(result.Company);
+     }
+
+     #endregion PUBLIC METHODS
+ }
