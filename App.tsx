@@ -52,6 +52,7 @@ import CreatePostScreen from "./src/features/profile/player/screens/Post/CreateP
 import EditPostScreen from "./src/features/profile/player/screens/Post/EditPostScreen";
 import LikedPostsScreen from "./src/features/home/screens/LikedPostsScreen";
 import PostLikesScreen from "./src/features/home/screens/PostLikesScreen";
+import StripeWrapper from "./src/providers/StripeWrapper";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -146,7 +147,10 @@ function RootNavigator() {
           component={VisitorsScreen} // on le créera à l'étape suivante
           options={{ title: "Visiteurs du Profil" }}
         />
-        <Stack.Screen name="ClubLikedVideos" component={ClubLikedVideosScreen} />
+        <Stack.Screen
+          name="ClubLikedVideos"
+          component={ClubLikedVideosScreen}
+        />
         <Stack.Screen name="ClubVisitors" component={ClubVisitorsScreen} />
 
         <Stack.Screen
@@ -198,22 +202,24 @@ function RootNavigator() {
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-          <StatusBar
-            translucent
-            backgroundColor="transparent"
-            barStyle="light-content"
-          />
+    <StripeWrapper>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <AuthProvider>
+          <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+            <StatusBar
+              translucent
+              backgroundColor="transparent"
+              barStyle="light-content"
+            />
 
-          <MenuProvider skipInstanceCheck>
-            <PersistedNavContainer>
-              <RootNavigator />
-            </PersistedNavContainer>
-          </MenuProvider>
-        </SafeAreaProvider>
-      </AuthProvider>
-    </GestureHandlerRootView>
+            <MenuProvider skipInstanceCheck>
+              <PersistedNavContainer>
+                <RootNavigator />
+              </PersistedNavContainer>
+            </MenuProvider>
+          </SafeAreaProvider>
+        </AuthProvider>
+      </GestureHandlerRootView>
+    </StripeWrapper>
   );
 }

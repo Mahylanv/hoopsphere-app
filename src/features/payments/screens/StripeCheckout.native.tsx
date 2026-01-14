@@ -1,12 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StatusBar, ActivityIndicator, Pressable } from "react-native";
+import {
+  View,
+  Text,
+  StatusBar,
+  ActivityIndicator,
+  Pressable,
+  Alert,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../types";
 import { Ionicons } from "@expo/vector-icons";
-import { Linking } from "react-native";
-import { auth } from "../../../config/firebaseConfig";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { getApp } from "firebase/app";
+import { useStripe } from "@stripe/stripe-react-native";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "StripeCheckout">;
 type RouteProps = RouteProp<RootStackParamList, "StripeCheckout">;
@@ -14,43 +22,52 @@ type RouteProps = RouteProp<RootStackParamList, "StripeCheckout">;
 export default function StripeCheckout() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProps>();
-  const { priceId, interval } = route.params;
+  const { interval } = route.params;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || "";
+  const functions = getFunctions(getApp());
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const startCheckout = async () => {
     setLoading(true);
     setError(null);
 
-    if (!apiBaseUrl) {
-      setLoading(false);
-      setError("API_BASE_URL manquant.");
-      return;
-    }
-
     try {
-      const token = await auth.currentUser?.getIdToken();
-      const res = await fetch(`${apiBaseUrl}/createCheckoutSession`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          priceId,
-          interval,
-        }),
+      const createSubscription = httpsCallable(functions, "createSubscription");
+      const res: any = await createSubscription({
+        plan: interval === "year" ? "year" : "month",
       });
-
-      const data = await res.json();
-      if (!res.ok || !data?.url) {
-        throw new Error(data?.error || "Impossible de creer la session Stripe.");
+      const clientSecret = res?.data?.clientSecret;
+      const customerId = res?.data?.customerId;
+      const ephemeralKeySecret = res?.data?.ephemeralKeySecret;
+      if (!clientSecret || !customerId || !ephemeralKeySecret) {
+        throw new Error("Impossible de creer la subscription.");
       }
 
-      await Linking.openURL(data.url);
+      const init = await initPaymentSheet({
+        merchantDisplayName: "Hoopsphere",
+        customerId,
+        customerEphemeralKeySecret: ephemeralKeySecret,
+        paymentIntentClientSecret: clientSecret,
+        allowsDelayedPaymentMethods: true,
+      });
+      if (init.error) {
+        throw new Error(init.error.message);
+      }
+
+      const present = await presentPaymentSheet();
+      if (present.error) {
+        if (present.error.code !== "Canceled") {
+          throw new Error(present.error.message);
+        }
+        setLoading(false);
+        return;
+      }
+
+      Alert.alert("Succes", "Abonnement active !");
+      navigation.goBack();
       setLoading(false);
     } catch (e: any) {
       setLoading(false);
@@ -91,10 +108,7 @@ export default function StripeCheckout() {
           </>
         )}
 
-        <Pressable
-          onPress={() => navigation.goBack()}
-          className="mt-6"
-        >
+        <Pressable onPress={() => navigation.goBack()} className="mt-6">
           <Text className="text-gray-400">Retour</Text>
         </Pressable>
       </View>

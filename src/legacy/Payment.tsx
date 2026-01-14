@@ -1,12 +1,5 @@
 import React, { useState } from "react";
-import {
-  ScrollView,
-  View,
-  Text,
-  StatusBar,
-  Pressable,
-  Alert,
-} from "react-native";
+import { ScrollView, View, Text, StatusBar, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -31,19 +24,8 @@ export default function Payment() {
   const navigation = useNavigation<PaymentNavProp>();
   const [interval, setInterval] = useState<"month" | "year">("year");
 
-  const priceMonthly = process.env.EXPO_PUBLIC_STRIPE_PRICE_MONTHLY || "";
-  const priceYearly = process.env.EXPO_PUBLIC_STRIPE_PRICE_YEARLY || "";
-
   const handleSubscribe = () => {
-    const priceId = interval === "month" ? priceMonthly : priceYearly;
-    if (!priceId) {
-      Alert.alert(
-        "Configuration manquante",
-        "Ajoute les price IDs Stripe dans EXPO_PUBLIC_STRIPE_PRICE_MONTHLY / YEARLY."
-      );
-      return;
-    }
-    navigation.navigate("StripeCheckout", { priceId, interval });
+    navigation.navigate("StripeCheckout", { interval });
   };
 
   return (
@@ -55,7 +37,7 @@ export default function Payment() {
             Pass Pro
           </Text>
           <Text className="text-gray-200 mt-1">
-            {interval === "year" ? "4,99 EUR / an" : "0,99 EUR / mois"}
+            {interval === "year" ? "19,99 EUR / an" : "2,49 EUR / mois"}
           </Text>
         </View>
 
