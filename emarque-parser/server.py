@@ -460,6 +460,74 @@ def extract_match_number(data: bytes, scale=6) -> (str, str):
 
     return "", "\n".join(debug_chunks)
 
+
+def is_emarque_v2(data: bytes, scale=6) -> bool:
+    """
+    Vérifie que le PDF ressemble à une feuille e-Marque V2 (FFBB).
+    - Lecture du texte PDF natif (page 1)
+    - Fallback OCR bande haute
+    On cherche des motifs d'en-tête + colonnes spécifiques e-Marque.
+    """
+    key_tokens = [
+        "emarque v2",
+        "e marque v2",
+        "feuille de marque",
+        "federation francaise de basket",
+        "ffbb",
+    ]
+    column_tokens = [
+        "nb pts marques",
+        "tps de jeu",
+        "nb tirs reussis",
+        "fautes com",
+        "5 de depart",
+    ]
+    meta_tokens = [
+        "emarque",
+        "e-marque",
+        "e marque",
+        "ffbb",
+        "federation francaise de basket",
+    ]
+
+    def score(txt: str) -> bool:
+        if not txt:
+            return False
+        t = norm_txt(txt)
+        k_hits = sum(1 for k in key_tokens if k in t)
+        c_hits = sum(1 for k in column_tokens if k in t)
+        return (k_hits >= 1 and c_hits >= 2) or k_hits >= 2
+
+    # Lecture metadata brute (Producer / Title) sans parser complet
+    raw = ""
+    try:
+        raw = data[:5000].decode("latin-1", errors="ignore").lower()
+    except Exception:
+        raw = ""
+    if any(tok in raw for tok in meta_tokens):
+        return True
+
+    pdf_txt = _pdf_text_first_pages(data, max_pages=1)
+    if score(pdf_txt):
+        return True
+
+    # Fallback OCR bande haute
+    try:
+        bgr = render_highres_bgr(data, scale=scale)
+        H, W, _ = bgr.shape
+        top = bgr[0 : int(0.35 * H), 0:W]
+        gray = cv2.cvtColor(top, cv2.COLOR_BGR2GRAY)
+        gray = cv2.bilateralFilter(gray, 5, 50, 50)
+        try:
+            t_top = pytesseract.image_to_string(
+                gray, config=HDR_OCR_CFG, timeout=8
+            ) or ""
+        except pytesseract.TesseractError:
+            t_top = ""
+        return score(t_top)
+    except Exception:
+        return False
+
 # ---------------- Grid OCR principal ----------------
 def grid_ocr_full(
     data: bytes,
@@ -706,6 +774,7 @@ async def parse_emarque(
         ensure(file.filename.lower().endswith(".pdf"), 400, "Le champ 'file' doit être un PDF")
         data = await file.read()
         ensure(data, 400, "Fichier vide")
+        ensure(is_emarque_v2(data, scale=scale), 400, "Le PDF ne semble pas être une feuille e-Marque V2 (FFBB).")
 
         teamA, teamB = grid_ocr_full(
             data,

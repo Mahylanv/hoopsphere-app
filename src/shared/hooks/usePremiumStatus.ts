@@ -24,21 +24,47 @@ export function usePremiumStatus() {
       return;
     }
 
-    const ref = doc(db, "joueurs", uid);
-    const unsub = onSnapshot(
-      ref,
+    setLoading(true);
+
+    const joueurRef = doc(db, "joueurs", uid);
+    const clubRef = doc(db, "clubs", uid);
+
+    const handleValue = (playerPremium?: boolean, clubPremium?: boolean) => {
+      setIsPremium(!!playerPremium || !!clubPremium);
+      setLoading(false);
+    };
+
+    let lastPlayer: boolean | undefined;
+    let lastClub: boolean | undefined;
+
+    const unsubJoueur = onSnapshot(
+      joueurRef,
       (snap) => {
-        const data = snap.data();
-        setIsPremium(!!data?.premium);
-        setLoading(false);
+        lastPlayer = !!snap.data()?.premium;
+        handleValue(lastPlayer, lastClub);
       },
       () => {
-        setIsPremium(false);
-        setLoading(false);
+        lastPlayer = false;
+        handleValue(lastPlayer, lastClub);
       }
     );
 
-    return () => unsub();
+    const unsubClub = onSnapshot(
+      clubRef,
+      (snap) => {
+        lastClub = !!snap.data()?.premium;
+        handleValue(lastPlayer, lastClub);
+      },
+      () => {
+        lastClub = false;
+        handleValue(lastPlayer, lastClub);
+      }
+    );
+
+    return () => {
+      unsubJoueur();
+      unsubClub();
+    };
   }, [uid]);
 
   return { isPremium, loading };

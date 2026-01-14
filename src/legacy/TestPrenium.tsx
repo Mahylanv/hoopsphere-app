@@ -29,6 +29,7 @@ export default function TestPrenium() {
 
   // Premium
   const [premiumToggle, setPremiumToggle] = useState<boolean>(false);
+  const [cardStyle, setCardStyle] = useState<"normal" | "premium">("normal");
 
   // Adresse sélectionnée (test)
   const [selectedAddress, setSelectedAddress] = useState<any>(null);
@@ -37,7 +38,25 @@ export default function TestPrenium() {
     if (user?.premium !== undefined) {
       setPremiumToggle(user.premium);
     }
+    if (user?.cardStyle) {
+      setCardStyle(user.cardStyle);
+    }
   }, [user]);
+
+  const updateCardStyle = async (nextStyle: "normal" | "premium") => {
+    try {
+      await updateUserProfile({ cardStyle: nextStyle });
+      setCardStyle(nextStyle);
+      Alert.alert(
+        "Carte mise a jour",
+        nextStyle === "premium"
+          ? "La card premium sera affichee sur ton profil."
+          : "La card normale sera affichee sur ton profil."
+      );
+    } catch {
+      Alert.alert("Erreur", "Impossible de mettre a jour la card.");
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-black">
@@ -90,6 +109,16 @@ export default function TestPrenium() {
         {premiumToggle && (
           <View className="gap-4 mb-10">
             <Pressable
+              onPress={() =>
+                updateCardStyle(cardStyle === "premium" ? "normal" : "premium")
+              }
+              className="bg-orange-600 px-4 py-3 rounded-xl"
+            >
+              <Text className="text-white font-semibold text-center">
+                Card actuelle : {cardStyle === "premium" ? "Premium" : "Normale"}
+              </Text>
+            </Pressable>
+            <Pressable
               onPress={() => navigation.navigate("Visitors")}
               className="bg-blue-600 px-4 py-3 rounded-xl"
             >
@@ -103,7 +132,16 @@ export default function TestPrenium() {
               className="bg-pink-600 px-4 py-3 rounded-xl"
             >
               <Text className="text-white font-semibold text-center">
-                Voir mes posts likés ❤️
+                Voir mes posts aimés
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => navigation.navigate("PostLikes")}
+              className="bg-purple-600 px-4 py-3 rounded-xl"
+            >
+              <Text className="text-white font-semibold text-center">
+                Voir qui a aimé mes posts
               </Text>
             </Pressable>
           </View>
@@ -120,7 +158,7 @@ export default function TestPrenium() {
           <AddressAutocomplete
             placeholder="Adresse du joueur"
             onSelect={(address) => {
-              console.log("Adresse sélectionnée :", address);
+              // console.log("Adresse sélectionnée :", address);
               setSelectedAddress(address);
             }}
           />

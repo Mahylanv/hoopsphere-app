@@ -14,7 +14,7 @@ admin.initializeApp({
 const db = admin.firestore();
 
 async function cleanupGhostUsers() {
-  console.log("🚀 Démarrage du nettoyage des comptes fantômes...");
+  // console.log("🚀 Démarrage du nettoyage des comptes fantômes...");
 
   const list = await admin.auth().listUsers(1000);
 
@@ -26,11 +26,11 @@ async function cleanupGhostUsers() {
 
     if (!joueurSnap.exists && !clubSnap.exists) {
       await admin.auth().deleteUser(uid);
-      console.log("🧹 Utilisateur fantôme supprimé :", uid);
+      // console.log("🧹 Utilisateur fantôme supprimé :", uid);
     }
   }
 
-  console.log("✅ Nettoyage terminé.");
+  // console.log("✅ Nettoyage terminé.");
 }
 
 cleanupGhostUsers().catch(console.error);

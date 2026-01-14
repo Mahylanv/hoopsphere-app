@@ -5,7 +5,6 @@ import {
   View,
   Text,
   TextInput,
-  FlatList,
   Pressable,
   ActivityIndicator,
 } from "react-native";
@@ -62,7 +61,7 @@ export default function AddressAutocomplete({
       const data = await res.json();
       setResults(data?.results || data?.features || []);
     } catch (e) {
-      console.log("Adresse autocomplete error:", e);
+      // console.log("Adresse autocomplete error:", e);
     } finally {
       setLoading(false);
     }
@@ -100,12 +99,10 @@ export default function AddressAutocomplete({
         </View>
       )}
 
-      <FlatList
-        data={results}
-        keyExtractor={(_, i) => i.toString()}
-        className="mt-2"
-        renderItem={({ item }) => (
+      <View className="mt-2">
+        {results.map((item, i) => (
           <Pressable
+            key={`${item.fulltext || item.properties?.label || "addr"}-${i}`}
             onPress={() => handleSelect(item)}
             className="bg-[#1A1A1A] px-4 py-3 rounded-lg mb-2"
           >
@@ -113,8 +110,8 @@ export default function AddressAutocomplete({
               {item.fulltext || item.properties?.label}
             </Text>
           </Pressable>
-        )}
-      />
+        ))}
+      </View>
     </View>
   );
 }

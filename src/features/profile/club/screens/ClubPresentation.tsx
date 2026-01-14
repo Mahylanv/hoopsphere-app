@@ -12,6 +12,8 @@ import {
   Alert,
 } from "react-native";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { RootStackParamList } from "../../../../types";
 import { auth, db } from "../../../../config/firebaseConfig";
 import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
@@ -82,7 +84,7 @@ export default function ClubPresentation() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-gray-900 justify-center items-center">
+      <View className="flex-1 bg-[#0E0D0D] justify-center items-center">
         <ActivityIndicator size="large" color="#F97316" />
         <Text className="text-gray-300 mt-3">Chargement du profil...</Text>
       </View>
@@ -91,7 +93,7 @@ export default function ClubPresentation() {
 
   if (!club) {
     return (
-      <View className="flex-1 bg-gray-900 justify-center items-center">
+      <View className="flex-1 bg-[#0E0D0D] justify-center items-center">
         <Text className="text-gray-300 text-center px-4">
           Aucune donnée trouvée.
         </Text>
@@ -107,75 +109,123 @@ export default function ClubPresentation() {
       : [];
 
   return (
-    <ScrollView className="flex-1 bg-gray-900 p-4">
+    <ScrollView className="flex-1 bg-[#0E0D0D] p-4">
       <StatusBar barStyle="light-content" />
 
       {/* === DESCRIPTION === */}
       <View className="mb-6">
-        <Text className="text-white font-semibold mb-2">Présentation</Text>
-        {club.description ? (
-          <Text className="text-gray-300 leading-6">{club.description}</Text>
-        ) : (
-          <>
-            <Text className="text-gray-400 italic">
-              Aucune description pour le moment.
-            </Text>
-            {isOwner && (
-              <Pressable
-                onPress={() => {
-                  setFieldToEdit("description");
-                  setInputValue("");
-                  setModalVisible(true);
-                }}
-                className="bg-orange-600 py-2 px-4 rounded-lg mt-2 self-start"
-              >
-                <Text className="text-white font-semibold">+ Ajouter une description</Text>
-              </Pressable>
+        <LinearGradient
+          colors={["#2563EB", "#0E0D0D"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ borderRadius: 18, padding: 1.5 }}
+        >
+          <View className="bg-[#0E0D0D] rounded-[16px] p-5 overflow-hidden">
+            <View
+              className="absolute -right-10 -top-8 w-24 h-24 rounded-full"
+              style={{ backgroundColor: "rgba(37,99,235,0.16)" }}
+            />
+            <View
+              className="absolute -left-12 bottom-0 w-24 h-24 rounded-full"
+              style={{ backgroundColor: "rgba(249,115,22,0.12)" }}
+            />
+
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="information-circle-outline" size={20} color="#fff" />
+              <Text className="text-white font-semibold ml-2">Présentation</Text>
+            </View>
+
+            {club.description ? (
+              <Text className="text-gray-300 leading-6">{club.description}</Text>
+            ) : (
+              <View>
+                <Text className="text-gray-400 italic">
+                  Aucune description pour le moment.
+                </Text>
+                {isOwner && (
+                  <Pressable
+                    onPress={() => {
+                      setFieldToEdit("description");
+                      setInputValue("");
+                      setModalVisible(true);
+                    }}
+                    className="bg-orange-600 mt-3 py-2 px-4 rounded-xl flex-row items-center self-start"
+                  >
+                    <Ionicons name="add" size={16} color="#fff" />
+                    <Text className="text-white font-semibold ml-2">
+                      Ajouter une description
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
             )}
-          </>
-        )}
+          </View>
+        </LinearGradient>
       </View>
 
       {/* === CATÉGORIES === */}
       <View className="mb-6">
-        <Text className="text-white font-semibold mb-2">Catégories</Text>
-        {categoriesList.length > 0 ? (
-          <View className="flex-row flex-wrap">
-            {categoriesList.map((cat: string, index: number) => (
-              <View
-                key={`${cat}-${index}`}
-                className="px-3 py-1 mr-2 mb-2 bg-gray-800 rounded-full border border-gray-700"
-              >
-                <Text className="text-sm text-gray-300">{cat}</Text>
+        <LinearGradient
+          colors={["#F97316", "#0E0D0D"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ borderRadius: 18, padding: 1.5 }}
+        >
+          <View className="bg-[#0E0D0D] rounded-[16px] p-5 overflow-hidden">
+            <View
+              className="absolute -right-10 -top-8 w-24 h-24 rounded-full"
+              style={{ backgroundColor: "rgba(249,115,22,0.14)" }}
+            />
+            <View
+              className="absolute -left-12 bottom-0 w-24 h-24 rounded-full"
+              style={{ backgroundColor: "rgba(37,99,235,0.12)" }}
+            />
+
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="grid-outline" size={20} color="#fff" />
+              <Text className="text-white font-semibold ml-2">Catégories</Text>
+            </View>
+
+            {categoriesList.length > 0 ? (
+              <View className="flex-row flex-wrap">
+                {categoriesList.map((cat: string, index: number) => (
+                  <View
+                    key={`${cat}-${index}`}
+                    className="px-3 py-1 mr-2 mb-2 bg-[#0b0f19] rounded-full border border-gray-700"
+                  >
+                    <Text className="text-sm text-gray-200 font-semibold">{cat}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
-        ) : (
-          <>
-            <Text className="text-gray-400 italic">Aucune catégorie renseignée.</Text>
-            {isOwner && (
-              <Pressable
-                onPress={() => {
-                  setFieldToEdit("categories");
-                  setInputValue("");
-                  setModalVisible(true);
-                }}
-                className="bg-orange-600 py-2 px-4 rounded-lg mt-2 self-start"
-              >
-                <Text className="text-white font-semibold">
-                  + Ajouter des catégories (ex : U15, U17, Seniors)
-                </Text>
-              </Pressable>
+            ) : (
+              <View>
+                <Text className="text-gray-400 italic">Aucune catégorie renseignée.</Text>
+                {isOwner && (
+                  <Pressable
+                    onPress={() => {
+                      setFieldToEdit("categories");
+                      setInputValue("");
+                      setModalVisible(true);
+                    }}
+                    className="bg-orange-600 mt-3 py-2 px-4 rounded-xl flex-row items-center self-start"
+                  >
+                    <Ionicons name="add" size={16} color="#fff" />
+                    <Text className="text-white font-semibold ml-2">
+                      Ajouter des catégories
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
             )}
-          </>
-        )}
+          </View>
+        </LinearGradient>
       </View>
 
       {/* === MODAL D'ÉDITION (seulement propriétaire) === */}
       {isOwner && (
         <Modal visible={modalVisible} transparent animationType="fade">
           <View className="flex-1 bg-black/70 justify-center items-center px-6">
-            <View className="bg-gray-900 p-6 rounded-xl w-full max-w-md border border-gray-700">
+            <View className="bg-[#0E0D0D] p-6 rounded-xl w-full max-w-md border border-gray-700">
               <Text className="text-lg text-white font-semibold mb-3">
                 {fieldToEdit === "description" && "Ajouter une description"}
                 {fieldToEdit === "categories" && "Ajouter des catégories (séparées par des virgules)"}

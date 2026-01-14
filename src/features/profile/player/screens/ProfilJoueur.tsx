@@ -7,7 +7,6 @@ import {
   Animated,
   Dimensions,
   Easing,
-  Switch,
   ScrollView,
   RefreshControl,
   DeviceEventEmitter,
@@ -28,9 +27,10 @@ import FloatingShareButton from "../components/FloatingShareButton";
 import usePlayerProfile from "../hooks/usePlayerProfile";
 import EditProfileModal from "../modals/EditProfileModal/EditProfileModal";
 import { Modalize } from "react-native-modalize";
-import { updateUserProfile } from "../../../auth/services/userService";
 import PostGridSection from "../components/PostGridSection";
 import usePlayerPosts from "../hooks/usePlayerPosts";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 
 const CARD_WIDTH = Dimensions.get("window").width * 0.9;
 const CARD_HEIGHT = CARD_WIDTH * 1.3;
@@ -67,6 +67,39 @@ export default function ProfilJoueur() {
   const { posts, loading: postsLoading } = usePlayerPosts(user?.uid);
 
   const navigation = useNavigation<any>();
+
+  const brand = {
+    orange: "#F97316",
+    orangeLight: "#fb923c",
+    blue: "#2563EB",
+    blueDark: "#1D4ED8",
+    surface: "#0E0D0D",
+    card: "#111827",
+  } as const;
+
+  const quickActions = [
+    {
+      title: "Partager un highlight",
+      subtitle: "Montre ton dernier move",
+      icon: "sparkles-outline" as const,
+      colors: [brand.orange, brand.orangeLight] as const,
+      onPress: () => navigation.navigate("CreatePost"),
+    },
+    {
+      title: "Explorer les clubs",
+      subtitle: "Trouve un match ou un essai",
+      icon: "compass-outline" as const,
+      colors: [brand.blue, brand.blueDark] as const,
+      onPress: () => navigation.navigate("Search"),
+    },
+    {
+      title: "Vidéos aimées",
+      subtitle: "Revois tes coups de cœur",
+      icon: "heart-outline" as const,
+      colors: [brand.orange, brand.blue] as const,
+      onPress: () => navigation.navigate("LikedPosts"),
+    },
+  ];
 
   // ————————— Remontage forcé (si ton hook n'a pas refetch)
   const [focusKey, setFocusKey] = useState(0);
@@ -126,11 +159,6 @@ export default function ProfilJoueur() {
     outputRange: [0, CARD_HEIGHT * 0.55],
     extrapolate: "clamp",
   });
-  const opacity = scrollY.interpolate({
-    inputRange: [0, 300],
-    outputRange: [1, 0],
-    extrapolate: "clamp",
-  });
 
   // Pull-to-refresh
   const [refreshing, setRefreshing] = useState(false);
@@ -147,7 +175,7 @@ export default function ProfilJoueur() {
       const uri = await cardRef.current?.capture?.();
       return uri ?? null;
     } catch (e) {
-      console.log("❌ Erreur capture:", e);
+      // console.log("❌ Erreur capture:", e);
       return null;
     }
   };
@@ -177,7 +205,10 @@ export default function ProfilJoueur() {
 
   if (loading || !user) {
     return (
-      <SafeAreaView className="flex-1 bg-black justify-center items-center">
+      <SafeAreaView
+        className="flex-1 bg-black justify-center items-center"
+        edges={["top", "left", "right"]}
+      >
         <Text className="text-white text-lg">Chargement...</Text>
       </SafeAreaView>
     );
@@ -188,7 +219,11 @@ export default function ProfilJoueur() {
   };
 
   return (
-    <SafeAreaView key={focusKey} className="flex-1 bg-[#0E0D0D]">
+    <SafeAreaView
+      key={focusKey}
+      className="flex-1 bg-[#0E0D0D]"
+      edges={["top", "left", "right"]}
+    >
       <Animated.ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
@@ -220,7 +255,6 @@ export default function ProfilJoueur() {
               { scale },
               { translateY: Animated.add(translateY, adjustedTranslate) },
             ],
-            opacity,
           }}
         >
           <ViewShot
@@ -250,39 +284,55 @@ export default function ProfilJoueur() {
 
         <FloatingShareButton cardRef={cardRef} />
 
-        <View className="mt-4">
-          <BioSection
-            editMode={false}
-            onToggleEdit={openEditModal}
-            onSave={saveProfile}
-            birthYear={fields.dob}
-            setBirthYear={(v) => setEditField("dob", v)}
-            height={fields.taille}
-            setHeight={(v) => setEditField("taille", v)}
-            onSelectHeight={() => {}}
-            weight={fields.poids}
-            setWeight={(v) => setEditField("poids", v)}
-            onSelectWeight={() => {}}
-            position={fields.poste}
-            setPosition={(v) => setEditField("poste", v)}
-            onSelectPoste={() => {}}
-            strongHand={fields.main}
-            setStrongHand={(v) => setEditField("main", v)}
-            departement={fields.departement}
-            onSelectDepartement={() => {}}
-            club={fields.club}
-            onSelectClub={() => {}}
-            phone={fields.phone}
-            setPhone={(v) => setEditField("phone", v)}
-            email={fields.email}
-            setEmail={(v) => setEditField("email", v)}
-            level={fields.level}
-            onSelectLevel={() => {}}
-            experience={fields.experience}
-            setExperience={(v) => setEditField("experience", v)}
-            bio={fields.description}
-            setBio={(v) => setEditField("description", v)}
-          />
+        <View className="mt-4 px-5">
+          <View className="flex-row items-center mb-3">
+            <Ionicons name="book-outline" size={20} color="#F97316" />
+            <Text className="text-white text-lg font-semibold ml-2">
+              Biographie
+            </Text>
+          </View>
+          <LinearGradient
+            colors={["#0b1220", "#0d182c"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              borderRadius: 16,
+              padding: 1,
+            }}
+          >
+              <BioSection
+                editMode={false}
+                onToggleEdit={openEditModal}
+                onSave={saveProfile}
+                birthYear={fields.dob}
+                setBirthYear={(v) => setEditField("dob", v)}
+                height={fields.taille}
+                setHeight={(v) => setEditField("taille", v)}
+                onSelectHeight={() => {}}
+                weight={fields.poids}
+                setWeight={(v) => setEditField("poids", v)}
+                onSelectWeight={() => {}}
+                position={fields.poste}
+                setPosition={(v) => setEditField("poste", v)}
+                onSelectPoste={() => {}}
+                strongHand={fields.main}
+                setStrongHand={(v) => setEditField("main", v)}
+                departement={fields.departement}
+                onSelectDepartement={() => {}}
+                club={fields.club}
+                onSelectClub={() => {}}
+                phone={fields.phone}
+                setPhone={(v) => setEditField("phone", v)}
+                email={fields.email}
+                setEmail={(v) => setEditField("email", v)}
+                level={fields.level}
+                onSelectLevel={() => {}}
+                experience={fields.experience}
+                setExperience={(v) => setEditField("experience", v)}
+                bio={fields.description}
+                setBio={(v) => setEditField("description", v)}
+              />
+          </LinearGradient>
         </View>
         {user?.premium ? (
           <StatsChartSection playerUid={user?.uid} />
@@ -314,46 +364,59 @@ export default function ProfilJoueur() {
           onSetAvatar={handleAvatarChange}
         /> */}
 
+        {/* Actions rapides (même DA que Home) */}
+        <View className="mt-10 px-5">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center">
+              <Ionicons name="flash-outline" size={20} color="#F97316" />
+              <Text className="text-white text-lg font-semibold ml-2">
+                Actions
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+          </View>
+          <View className="flex-row flex-wrap gap-3 mt-3">
+            {quickActions.map((action) => (
+              <TouchableOpacity
+                key={action.title}
+                activeOpacity={0.9}
+                onPress={action.onPress}
+                className="flex-1 min-w-[160px]"
+              >
+                <LinearGradient
+                  colors={action.colors}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{ borderRadius: 18, padding: 1 }}
+                >
+                  <View className="bg-[#0E0D0D] rounded-[16px] px-4 py-4 flex-row items-center justify-between">
+                    <View className="flex-1 pr-3">
+                      <Text className="text-white font-semibold">
+                        {action.title}
+                      </Text>
+                      <Text className="text-gray-400 text-xs mt-1">
+                        {action.subtitle}
+                      </Text>
+                    </View>
+                    <View className="bg-white/10 p-2 rounded-full">
+                      <Ionicons name={action.icon} size={18} color="#ffffff" />
+                    </View>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         <PostGridSection
           posts={posts}
-          onOpenPost={(post) =>
+          onOpenPost={(post, _index) =>
             navigation.navigate("EditPost", {
               post,
             })
           }
           onCreatePost={() => navigation.navigate("CreatePost")}
         />
-
-        {/* 🔥 TOGGLE PREMIUM POUR TESTS DEV */}
-        <View className="mt-10 px-5">
-          <Text className="text-white text-lg font-semibold mb-2">
-            Mode Premium (test développeur)
-          </Text>
-
-          <View className="flex-row items-center justify-between bg-[#1A1A1A] px-4 py-3 rounded-xl">
-            <Text className="text-white">Activer Premium</Text>
-
-            <Switch
-              value={user?.premium ?? false}
-              onValueChange={async (value) => {
-                try {
-                  await updateUserProfile({ premium: value });
-
-                  Alert.alert(
-                    "Statut mis à jour",
-                    value
-                      ? "Le compte est maintenant Premium ✨"
-                      : "Le compte n'est plus Premium."
-                  );
-                } catch (e) {
-                  console.log("Erreur maj premium:", e);
-                }
-              }}
-              thumbColor={user?.premium ? "#F97316" : "#888"}
-              trackColor={{ false: "#555", true: "#FBBF24" }}
-            />
-          </View>
-        </View>
 
         <LogoutButton />
         <DeleteAccountSection />

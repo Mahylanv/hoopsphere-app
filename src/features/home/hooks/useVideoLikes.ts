@@ -27,20 +27,20 @@ export function useVideoLikes(
   setVideos: React.Dispatch<React.SetStateAction<VideoItem[]>>
 ) {
   const auth = getAuth();
+  const uid = auth.currentUser?.uid;
 
   /* ============================================================
      REALTIME SYNC
      🔥 Firestore = SOURCE DE VÉRITÉ UNIQUE
   ============================================================ */
   useEffect(() => {
-    const user = auth.currentUser;
-    if (!user || videos.length === 0) return;
+    if (!uid || videos.length === 0) return;
 
     const unsubscribes: (() => void)[] = [];
 
     videos.forEach((video) => {
       const postRef = doc(db, "posts", video.id);
-      const likeRef = doc(db, "posts", video.id, "likes", user.uid);
+      const likeRef = doc(db, "posts", video.id, "likes", uid);
 
       // 🔢 likeCount → Firestore UNIQUEMENT
       unsubscribes.push(
@@ -70,7 +70,7 @@ export function useVideoLikes(
     return () => {
       unsubscribes.forEach((u) => u());
     };
-  }, [videos.map((v) => v.id).join("|")]);
+  }, [uid, videos.map((v) => v.id).join("|")]);
 
   /* ============================================================
      ACTION : TOGGLE LIKE

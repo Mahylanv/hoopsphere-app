@@ -5,6 +5,7 @@ import { View, Text, TouchableOpacity } from "react-native";
 import * as Animatable from "react-native-animatable";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 
 import { RootStackParamList } from "../../../../types";
 import { getAuth, signOut } from "firebase/auth";
@@ -28,16 +29,17 @@ export default function LogoutButton() {
   };
 
   return (
-    <View className="mt-10 px-6 mb-10">
-      <View
+    <View className="mt-8 px-6 mb-10">
+      <TouchableOpacity
+        onPress={handleLogout}
+        activeOpacity={0.9}
+        className="flex-row items-center justify-center py-3.5 px-6 rounded-2xl bg-[#1A1A1A] border border-orange-400/60 shadow-lg shadow-black/40"
       >
-        <TouchableOpacity
-          onPress={handleLogout}
-          className="py-3 px-6 rounded-lg bg-orange-500 shadow-md shadow-black"
-        >
-          <Text className="text-white text-base font-semibold text-center">Déconnexion</Text>
-        </TouchableOpacity>
-      </View>
+        <Ionicons name="log-out-outline" size={18} color="#F97316" />
+        <Text className="text-white text-base font-semibold text-center ml-2">
+          Déconnexion
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }

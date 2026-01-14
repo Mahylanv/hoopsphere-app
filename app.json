@@ -32,10 +32,8 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
-    "expo": {
     "experiments": {
       "reactNativeRuntime": true
     }
-  }
   }
 }

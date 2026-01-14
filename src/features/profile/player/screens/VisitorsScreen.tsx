@@ -9,7 +9,12 @@ import {
   getDocs,
   query,
   where,
-  Timestamp
+  Timestamp,
+  doc,
+  getDoc,
+  updateDoc,
+  writeBatch,
+  limit,
 } from "firebase/firestore";
 import PremiumWall from "../../../../shared/components/PremiumWall";
 import { usePremiumStatus } from "../../../../shared/hooks/usePremiumStatus";
@@ -43,6 +48,29 @@ export default function VisitorsScreen() {
       }
 
       try {
+        // Reset mensuel des vues joueurs
+        const monthKey = `${new Date().getFullYear()}-${new Date().getMonth() + 1}`;
+        const joueurRef = doc(db, "joueurs", uid);
+        const joueurSnap = await getDoc(joueurRef);
+        if (joueurSnap.exists()) {
+          const lastReset = (joueurSnap.data() as any)?.viewsResetMonth;
+          if (lastReset !== monthKey) {
+            let hasMore = true;
+            const viewsRef = collection(db, "joueurs", uid, "views");
+            while (hasMore) {
+              const chunk = await getDocs(query(viewsRef, limit(300)));
+              if (chunk.empty) {
+                hasMore = false;
+                break;
+              }
+              const batch = writeBatch(db);
+              chunk.forEach((d) => batch.delete(d.ref));
+              await batch.commit();
+            }
+            await updateDoc(joueurRef, { viewsResetMonth: monthKey });
+          }
+        }
+
         // 📌 Aujourd'hui à minuit
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -94,7 +122,7 @@ export default function VisitorsScreen() {
 
         setVisitors(enriched);
       } catch (e) {
-        console.log("Erreur chargement visiteurs :", e);
+        // console.log("Erreur chargement visiteurs :", e);
       }
 
       setLoading(false);

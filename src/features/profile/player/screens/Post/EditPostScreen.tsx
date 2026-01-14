@@ -12,12 +12,15 @@ import {
   Dimensions,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { updatePost, deletePost } from "../../services/postService";
+import AddressAutocomplete from "../../../../../shared/components/AddressAutocomplete";
 
 import * as ImagePicker from "expo-image-picker";
 
@@ -43,7 +46,7 @@ type PostItem = {
   location?: string;
   postType: "highlight" | "match" | "training";
   skills: string[];
-  visibility: "public" | "private";
+  visibility: "public" | "private" | "clubs";
 };
 
 const POST_TYPES: PostItem["postType"][] = ["highlight", "match", "training"];
@@ -56,10 +59,16 @@ export default function EditPostScreen() {
   const route = useRoute<any>();
   const { post } = route.params as { post: PostItem };
 
+  const MAX_DESCRIPTION_LINES = 3;
+  const clampDescription = (text: string) =>
+    (text || "").split(/\r?\n/).slice(0, MAX_DESCRIPTION_LINES).join("\n");
+
   /* -------------------------------
      STATES
   -------------------------------- */
-  const [description, setDescription] = useState(post.description);
+  const [description, setDescription] = useState(
+    clampDescription(post.description)
+  );
   const [location, setLocation] = useState(post.location || "");
   const [postType, setPostType] = useState(post.postType);
   const [visibility, setVisibility] = useState(post.visibility);
@@ -101,7 +110,7 @@ export default function EditPostScreen() {
          1️⃣ SI NOUVELLE VIDÉO
       =============================== */
       if (newMediaUri && newMediaType === "video") {
-        console.log("🎥 Upload nouvelle vidéo");
+        // console.log("🎥 Upload nouvelle vidéo");
 
         // ➜ récupérer le fichier
         const response = await fetch(newMediaUri);
@@ -140,13 +149,13 @@ export default function EditPostScreen() {
         payload.mediaType = "video";
       }
 
-      console.log("💾 updatePost payload final :", payload);
+      // console.log("💾 updatePost payload final :", payload);
 
       await updatePost(post.id, payload);
 
       navigation.goBack();
     } catch (e) {
-      console.log("❌ Erreur sauvegarde :", e);
+      // console.log("❌ Erreur sauvegarde :", e);
     } finally {
       setIsSaving(false);
     }
@@ -172,7 +181,7 @@ export default function EditPostScreen() {
 
               navigation.goBack();
             } catch (e) {
-              console.log("❌ Erreur suppression :", e);
+              // console.log("❌ Erreur suppression :", e);
             } finally {
               setIsSaving(false);
             }
@@ -220,30 +229,41 @@ export default function EditPostScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 50 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1"
+      >
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 50 }}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* VISIBILITY */}
         <View className="mt-6 ml-5">
           <Text className="text-white mb-2 font-semibold">Visibilité</Text>
-          <View className="flex-row gap-3">
-            {(["public", "private"] as const).map((v) => (
-              <TouchableOpacity
-                key={v}
-                onPress={() => setVisibility(v)}
-                className={`px-4 py-2 rounded-full border ${
-                  visibility === v
-                    ? "bg-orange-500 border-orange-500"
-                    : "border-gray-700"
-                }`}
-              >
-                <Text
-                  className={`font-semibold ${
-                    visibility === v ? "text-white" : "text-gray-400"
+          <View className="flex-row gap-3 flex-wrap">
+            {(["public", "private", "clubs"] as const).map((v) => {
+              const label =
+                v === "public" ? "Publique" : v === "private" ? "Privée" : "Clubs";
+              return (
+                <TouchableOpacity
+                  key={v}
+                  onPress={() => setVisibility(v)}
+                  className={`px-4 py-2 rounded-full border ${
+                    visibility === v
+                      ? "bg-orange-500 border-orange-500"
+                      : "border-gray-700"
                   }`}
                 >
-                  {v === "public" ? "Publique" : "Privée"}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    className={`font-semibold ${
+                      visibility === v ? "text-white" : "text-gray-400"
+                    }`}
+                  >
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
         {/* MEDIA */}
@@ -329,26 +349,22 @@ export default function EditPostScreen() {
           <Text className="text-white mb-2 font-semibold">Description</Text>
           <TextInput
             value={description}
-            onChangeText={setDescription}
+            onChangeText={(text) => setDescription(clampDescription(text))}
             multiline
             placeholder="Description"
             placeholderTextColor="#666"
+            textAlignVertical="top"
             className="bg-[#1A1A1A] text-white p-4 rounded-xl min-h-[100px]"
           />
 
           {/* LOCATION */}
           <View className="mt-4">
             <Text className="text-white mb-2 font-semibold">Lieu</Text>
-            <View className="flex-row items-center bg-[#1A1A1A] rounded-xl px-4 py-3">
-              <Ionicons name="location-outline" size={18} color="#aaa" />
-              <TextInput
-                value={location}
-                onChangeText={setLocation}
-                placeholder="Lieu"
-                placeholderTextColor="#666"
-                className="text-white ml-3 flex-1"
-              />
-            </View>
+            <AddressAutocomplete
+              value={location}
+              placeholder="Gymnase, ville, tournoi..."
+              onSelect={(addr) => setLocation(addr.label)}
+            />
           </View>
 
           {/* SKILLS */}
@@ -394,7 +410,8 @@ export default function EditPostScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* FULLSCREEN VIDEO */}
       <Modal visible={fullscreen} transparent animationType="fade">

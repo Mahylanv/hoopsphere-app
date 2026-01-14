@@ -23,17 +23,22 @@ import {
 } from "react-native-gesture-handler";
 
 import { BlurView } from "expo-blur";
-import JoueurCard from "../../../shared/components/JoueurCard";
+import AvatarSection from "../../profile/player/components/AvatarSection";
 import { RankingPlayer } from "../hooks/usePlayerRanking";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
-const { height } = Dimensions.get("window");
+const { height, width } = Dimensions.get("window");
 
 // ⭐ CONFIG MODIFIABLES PAR TOI
-const PANEL_HEIGHT = 0.88; // 88% d'écran → modifie pour changer la hauteur
-const PANEL_TOP = height * 0.1; // Position d’ouverture → 10% du haut
+const PANEL_HEIGHT = 0.75; // environ 3/4 de l'écran
+const PANEL_TOP = height * 0.15; // ouverture plus basse pour laisser voir le fond
 const CLOSE_THRESHOLD = height * 0.22; // Distance pour fermer le panel en glissant
+
+// Carte responsive (plus compacte)
+const CARD_WIDTH = width * 0.8;
+const CARD_HEIGHT = CARD_WIDTH * 0.75;
+const CARD_SCALE = Math.min(1, (width * 0.75) / 420); // réduit un peu plus sur petits écrans
 
 export default function RankingPlayerPanel({
   visible,
@@ -54,7 +59,12 @@ export default function RankingPlayerPanel({
   const contentOpacity = useSharedValue(0);
   const contentScale = useSharedValue(0.9);
 
-  const navigation = useNavigation();
+  let navigation: any = null;
+  try {
+    navigation = useNavigation();
+  } catch {
+    navigation = null;
+  }
 
   // -------------------------------------
   // OPEN / CLOSE ANIMATIONS
@@ -170,7 +180,7 @@ export default function RankingPlayerPanel({
       {/* -------------------------------------------------- */}
       <PanGestureHandler onGestureEvent={onGesture} onEnded={onGestureEnd}>
         <Animated.View
-          style={panelStyle}
+          style={[panelStyle, { maxHeight: height * PANEL_HEIGHT }]}
           className="absolute left-0 right-0 rounded-t-3xl shadow-2xl shadow-black/70 p-4"
         >
           {/* ⭐ BARRE DE DRAG */}
@@ -186,54 +196,70 @@ export default function RankingPlayerPanel({
 
           {/* APRES POUR TEST VERSION WEB */}
 
-          <View className="flex-row items-center justify-between mb-4 px-2">
-            <View className="flex-1" />
-
-            <Text className="text-white text-xl font-bold text-center flex-1">
-              Profil du Joueur
-            </Text>
-
-            <TouchableOpacity
-              onPress={() => {
-                onClose();
-                setTimeout(() => {
-                  (navigation as any).navigate("JoueurDetail", {
-                    uid: player.uid,
-                  });
-                }, 200);
-              }}
-              className="flex-1 items-end"
-            >
-              <Ionicons name="open-outline" size={22} color="#F97316" />
-            </TouchableOpacity>
-          </View>
+          <Text className="text-white text-xl font-bold text-center" numberOfLines={1}>
+            Profil du Joueur
+          </Text>
 
           {/* ⭐ CONTENU ANIMÉ */}
-          <Animated.View style={contentStyle} className="flex-1">
-            <JoueurCard
-              joueur={joueurFull}
-              stats={player.stats}
-              rating={player.rating}
-              showActionsButton={false}
-            />
+          <Animated.ScrollView
+            style={contentStyle}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingBottom: 0,
+              alignItems: "center",
+              gap: 0,
+            }}
+          >
+            <View
+              style={{
+                transform: [{ scale: CARD_SCALE }],
+                alignItems: "center",
+                marginTop: -80,
+              }}
+            >
+              <AvatarSection
+                user={{
+                  avatar: joueurFull.avatar ?? null,
+                  prenom: joueurFull.prenom ?? "",
+                  nom: joueurFull.nom ?? "",
+                  dob: joueurFull.dob,
+                  taille: joueurFull.taille,
+                  poids: joueurFull.poids,
+                  poste: joueurFull.poste,
+                  main: joueurFull.main,
+                  departement: joueurFull.departement,
+                  club: joueurFull.club,
+                  premium: joueurFull.premium,
+                }}
+                onEditAvatar={async () => {}}
+                avatarLoading={false}
+                stats={player.stats}
+                rating={player.rating}
+                editable={false}
+              />
+            </View>
 
             {/* ⭐ Bouton profil */}
             <TouchableOpacity
               onPress={() => {
                 onClose();
-                setTimeout(() => {
-                  (navigation as any).navigate("JoueurDetail", {
-                    uid: player.uid,
-                  });
-                }, 200);
+                if (navigation?.navigate) {
+                  setTimeout(() => {
+                    navigation.navigate("JoueurDetail", {
+                      uid: player.uid,
+                    });
+                  }, 200);
+                }
               }}
-              className="mt-5 bg-orange-500 py-3 rounded-xl items-center"
+              className="mt-[-30px] px-5 py-3 rounded-full bg-orange-500/90 flex-row items-center justify-center shadow-lg shadow-orange-500/30"
+              activeOpacity={0.9}
             >
-              <Text className="text-white font-semibold text-lg">
-                Voir Profil Complet
+              <Ionicons name="person" size={18} color="#fff" />
+              <Text className="text-white font-semibold text-lg ml-2">
+                Voir profil complet
               </Text>
             </TouchableOpacity>
-          </Animated.View>
+          </Animated.ScrollView>
         </Animated.View>
       </PanGestureHandler>
     </GestureHandlerRootView>

@@ -8,6 +8,7 @@ import {
   Alert,
   StatusBar,
   DeviceEventEmitter,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
@@ -16,6 +17,8 @@ import { auth, db } from "../config/firebaseConfig";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { MainTabParamListJoueur } from "../types";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 function toNum(v: any): number | null {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
@@ -79,9 +82,9 @@ function isSamePlayer(pdfName: string, userFullname: string) {
 
 function Row({ label, value }: { label: string; value: any }) {
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-      <Text style={{ color: "#bbb" }}>{label}</Text>
-      <Text style={{ color: "#fff", fontWeight: "700" }}>{String(value ?? "-")}</Text>
+    <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
+      <Text style={{ color: "#cbd5e1", fontSize: 14 }}>{label}</Text>
+      <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>{String(value ?? "-")}</Text>
     </View>
   );
 }
@@ -173,16 +176,19 @@ export default function Match() {
       form.append("file", { name: pdfName || "feuille.pdf", type: "application/pdf", uri: pdfUri } as any);
 
       const resp = await fetch(API_URL, { method: "POST", body: form });
-      if (!resp.ok) {
-        const t = await resp.text();
-        throw new Error(`Parser HTTP ${resp.status}: ${t}`);
+      const json = (await resp.json()) as any;
+      if (!resp.ok || json?.ok === false) {
+        const errMsg =
+          json?.error ||
+          "Le PDF n’a pas été reconnu comme une feuille e‑Marque V2. Vérifie que tu utilises bien le PDF officiel exporté depuis e‑Marque.";
+        throw new Error(errMsg);
       }
-      const json = (await resp.json()) as ApiResponse;
+      const parsed = json as ApiResponse;
 
-      setMatchNumber(json?.match?.number ?? null);
+      setMatchNumber(parsed?.match?.number ?? null);
 
       let found: PlayerStats | null = null;
-      for (const team of json.teams || []) {
+      for (const team of parsed.teams || []) {
         for (const p of team.players) {
           if (p?.name && isSamePlayer(p.name, fullName)) {
             found = p; break;
@@ -277,43 +283,131 @@ export default function Match() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0E0D0D" }}>
       <StatusBar barStyle="light-content" />
-      <View style={{ flex: 1, padding: 16 }}>
-        <Text style={{ color: "#fff", fontSize: 22, fontWeight: "700", marginBottom: 12 }}>
-          Créer un match (import e-Marque)
-        </Text>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 28 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <LinearGradient
+          colors={["#2563EB", "#0E0D0D"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            borderRadius: 20,
+            padding: 18,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)",
+            marginBottom: 18,
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 22, fontWeight: "800" }}>
+            Import e‑Marque V2
+          </Text>
+          <Text style={{ color: "#e5e7eb", marginTop: 6 }}>
+            Ajoute tes stats officielles depuis le PDF e‑Marque. Le nom doit correspondre à ton profil.
+          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10 }}>
+            <Ionicons name="document-text-outline" size={18} color="#f97316" />
+            <Text style={{ color: "#f97316", marginLeft: 6, fontWeight: "700" }}>
+              PDF officiel uniquement (e‑Marque V2)
+            </Text>
+          </View>
+        </LinearGradient>
 
-        <View style={{ marginBottom: 12, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: "#555", backgroundColor: "#151515" }}>
-          <Row label="Joueur" value={profileLoading ? "Chargement..." : (fullName || "—")} />
+        <View
+          style={{
+            backgroundColor: "#111827",
+            borderRadius: 16,
+            padding: 14,
+            borderWidth: 1,
+            borderColor: "#1f2937",
+            marginBottom: 12,
+          }}
+        >
+          <Text style={{ color: "#9ca3af", marginBottom: 4 }}>Joueur</Text>
+          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
+            {profileLoading ? "Chargement..." : fullName || "—"}
+          </Text>
         </View>
 
-        <TouchableOpacity
-          onPress={pickPdf}
-          style={{ backgroundColor: "#2563eb", padding: 14, borderRadius: 12, alignItems: "center", marginBottom: 10 }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "700" }}>
-            {pdfName ? "Changer de PDF" : "Sélectionner le PDF"}
-          </Text>
-        </TouchableOpacity>
-        {pdfName ? <Text style={{ color: "#bbb", marginBottom: 12 }}>{pdfName}</Text> : null}
+        <View style={{ flexDirection: "row", gap: 10, marginBottom: 12 }}>
+          <TouchableOpacity
+            onPress={pickPdf}
+            style={{
+              flex: 1,
+              backgroundColor: "#2563eb",
+              padding: 14,
+              borderRadius: 12,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "700" }}>
+              {pdfName ? "Changer de PDF" : "Sélectionner le PDF"}
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={handleParse}
-          disabled={loading || !canParse}
-          style={{ backgroundColor: !canParse ? "#444" : "#f97316", padding: 14, borderRadius: 12, alignItems: "center" }}
-        >
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700" }}>Analyser le PDF</Text>}
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleParse}
+            disabled={loading || !canParse}
+            style={{
+              backgroundColor: !canParse ? "#374151" : "#f97316",
+              padding: 14,
+              borderRadius: 12,
+              alignItems: "center",
+              minWidth: 120,
+              justifyContent: "center",
+            }}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={{ color: "#fff", fontWeight: "700" }}>Analyser</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+        {pdfName ? <Text style={{ color: "#9ca3af", marginBottom: 12 }}>{pdfName}</Text> : null}
 
         {matchNumber ? (
-          <View style={{ marginTop: 14, padding: 12, borderWidth: 1, borderColor: "#444", borderRadius: 12 }}>
-            <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700", marginBottom: 6 }}>Informations rencontre</Text>
+          <View
+            style={{
+              marginTop: 4,
+              padding: 14,
+              borderRadius: 16,
+              backgroundColor: "#0b111d",
+              borderWidth: 1,
+              borderColor: "rgba(37,99,235,0.3)",
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+              <Ionicons name="trophy-outline" size={18} color="#f97316" />
+              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700", marginLeft: 8 }}>
+                Informations rencontre
+              </Text>
+            </View>
             <Row label="N° de rencontre" value={matchNumber} />
           </View>
         ) : null}
 
         {stats && (
-          <View style={{ marginTop: 20, padding: 12, borderWidth: 1, borderColor: "#444", borderRadius: 12 }}>
-            <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700", marginBottom: 10 }}>Tes stats détectées</Text>
+          <View
+            style={{
+              marginTop: 16,
+              padding: 14,
+              borderRadius: 16,
+              backgroundColor: "#111827",
+              borderWidth: 1,
+              borderColor: "#1f2937",
+              shadowColor: "#000",
+              shadowOpacity: 0.25,
+              shadowRadius: 6,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+              <Ionicons name="stats-chart-outline" size={18} color="#22d3ee" />
+              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700", marginLeft: 8 }}>
+                Tes stats détectées
+              </Text>
+            </View>
 
             <Row label="Top 5 départ" value={stats.starter ? "Oui" : "Non"} />
             <Row label="Temps de jeu" value={stats.play_time || "-"} />
@@ -328,13 +422,23 @@ export default function Match() {
             <TouchableOpacity
               onPress={handleSave}
               disabled={saving || !matchNumber}
-              style={{ marginTop: 12, backgroundColor: matchNumber ? "#f97316" : "#444", padding: 14, borderRadius: 12, alignItems: "center" }}
+              style={{
+                marginTop: 12,
+                backgroundColor: matchNumber ? "#f97316" : "#374151",
+                padding: 14,
+                borderRadius: 12,
+                alignItems: "center",
+              }}
             >
-              {saving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "700" }}>Valider</Text>}
+              {saving ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={{ color: "#fff", fontWeight: "700" }}>Valider</Text>
+              )}
             </TouchableOpacity>
           </View>
         )}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

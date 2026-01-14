@@ -1,20 +1,14 @@
 // src/Profil/Joueur/components/PostGridSection.tsx
 
 import React from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  FlatList,
-  Dimensions,
-} from "react-native";
+import { View, Text, TouchableOpacity, Image, FlatList, Dimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Video, ResizeMode } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 
 const { width } = Dimensions.get("window");
-const ITEM_SIZE = width / 2 - 20;
+const ITEM_WIDTH = width * 0.78;
+const ITEM_HEIGHT = ITEM_WIDTH * 0.65;
 
 /* ============================================================
    TYPES
@@ -24,7 +18,8 @@ export type PostItem = {
   mediaUrl: string;
   mediaType: "image" | "video";
   postType: "highlight" | "match" | "training";
-  visibility: "public" | "private";
+  visibility: "public" | "private" | "clubs";
+  skills?: string[];
 };
 
 type Props = {
@@ -52,6 +47,11 @@ export default function PostGridSection({
           <Text className="text-xl font-bold text-white ml-2">
             Publications
           </Text>
+          <View className="ml-2 bg-white/10 px-2.5 py-1 rounded-full">
+            <Text className="text-white text-xs font-semibold">
+              {posts?.length ?? 0}
+            </Text>
+          </View>
         </View>
 
         {/* CREATE POST */}
@@ -75,21 +75,23 @@ export default function PostGridSection({
           </Text>
         </View>
       ) : (
-        /* GRID */
+        /* SLIDER HORIZONTAL */
         <FlatList
           data={posts}
-          numColumns={2}
           keyExtractor={(item) => item.id}
-          columnWrapperStyle={{ justifyContent: "space-between" }}
-          contentContainerStyle={{ gap: 14 }}
-          scrollEnabled={false}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={ITEM_WIDTH + 14}
+          decelerationRate="fast"
+          contentContainerStyle={{ paddingVertical: 6, paddingRight: 14 }}
+          ItemSeparatorComponent={() => <View style={{ width: 14 }} />}
           renderItem={({ item, index }) => (
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => onOpenPost(item, index)}
               style={{
-                width: ITEM_SIZE,
-                height: ITEM_SIZE,
+                width: ITEM_WIDTH,
+                height: ITEM_HEIGHT,
                 borderRadius: 18,
                 overflow: "hidden",
                 backgroundColor: "#0f1115",
@@ -119,6 +121,21 @@ export default function PostGridSection({
                 </>
               )}
 
+              {/* VISIBILITY ICON */}
+              <View className="absolute top-3 left-3 bg-black/60 p-1.5 rounded-full">
+                <Ionicons
+                  name={
+                    item.visibility === "private"
+                      ? "lock-closed"
+                      : item.visibility === "clubs"
+                      ? "business"
+                      : "globe-outline"
+                  }
+                  size={16}
+                  color="white"
+                />
+              </View>
+
               {/* GRADIENT OVERLAY */}
               <LinearGradient
                 colors={["transparent", "rgba(0,0,0,0.85)"]}
@@ -127,7 +144,7 @@ export default function PostGridSection({
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  padding: 10,
+                  padding: 12,
                 }}
               >
                 <View className="flex-row items-center justify-between">
@@ -137,17 +154,26 @@ export default function PostGridSection({
                       {item.postType.toUpperCase()}
                     </Text>
                   </View>
-
-                  {/* PRIVATE */}
-                  {item.visibility === "private" && (
-                    <Ionicons
-                      name="lock-closed"
-                      size={14}
-                      color="white"
-                    />
-                  )}
                 </View>
+
+                {/* SKILLS PREVIEW */}
+                {item.mediaType === "video" && item.skills && item.skills.length > 0 && (
+                  <Text className="text-gray-300 text-xs mt-2" numberOfLines={1}>
+                    {"#" + item.skills.slice(0, 3).join(" #")}
+                  </Text>
+                )}
               </LinearGradient>
+
+              {/* EDIT ICON */}
+              <TouchableOpacity
+                onPress={(event) => {
+                  event.stopPropagation();
+                  onOpenPost(item, index);
+                }}
+                className="absolute bottom-3 right-3 bg-black/60 p-1.5 rounded-full"
+              >
+                <Ionicons name="create-outline" size={16} color="white" />
+              </TouchableOpacity>
             </TouchableOpacity>
           )}
         />

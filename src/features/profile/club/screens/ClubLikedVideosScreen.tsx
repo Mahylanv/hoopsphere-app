@@ -1,41 +1,39 @@
-// src/features/home/screens/LikedPostsScreen.tsx
-// Écran Premium – Posts aimés par l'utilisateur
-
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
-  FlatList,
   ActivityIndicator,
+  FlatList,
   TouchableOpacity,
-  Dimensions,
   Image,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Video, ResizeMode } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
-import { getAuth } from "firebase/auth";
 import {
-  getFirestore,
   collection,
   getDocs,
-  query,
-  where,
   doc,
   getDoc,
 } from "firebase/firestore";
-import { toggleLikePost } from "../services/likeService";
-import { RootStackParamList } from "../../../types";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { usePremiumStatus } from "../../../shared/hooks/usePremiumStatus";
-import { PostLikesContent } from "../components/PostLikesContent";
+
+import { RootStackParamList } from "../../../../types";
+import { db } from "../../../../config/firebaseConfig";
+import { toggleLikePost } from "../../../home/services/likeService";
+
+type NavProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "ClubLikedVideos"
+>;
 
 const { width } = Dimensions.get("window");
 const H_PADDING = 12;
 const GAP = 4;
-const tileSize = (width - H_PADDING * 2 - GAP * 3) / 3; // 3 colonnes façon grille
+const TILE_SIZE = (width - H_PADDING * 2 - GAP * 3) / 3;
 const INITIAL_COUNT = 9;
 
 type LikedPost = {
@@ -43,135 +41,76 @@ type LikedPost = {
   url: string;
   playerUid: string;
   likeCount: number;
-  playerAvatar?: string;
+  playerAvatar?: string | null;
   likedAt?: any | null;
   postCreatedAt?: any | null;
   mediaType?: "video" | "image";
   thumbnailUrl?: string | null;
+  description?: string | null;
 };
 
-type NavProp = NativeStackNavigationProp<RootStackParamList, "LikedPosts">;
-
-export default function LikedPostsScreen() {
+export default function ClubLikedVideosScreen() {
   const navigation = useNavigation<NavProp>();
-  const auth = getAuth();
-  const db = getFirestore();
-  const { isPremium, loading: premiumLoading } = usePremiumStatus();
-
-  const [posts, setPosts] = useState<LikedPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState<LikedPost[]>([]);
   const [showAll, setShowAll] = useState(false);
-  const [activeTab, setActiveTab] = useState<"liked" | "likes">("liked");
-  const showLikesTab = isPremium && !premiumLoading;
-  const [likesCount, setLikesCount] = useState(0);
-  useEffect(() => {
-    const fetchLikedPosts = async () => {
-      const user = auth.currentUser;
-      if (!user) return setLoading(false);
 
-      try {
-        const results: LikedPost[] = [];
-        const clubSnap = await getDoc(doc(db, "clubs", user.uid));
-        const clubUser = clubSnap.exists();
-        let shouldFallback = false;
+  const fetchLiked = useCallback(async () => {
+    const uid = (await import("firebase/auth")).getAuth().currentUser?.uid;
+    if (!uid) return setLoading(false);
+    setLoading(true);
+    try {
+      const likedRef = collection(db, "clubs", uid, "likedPosts");
+      const likedSnap = await getDocs(likedRef);
+      const likedItems = likedSnap.docs
+        .map((d) => ({
+          postId: (d.data()?.postId as string) || d.id,
+          likedAt: d.data()?.createdAt ?? null,
+        }))
+        .filter((item) => item.postId);
 
-        // 1️⃣ Essai via sous-collection likedPosts (autorisée par les règles)
+      const results: LikedPost[] = [];
+      for (const liked of likedItems) {
+        const postId = liked.postId;
         try {
-          const likedRef = collection(
-            db,
-            clubUser ? "clubs" : "joueurs",
-            user.uid,
-            "likedPosts"
-          );
-          const likedSnap = await getDocs(likedRef);
+          const snap = await getDoc(doc(db, "posts", postId));
+          if (!snap.exists()) continue;
+          const data = snap.data() as any;
+          if (!data?.mediaUrl || !data?.playerUid) continue;
 
-          if (!likedSnap.empty) {
-            for (const likedDoc of likedSnap.docs) {
-              try {
-                const data = likedDoc.data();
-                const postId = likedDoc.id;
-                const postRef = doc(db, "posts", postId);
-                const postSnap = await getDoc(postRef);
-                if (!postSnap.exists()) continue;
+          let avatar: string | null = null;
+          try {
+            const playerSnap = await getDoc(
+              doc(db, "joueurs", data.playerUid)
+            );
+            avatar = (playerSnap.data() as any)?.avatar ?? null;
+          } catch {}
 
-                const postData = postSnap.data();
-                let avatar: string | undefined;
-                try {
-                  const playerSnap = await getDoc(
-                    doc(db, "joueurs", postData.playerUid)
-                  );
-                  avatar = (playerSnap.data() as any)?.avatar;
-                } catch {}
-
-                results.push({
-                  id: postId,
-                  url: postData.mediaUrl,
-                  playerUid: postData.playerUid,
-                  likeCount: postData.likeCount || 0,
-                  playerAvatar: avatar,
-                  likedAt: data.createdAt ?? null,
-                  postCreatedAt: postData.createdAt ?? null,
-                  mediaType: postData.mediaType ?? "video",
-                  thumbnailUrl: postData.thumbnailUrl ?? null,
-                });
-              } catch (innerErr) {
-                shouldFallback = true;
-              }
-            }
-          }
-        } catch (err) {
-          // console.log("⚠️ Sous-collection likedPosts inaccessible :", err);
-          shouldFallback = true;
-        }
-
-        // 2️⃣ Fallback : query sur posts publics avec likedBy + visibility public
-        if (results.length === 0 && (!clubUser || shouldFallback)) {
-          const postsRef = collection(db, "posts");
-          const q = query(
-            postsRef,
-            where("visibility", "==", "public"),
-            where("likedBy", "array-contains", user.uid)
-          );
-          const snap = await getDocs(q);
-          for (const docSnap of snap.docs) {
-            const data = docSnap.data();
-            let avatar: string | undefined;
-            try {
-              const playerSnap = await getDoc(
-                doc(db, "joueurs", data.playerUid)
-              );
-              avatar = (playerSnap.data() as any)?.avatar;
-            } catch {}
-
-            results.push({
-              id: docSnap.id,
-              url: data.mediaUrl,
-              playerUid: data.playerUid,
-              likeCount: data.likeCount || 0,
-              playerAvatar: avatar,
-              postCreatedAt: data.createdAt ?? null,
-              mediaType: data.mediaType ?? "video",
-              thumbnailUrl: data.thumbnailUrl ?? null,
-            });
-          }
-        }
-
-        setPosts(results);
-      } catch (e) {
-        // console.log("Erreur récupération posts aimés :", e);
-      } finally {
-        setLoading(false);
+          results.push({
+            id: snap.id,
+            url: data.mediaUrl,
+            playerUid: data.playerUid,
+            likeCount: data.likeCount ?? 0,
+            playerAvatar: avatar,
+            likedAt: liked.likedAt,
+            postCreatedAt: data.createdAt ?? null,
+            mediaType: data.mediaType === "image" ? "image" : "video",
+            thumbnailUrl: data.thumbnailUrl ?? null,
+            description: data.description ?? null,
+          });
+        } catch {}
       }
-    };
-
-    fetchLikedPosts();
+      setPosts(results);
+    } catch (e) {
+      setPosts([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    if (!showLikesTab && activeTab === "likes") {
-      setActiveTab("liked");
-    }
-  }, [activeTab, showLikesTab]);
+    fetchLiked();
+  }, [fetchLiked]);
 
   return (
     <SafeAreaView className="flex-1 bg-black">
@@ -207,7 +146,6 @@ export default function LikedPostsScreen() {
         />
       </View>
 
-      {/* HEADER */}
       <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-800">
         <View className="flex-row items-center">
           <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -220,67 +158,22 @@ export default function LikedPostsScreen() {
             </Text>
           </View>
         </View>
-      </View>
 
-      <View className="px-4 pt-3">
-        <View className="flex-row flex-wrap gap-2">
-          <TouchableOpacity
-            onPress={() => setActiveTab("liked")}
-            activeOpacity={0.9}
-            className={`px-4 py-2 rounded-full border ${
-              activeTab === "liked"
-                ? "bg-orange-500/20 border-orange-500/40"
-                : "bg-white/5 border-white/10"
-            }`}
-          >
-            <Text
-              className={
-                activeTab === "liked"
-                  ? "text-orange-200 font-semibold"
-                  : "text-gray-300"
-              }
-            >
-              Mes vidéos aimées ({posts.length})
-            </Text>
-          </TouchableOpacity>
-          {showLikesTab ? (
-            <TouchableOpacity
-              onPress={() => setActiveTab("likes")}
-              activeOpacity={0.9}
-              className={`px-4 py-2 rounded-full border ${
-                activeTab === "likes"
-                  ? "bg-blue-500/20 border-blue-500/40"
-                  : "bg-white/5 border-white/10"
-              }`}
-            >
-              <Text
-                className={
-                  activeTab === "likes"
-                    ? "text-blue-200 font-semibold"
-                    : "text-gray-300"
-                }
-              >
-                Ceux qui ont aimé mes vidéos ({likesCount})
-              </Text>
-            </TouchableOpacity>
-          ) : null}
+        <View className="bg-orange-500/20 border border-orange-500 rounded-full px-3 py-1">
+          <Text className="text-orange-400 font-semibold">
+            {posts.length} vidéo{posts.length > 1 ? "s" : ""}
+          </Text>
         </View>
       </View>
 
-      {/* CONTENT */}
-      {activeTab === "likes" ? (
-        <PostLikesContent
-          title="Ceux qui ont aimé mes vidéos"
-          onCountChange={setLikesCount}
-        />
-      ) : loading ? (
+      {loading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#F97316" />
         </View>
       ) : posts.length === 0 ? (
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-gray-400 text-center">
-            Tu n'as encore aimé aucun post.
+            Le club n'a encore aimé aucun post.
           </Text>
         </View>
       ) : (
@@ -324,8 +217,8 @@ export default function LikedPostsScreen() {
                   })
                 }
                 style={{
-                  width: tileSize,
-                  height: tileSize,
+                  width: TILE_SIZE,
+                  height: TILE_SIZE,
                   marginBottom: GAP,
                   marginHorizontal: GAP / 2,
                   borderRadius: 8,

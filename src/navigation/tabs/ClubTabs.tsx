@@ -6,11 +6,12 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
 // --- Import des pages du club ---
-import Home from "../../legacy/Home";
+import HomeScreen from "../../features/home/screens/HomeScreen";
 import ManageCandidatures from "../../features/profile/club/screens/candidatures/ManageCandidatures";
 // import SearchJoueur from "../Components/SearchJoueur";
 import ProfilClub from "../../features/profile/club/screens/ProfilClub";
 import SearchJoueurTabs from "../../features/search/screens/SearchJoueurTabs";
+import ClubPremiumScreen from "../../features/profile/club/screens/ClubPremiumScreen";
 
 import { MainTabParamListClub } from "../../types";
 
@@ -22,8 +23,8 @@ export default function MainTabNavigatorClub() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: "#1f2937",
-          borderTopColor: "#111827",
+          backgroundColor: "#0E0D0D",
+          borderTopColor: "#0E0D0D",
           height: 70,
           paddingBottom: 8,
         },
@@ -43,8 +44,11 @@ export default function MainTabNavigatorClub() {
             case "Candidatures":
               iconName = "document-text-outline";
               break;
-            case "SearchJoueur":
+            case "SearchJoueurTabs":
               iconName = "search-outline";
+              break;
+            case "ClubPremium":
+              iconName = "star-outline";
               break;
             case "ProfilClub":
               iconName = "business-outline";
@@ -60,11 +64,9 @@ export default function MainTabNavigatorClub() {
     >
       <>
         {/* 🏠 Accueil club */}
-        <Tab.Screen
-          name="Home"
-          component={Home}
-          options={{ tabBarLabel: "Accueil" }}
-        />
+        <Tab.Screen name="Home" options={{ tabBarLabel: "Accueil" }}>
+          {() => <HomeScreen forClub />}
+        </Tab.Screen>
 
         {/* 📄 Candidatures */}
         <Tab.Screen
@@ -78,6 +80,13 @@ export default function MainTabNavigatorClub() {
           name="SearchJoueurTabs"
           component={SearchJoueurTabs}
           options={{ tabBarLabel: "Joueurs" }}
+        />
+
+        {/* ⭐ Espace Premium Club */}
+        <Tab.Screen
+          name="ClubPremium"
+          component={ClubPremiumScreen}
+          options={{ tabBarLabel: "Premium" }}
         />
 
         {/* 🏢 Profil du club */}

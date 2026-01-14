@@ -12,6 +12,7 @@ import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import CardOverlay from "./CardOverlay";
 import PremiumBadge from "../../../../shared/components/PremiumBadge";
+import { CARD_PREMIUM, CARD_NORMAL } from "../../../../constants/images";
 
 type PlayerStats = {
   gamesPlayed: number;
@@ -37,11 +38,13 @@ type Props = {
     club?: string;
     description?: string;
     premium?: boolean;
+    cardStyle?: "normal" | "premium";
   };
   onEditAvatar: (uri: string) => Promise<void>;
   avatarLoading: boolean;
   stats?: PlayerStats; 
   rating?: number;
+  editable?: boolean;
 };
 
 export default function AvatarSection({
@@ -50,7 +53,13 @@ export default function AvatarSection({
   avatarLoading,
   stats,
   rating,
+  editable = true,
 }: Props) {
+  const cardSource =
+  user.premium && user.cardStyle === "premium"
+    ? CARD_PREMIUM
+    : CARD_NORMAL;
+
   const pickImage = async () => {
     try {
       const { status } =
@@ -80,7 +89,7 @@ export default function AvatarSection({
     <View className="items-center mt-8">
       {/* 🟧 Carte background */}
       <ImageBackground
-        source={require("../../../../../assets/CARD-NORMAL-FOND.png")}
+        source={cardSource}
         resizeMode="contain"
         style={{
           width: 460,
@@ -108,13 +117,15 @@ export default function AvatarSection({
           />
 
           {/* ✏️ Bouton modifier avatar */}
-          <TouchableOpacity
-            onPress={pickImage}
-            disabled={avatarLoading}
-            className="absolute bottom-1 right-1 bg-black/60 p-1.5 rounded-full"
-          >
-            <Feather name="edit-2" size={16} color="white" />
-          </TouchableOpacity>
+          {editable && (
+            <TouchableOpacity
+              onPress={pickImage}
+              disabled={avatarLoading}
+              className="absolute bottom-1 right-1 bg-black/60 p-1.5 rounded-full"
+            >
+              <Feather name="edit-2" size={16} color="white" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* 🟣 Nom */}

@@ -112,7 +112,7 @@ export default function EditClubProfile() {
               // 3️⃣ Redirection vers l'écran Home du stack principal
               navigation.navigate("Home" as never);
             } catch (err: any) {
-              console.log("Erreur suppression compte :", err);
+              // console.log("Erreur suppression compte :", err);
 
               if (err.code === "auth/requires-recent-login") {
                 Alert.alert(
@@ -131,7 +131,7 @@ export default function EditClubProfile() {
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-black">
+      <View className="flex-1 justify-center items-center bg-[#0E0D0D]">
         <ActivityIndicator size="large" color="#F97316" />
         <Text className="text-white mt-3">Chargement...</Text>
       </View>
@@ -139,7 +139,7 @@ export default function EditClubProfile() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-900">
+    <SafeAreaView className="flex-1 bg-[#0E0D0D]">
       {/* HEADER */}
       <View className="flex-row items-center px-5 py-4 border-b border-gray-800 bg-[#0E1117] shadow-md">
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -292,10 +292,12 @@ export default function EditClubProfile() {
           {/* Bouton SUPPRIMER */}
           <TouchableOpacity
             onPress={handleDelete}
-            className="mt-4 bg-red-700 py-3 rounded-2xl items-center shadow-lg active:bg-red-800"
+            activeOpacity={0.9}
+            className="mt-4 flex-row items-center justify-center py-3.5 px-6 rounded-2xl bg-[#1A0F0F] border border-red-500/70 shadow-lg shadow-black/40"
           >
-            <Text className="text-white font-bold text-lg">
-              Supprimer le compte
+            <Ionicons name="trash-outline" size={18} color="#F87171" />
+            <Text className="text-white text-base font-semibold text-center ml-2">
+              Supprimer mon compte
             </Text>
           </TouchableOpacity>
         </ScrollView>

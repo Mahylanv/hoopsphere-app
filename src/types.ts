@@ -2,12 +2,12 @@
 
 import { NavigatorScreenParams } from "@react-navigation/native";
 
-export type Joueur = {
-  uid: string;
-  prenom: string;
-  nom: string;
-  email: string;
-  dob: string;
+  export type Joueur = {
+    uid: string;
+    prenom: string;
+    nom: string;
+    email: string;
+    dob: string;
   taille?: string;
   poids?: string;
   poste?: string;
@@ -15,10 +15,11 @@ export type Joueur = {
   club?: string;
   genre?: string;
   departement?: string;
-  avatar?: string;
-  createdAt?: string;
-  premium?: boolean;
-};
+    avatar?: string;
+    createdAt?: string;
+    premium?: boolean;
+    cardStyle?: "normal" | "premium";
+  };
 
 export type Club = {
   id: string;
@@ -91,7 +92,7 @@ export type RootStackParamList = {
     startIndex: number;
   };
   
-  ProfilClub: { club: Club };
+  ProfilClub: { club?: Club; openCreateOffer?: boolean };
 
   Search: undefined;
 
@@ -125,6 +126,7 @@ export type RootStackParamList = {
   EditPost: undefined;
   
   LikedPosts: undefined;
+  PostLikes: undefined;
 };
 
 // NAVIGATION — JOUEUR
@@ -147,6 +149,9 @@ export type MainTabParamListClub = {
   SearchJoueur: undefined;
   ProfilClub: undefined;
   SearchJoueurTabs: undefined;
+  ClubPremium: undefined;
+  ClubLikedVideos: undefined;
+  ClubVisitors: undefined;
 };
 
 // AUTRES TYPES (optionnels)
@@ -188,6 +193,8 @@ export type MediaItem = {
 export type VideoItem = {
   id: string;
   url: string;
+  cachedUrl?: string | null;
+  mediaType?: "image" | "video";
   avatar?: string | null;
   playerUid: string;
   likeCount: number;
