@@ -96,7 +96,7 @@ export const createSubscription = functions.https.onCall(
       payment_settings: {
         save_default_payment_method: "on_subscription",
       },
-      expand: ["latest_invoice.payment_intent"],
+      expand: ["latest_invoice.payment_intent", "pending_setup_intent"],
       metadata: {uid},
     });
 
@@ -104,6 +104,7 @@ export const createSubscription = functions.https.onCall(
 
     let paymentIntentId: string | null = null;
     let paymentIntentClientSecret: string | null = null;
+    let setupIntentClientSecret: string | null = null;
 
     // 1️⃣ latest_invoice est un ID string
     if (typeof latestInvoice === "string") {
@@ -148,11 +149,40 @@ export const createSubscription = functions.https.onCall(
       }
     }
 
-    if (!paymentIntentClientSecret && !paymentIntentId) {
-      throw new functions.https.HttpsError(
-        "internal",
-        "PaymentIntent introuvable."
-      );
+    const pendingSetupIntent =
+      subscription.pending_setup_intent as
+        | string
+        | Stripe.SetupIntent
+        | null
+        | undefined;
+
+    if (typeof pendingSetupIntent === "string") {
+      const setupIntent =
+        await stripe.setupIntents.retrieve(pendingSetupIntent);
+      setupIntentClientSecret = setupIntent.client_secret;
+    } else if (
+      pendingSetupIntent &&
+      typeof pendingSetupIntent === "object"
+    ) {
+      if (typeof pendingSetupIntent.client_secret === "string") {
+        setupIntentClientSecret = pendingSetupIntent.client_secret;
+      } else if (typeof pendingSetupIntent.id === "string") {
+        const setupIntent =
+          await stripe.setupIntents.retrieve(pendingSetupIntent.id);
+        setupIntentClientSecret = setupIntent.client_secret;
+      }
+    }
+
+    if (
+      !paymentIntentClientSecret &&
+      !paymentIntentId &&
+      !setupIntentClientSecret
+    ) {
+      const setupIntent = await stripe.setupIntents.create({
+        customer: customer.id,
+        usage: "off_session",
+      });
+      setupIntentClientSecret = setupIntent.client_secret;
     }
 
     if (!paymentIntentClientSecret && paymentIntentId) {
@@ -163,6 +193,7 @@ export const createSubscription = functions.https.onCall(
 
     return {
       clientSecret: paymentIntentClientSecret,
+      setupIntentClientSecret,
       subscriptionId: subscription.id,
       customerId: customer.id,
       ephemeralKeySecret: ephemeralKey.secret,

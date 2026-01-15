@@ -14,10 +14,19 @@ import { RootStackParamList } from "../../../types";
 import { Ionicons } from "@expo/vector-icons";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getApp } from "firebase/app";
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useStripe } from "@stripe/stripe-react-native";
+import { auth, db } from "../../../config/firebaseConfig";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "StripeCheckout">;
 type RouteProps = RouteProp<RootStackParamList, "StripeCheckout">;
+type PremiumNavType = "joueur" | "club";
 
 export default function StripeCheckout() {
   const navigation = useNavigation<NavProp>();
@@ -30,6 +39,50 @@ export default function StripeCheckout() {
   const functions = getFunctions(getApp());
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
+  const resolvePremiumTarget = async (
+    uid: string
+  ): Promise<{ ref: ReturnType<typeof doc>; navType: PremiumNavType }> => {
+    let savedType: string | null = null;
+    try {
+      savedType = await AsyncStorage.getItem("userType");
+    } catch {}
+
+    if (savedType === "club") {
+      return { ref: doc(db, "clubs", uid), navType: "club" };
+    }
+    if (savedType === "joueur") {
+      return { ref: doc(db, "joueurs", uid), navType: "joueur" };
+    }
+
+    const joueurRef = doc(db, "joueurs", uid);
+    const clubRef = doc(db, "clubs", uid);
+    const [joueurSnap, clubSnap] = await Promise.all([
+      getDoc(joueurRef),
+      getDoc(clubRef),
+    ]);
+
+    if (clubSnap.exists()) {
+      return { ref: clubRef, navType: "club" };
+    }
+
+    return { ref: joueurRef, navType: "joueur" };
+  };
+
+  const markPremium = async (): Promise<PremiumNavType> => {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error("Utilisateur non connecté.");
+    }
+
+    const target = await resolvePremiumTarget(user.uid);
+    await updateDoc(target.ref, {
+      premium: true,
+      premiumSince: serverTimestamp(),
+    });
+
+    return target.navType;
+  };
+
   const startCheckout = async () => {
     setLoading(true);
     setError(null);
@@ -40,9 +93,14 @@ export default function StripeCheckout() {
         plan: interval === "year" ? "year" : "month",
       });
       const clientSecret = res?.data?.clientSecret;
+      const setupIntentClientSecret = res?.data?.setupIntentClientSecret;
       const customerId = res?.data?.customerId;
       const ephemeralKeySecret = res?.data?.ephemeralKeySecret;
-      if (!clientSecret || !customerId || !ephemeralKeySecret) {
+      if (
+        (!clientSecret && !setupIntentClientSecret) ||
+        !customerId ||
+        !ephemeralKeySecret
+      ) {
         throw new Error("Impossible de creer la subscription.");
       }
 
@@ -50,7 +108,9 @@ export default function StripeCheckout() {
         merchantDisplayName: "Hoopsphere",
         customerId,
         customerEphemeralKeySecret: ephemeralKeySecret,
-        paymentIntentClientSecret: clientSecret,
+        ...(clientSecret
+          ? { paymentIntentClientSecret: clientSecret }
+          : { setupIntentClientSecret }),
         allowsDelayedPaymentMethods: true,
       });
       if (init.error) {
@@ -66,9 +126,36 @@ export default function StripeCheckout() {
         return;
       }
 
-      Alert.alert("Succes", "Abonnement active !");
-      navigation.goBack();
+      const navType = await markPremium();
       setLoading(false);
+      Alert.alert("Succes", "Abonnement active !", [
+        {
+          text: "OK",
+          onPress: () => {
+            if (navType === "club") {
+              navigation.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: "MainTabsClub",
+                    params: { screen: "Home" },
+                  },
+                ],
+              });
+            } else {
+              navigation.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: "MainTabs",
+                    params: { screen: "HomeScreen" },
+                  },
+                ],
+              });
+            }
+          },
+        },
+      ]);
     } catch (e: any) {
       setLoading(false);
       setError(e?.message || "Erreur lors du lancement du paiement.");
