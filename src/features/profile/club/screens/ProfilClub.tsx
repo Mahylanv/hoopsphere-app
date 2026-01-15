@@ -255,7 +255,10 @@ export default function ProfilClub() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0E0D0D]">
+    <SafeAreaView
+      className="flex-1 bg-[#0E0D0D]"
+      edges={["top", "left", "right"]}
+    >
       <StatusBar barStyle="light-content" />
 
       {isOwner && (
@@ -283,7 +286,7 @@ export default function ProfilClub() {
                   className="flex-row items-center py-3 px-2 rounded-xl active:bg-white/5"
                 >
                   <Ionicons name="heart-outline" size={18} color="#F97316" />
-                  <Text className="text-white ml-3">Vidéos likées</Text>
+                  <Text className="text-white ml-3">Vidéos aimées</Text>
                 </Pressable>
                 {isPremiumClub && (
                   <Pressable

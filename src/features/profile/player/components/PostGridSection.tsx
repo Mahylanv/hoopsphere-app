@@ -121,6 +121,21 @@ export default function PostGridSection({
                 </>
               )}
 
+              {/* VISIBILITY ICON */}
+              <View className="absolute top-3 left-3 bg-black/60 p-1.5 rounded-full">
+                <Ionicons
+                  name={
+                    item.visibility === "private"
+                      ? "lock-closed"
+                      : item.visibility === "clubs"
+                      ? "business"
+                      : "globe-outline"
+                  }
+                  size={16}
+                  color="white"
+                />
+              </View>
+
               {/* GRADIENT OVERLAY */}
               <LinearGradient
                 colors={["transparent", "rgba(0,0,0,0.85)"]}
@@ -139,19 +154,6 @@ export default function PostGridSection({
                       {item.postType.toUpperCase()}
                     </Text>
                   </View>
-
-                  {/* VISIBILITY */}
-                  {item.visibility !== "public" && (
-                    <Ionicons
-                      name={
-                        item.visibility === "private"
-                          ? "lock-closed"
-                          : "business"
-                      }
-                      size={16}
-                      color="white"
-                    />
-                  )}
                 </View>
 
                 {/* SKILLS PREVIEW */}
@@ -161,6 +163,17 @@ export default function PostGridSection({
                   </Text>
                 )}
               </LinearGradient>
+
+              {/* EDIT ICON */}
+              <TouchableOpacity
+                onPress={(event) => {
+                  event.stopPropagation();
+                  onOpenPost(item, index);
+                }}
+                className="absolute bottom-3 right-3 bg-black/60 p-1.5 rounded-full"
+              >
+                <Ionicons name="create-outline" size={16} color="white" />
+              </TouchableOpacity>
             </TouchableOpacity>
           )}
         />

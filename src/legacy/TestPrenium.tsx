@@ -132,7 +132,7 @@ export default function TestPrenium() {
               className="bg-pink-600 px-4 py-3 rounded-xl"
             >
               <Text className="text-white font-semibold text-center">
-                Voir mes posts likés 
+                Voir mes posts aimés
               </Text>
             </Pressable>
 
@@ -141,7 +141,7 @@ export default function TestPrenium() {
               className="bg-purple-600 px-4 py-3 rounded-xl"
             >
               <Text className="text-white font-semibold text-center">
-                Voir qui a liké mes posts
+                Voir qui a aimé mes posts
               </Text>
             </Pressable>
           </View>

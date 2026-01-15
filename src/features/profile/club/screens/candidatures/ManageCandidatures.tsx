@@ -344,6 +344,7 @@ export default function ManageCandidatures() {
                     renderItem={({ item }) => {
                         const st = item.status || "pending";
                         const tone = st === "accepted" ? "blue" : st === "rejected" ? "red" : "yellow";
+                        const message = item.message?.trim();
                         return (
                             <LinearGradient
                                 colors={[brand.orange, brand.surface]}
@@ -397,12 +398,12 @@ export default function ManageCandidatures() {
                                 </View>
 
                                 {/* Message */}
-                                {!!item.message && (
-                                    <Text className="text-gray-300">{item.message}</Text>
+                                {!!message && (
+                                    <Text className="text-gray-300 leading-snug">{message}</Text>
                                 )}
 
                                 {/* Actions */}
-                                <View className="flex-row gap-2">
+                                <View className="flex-row gap-2 py-2">
                                     {st !== "accepted" && (
                                         <Pressable onPress={() => setStatus(item, "accepted")}>
                                             <LinearGradient
