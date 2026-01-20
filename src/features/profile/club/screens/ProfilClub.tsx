@@ -17,6 +17,7 @@ import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import PremiumBadge from "../../../../shared/components/PremiumBadge";
 
 import { RootStackParamList } from "../../../../types";
 import ClubPresentation from "./ClubPresentation";
@@ -88,7 +89,10 @@ export default function ProfilClub() {
       !!(clubFromRoute as any)?.nom ||
       !!(clubFromRoute as any)?.name ||
       !!(clubFromRoute as any)?.logo;
-    if (!hasName) {
+    const hasPremium =
+      (clubFromRoute as any)?.premium !== undefined ||
+      (clubFromRoute as any)?.isPremium !== undefined;
+    if (!hasName || !hasPremium) {
       setLoading(true);
       fetchClub(clubFromRoute.uid || (clubFromRoute as any)?.id);
     }
@@ -126,7 +130,7 @@ export default function ProfilClub() {
     // en BDD tu as souvent un champ `uid` sur le doc club
     return uid && club && (club.uid === uid || club.id === uid);
   }, [club]);
-  const isPremiumClub = !!(club as any)?.premium;
+  const isPremiumClub = !!((club as any)?.premium ?? (club as any)?.isPremium);
 
   const formatDepartment = (dep: any) => {
     if (!dep || typeof dep !== "string") return "";
@@ -370,9 +374,16 @@ export default function ProfilClub() {
           )}
         </View>
 
-        <Text className="text-xl font-bold text-white mt-2">
-          {safeClub.name}
-        </Text>
+        <View className="flex-row items-center mt-2">
+          <Text className="text-xl font-bold text-white">
+            {safeClub.name}
+          </Text>
+          {isPremiumClub && (
+            <View className="ml-2">
+              <PremiumBadge compact />
+            </View>
+          )}
+        </View>
         <Text className="text-sm text-gray-400">
           {safeClub.city} {safeClub.department ? `• ${formatDepartment(safeClub.department)}` : ""}
         </Text>

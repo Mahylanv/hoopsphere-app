@@ -8,6 +8,9 @@ import { RootStackParamList } from "../../../../types";
 import { getAuth } from "firebase/auth";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "../../../../config/firebaseConfig";
+import PremiumWall from "../../../../shared/components/PremiumWall";
+import { usePremiumStatus } from "../../../../shared/hooks/usePremiumStatus";
+import PremiumBadge from "../../../../shared/components/PremiumBadge";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "ClubVisitors">;
 
@@ -15,6 +18,7 @@ export default function ClubVisitorsScreen() {
   const navigation = useNavigation<NavProp>();
   const [loading, setLoading] = useState(true);
   const [visitors, setVisitors] = useState<any[]>([]);
+  const { isPremium, loading: premiumLoading } = usePremiumStatus();
 
   const fetchVisitors = useCallback(async () => {
     const uid = getAuth().currentUser?.uid;
@@ -32,6 +36,7 @@ export default function ClubVisitorsScreen() {
         let avatar: string | undefined;
         let role = "Joueur";
         let viewedAt: Date | null = null;
+        let premium = false;
         try {
           const userSnap = await getDoc(doc(db, "joueurs", viewerUid));
           if (userSnap.exists()) {
@@ -46,13 +51,14 @@ export default function ClubVisitorsScreen() {
               name = c.nom || c.name || viewerUid;
               avatar = c.logo;
               role = "Club";
+              premium = !!(c.premium ?? c.isPremium);
             }
           }
         } catch {}
         if (data.viewedAt?.toDate) {
           viewedAt = data.viewedAt.toDate();
         }
-        byViewer.set(viewerUid, { id: viewerUid, viewerUid, name, avatar, role, viewedAt });
+        byViewer.set(viewerUid, { id: viewerUid, viewerUid, name, avatar, role, viewedAt, premium });
       }
       setVisitors(Array.from(byViewer.values()));
     } catch (e) {
@@ -63,8 +69,12 @@ export default function ClubVisitorsScreen() {
   }, []);
 
   useEffect(() => {
-    fetchVisitors();
-  }, [fetchVisitors]);
+    if (!premiumLoading && isPremium) {
+      fetchVisitors();
+    } else if (!premiumLoading && !isPremium) {
+      setLoading(false);
+    }
+  }, [fetchVisitors, isPremium, premiumLoading]);
 
   return (
     <SafeAreaView className="flex-1 bg-[#0E0D0D]">
@@ -75,10 +85,15 @@ export default function ClubVisitorsScreen() {
         <Text className="text-white text-xl font-semibold ml-2">Consultations de profil</Text>
       </View>
 
-      {loading ? (
+      {premiumLoading || loading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#F97316" />
         </View>
+      ) : !isPremium ? (
+        <PremiumWall
+          message="Les consultations de profil sont réservées aux clubs Premium."
+          onPressUpgrade={() => navigation.navigate("Payment")}
+        />
       ) : visitors.length === 0 ? (
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-gray-400 text-center">Aucun visiteur.</Text>
@@ -101,9 +116,16 @@ export default function ClubVisitorsScreen() {
                 )}
               </View>
               <View className="flex-1">
-                <Text className="text-white font-semibold" numberOfLines={1}>
-                  {item.name}
-                </Text>
+                <View className="flex-row items-center flex-wrap">
+                  <Text className="text-white font-semibold" numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  {item.role === "Club" && item.premium && (
+                    <View className="ml-2">
+                      <PremiumBadge compact />
+                    </View>
+                  )}
+                </View>
                 <Text className="text-gray-400 text-xs" numberOfLines={1}>
                   {item.role}
                 </Text>

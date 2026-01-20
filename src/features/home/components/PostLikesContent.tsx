@@ -20,6 +20,7 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { Video, ResizeMode } from "expo-av";
+import PremiumBadge from "../../../shared/components/PremiumBadge";
 
 type Liker = {
   uid: string;
@@ -29,6 +30,7 @@ type Liker = {
   city?: string | null;
   categories?: string[] | null;
   teamsCount?: number | null;
+  premium?: boolean;
 };
 
 type PostWithLikers = {
@@ -73,9 +75,10 @@ async function fetchLikerProfiles(db: any, uids: string[]): Promise<Liker[]> {
     let type: Liker["type"] = "inconnu";
     let name = "Inconnu";
     let avatar: string | null = null;
-    let city: string | null = null;
-    let categories: string[] | null = null;
-    let teamsCount: number | null = null;
+        let city: string | null = null;
+        let categories: string[] | null = null;
+        let teamsCount: number | null = null;
+        let premium = false;
 
     const joueurSnap = await getDoc(doc(db, "joueurs", uid));
     if (joueurSnap.exists()) {
@@ -93,10 +96,11 @@ async function fetchLikerProfiles(db: any, uids: string[]): Promise<Liker[]> {
         city = data.city ?? null;
         categories = data.categories ?? null;
         teamsCount = Array.isArray(data.teams) ? data.teams.length : data.teams ?? null;
+        premium = !!(data.premium ?? data.isPremium);
       }
     }
 
-    results.push({ uid, name, avatar, type, city, categories, teamsCount });
+    results.push({ uid, name, avatar, type, city, categories, teamsCount, premium });
   }
 
   return results;
@@ -238,6 +242,7 @@ export function PostLikesContent({
                     city: l.city ?? "Non renseigné",
                     teams: l.teamsCount ?? 0,
                     categories: l.categories ?? [],
+                    premium: !!l.premium,
                   },
                 } as any);
               }
@@ -254,9 +259,16 @@ export function PostLikesContent({
               )}
             </View>
             <View className="flex-1">
-              <Text className="text-white font-semibold" numberOfLines={1}>
-                {l.name}
-              </Text>
+              <View className="flex-row items-center flex-wrap">
+                <Text className="text-white font-semibold" numberOfLines={1}>
+                  {l.name}
+                </Text>
+                {l.type === "club" && l.premium && (
+                  <View className="ml-2">
+                    <PremiumBadge compact />
+                  </View>
+                )}
+              </View>
               <Text className="text-gray-400 text-xs">{l.type}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color="#888" />

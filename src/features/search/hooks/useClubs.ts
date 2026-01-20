@@ -10,6 +10,7 @@ export type FirestoreClub = {
   logo?: string;
   city?: string;
   categories?: string[];
+  premium?: boolean;
 };
 
 export function useClubs() {
