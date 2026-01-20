@@ -11,6 +11,7 @@ import {
   ScrollView,
   Platform,
   Modal,
+  ImageBackground,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
@@ -77,26 +78,41 @@ export default function InscriptionJoueurStep2() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0E0D0D" }}>
-      <StatusBar barStyle="light-content" />
-
-      {/* ---------- HEADER ---------- */}
-      <View className="flex-row items-center px-6 mt-6">
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={26} color="white" />
-        </TouchableOpacity>
-
-        <Text className="text-white text-xl ml-4">Inscription joueur</Text>
-      </View>
-
-      {/* ---------- CONTENT SCROLL ---------- */}
-      <ScrollView
-        contentContainerStyle={{
-          justifyContent: "center",
-          flexGrow: 1,
-          paddingHorizontal: 24,
-        }}
+    <View className="flex-1 bg-black">
+      <StatusBar barStyle="light-content" translucent />
+      <ImageBackground
+        source={require("../../../../../../assets/player.jpeg")}
+        resizeMode="cover"
+        className="flex-1"
+        imageStyle={{ opacity: 0.6 }}
       >
+        <View className="absolute inset-0 bg-black/55" />
+        <SafeAreaView style={{ flex: 1 }}>
+          {/* ---------- HEADER ---------- */}
+          <View className="flex-row items-center px-6 mt-6">
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={26} color="white" />
+            </TouchableOpacity>
+
+            <Text className="text-white text-xl ml-4">Inscription joueur</Text>
+          </View>
+
+          {/* ---------- CONTENT SCROLL ---------- */}
+          <ScrollView
+            contentContainerStyle={{
+              justifyContent: "center",
+              flexGrow: 1,
+              paddingHorizontal: 24,
+            }}
+          >
+            <View className="mb-8 mt-4">
+              <Text className="text-white text-3xl font-bold text-center">
+                Complète ton profil
+              </Text>
+              <Text className="text-gray-300 text-center mt-2">
+                Étape 2 — Informations personnelles
+              </Text>
+            </View>
         {/* ---------- GENRE ---------- */}
         <View className="mb-6">
           <Text className="text-gray-300 mb-2">Genre</Text>
@@ -254,7 +270,9 @@ export default function InscriptionJoueurStep2() {
           <View className="w-6 h-[2px] bg-gray-600 mx-1" />
           <View className="w-2 h-2 rounded-full bg-gray-600" />
         </View>
-      </ScrollView>
-    </SafeAreaView>
+          </ScrollView>
+        </SafeAreaView>
+      </ImageBackground>
+    </View>
   );
 }

@@ -10,6 +10,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  ImageBackground,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, Feather } from "@expo/vector-icons";
@@ -78,14 +79,21 @@ export default function InscriptionClub() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0E0D0D" }}>
-      <StatusBar barStyle="light-content" />
-
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <KeyboardAvoidingView
-          className="flex-1 px-6"
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
+    <View className="flex-1 bg-black">
+      <StatusBar barStyle="light-content" translucent />
+      <ImageBackground
+        source={require("../../../../../../assets/club.jpg")}
+        resizeMode="cover"
+        className="flex-1"
+        imageStyle={{ opacity: 0.6 }}
+      >
+        <View className="absolute inset-0 bg-black/55" />
+        <SafeAreaView style={{ flex: 1 }}>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <KeyboardAvoidingView
+              className="flex-1 px-6"
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+            >
           {/* HEADER */}
           <View className="flex-row items-center mt-6 mb-4">
             <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -217,8 +225,10 @@ export default function InscriptionClub() {
               <View className="w-2 h-2 rounded-full bg-gray-600" />
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </TouchableWithoutFeedback>
-    </SafeAreaView>
+            </KeyboardAvoidingView>
+          </TouchableWithoutFeedback>
+        </SafeAreaView>
+      </ImageBackground>
+    </View>
   );
 }
