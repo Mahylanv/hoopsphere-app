@@ -11,6 +11,7 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  ImageBackground,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -114,14 +115,21 @@ export default function InscriptionClubStep2() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0E0D0D] px-6">
-      <StatusBar barStyle="light-content" />
-
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          className="flex-1"
-        >
+    <View className="flex-1 bg-black">
+      <StatusBar barStyle="light-content" translucent />
+      <ImageBackground
+        source={require("../../../../../../assets/club.jpg")}
+        resizeMode="cover"
+        className="flex-1"
+        imageStyle={{ opacity: 0.6 }}
+      >
+        <View className="absolute inset-0 bg-black/55" />
+        <SafeAreaView className="flex-1 px-6">
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              className="flex-1"
+            >
 
           {/* ---------- HEADER ---------- */}
           <View className="flex-row items-center mt-6 mb-4">
@@ -232,8 +240,10 @@ export default function InscriptionClubStep2() {
             </View>
 
           </View>
-        </KeyboardAvoidingView>
-      </TouchableWithoutFeedback>
-    </SafeAreaView>
+            </KeyboardAvoidingView>
+          </TouchableWithoutFeedback>
+        </SafeAreaView>
+      </ImageBackground>
+    </View>
   );
 }
