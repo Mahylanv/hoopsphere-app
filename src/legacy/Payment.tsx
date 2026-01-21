@@ -58,7 +58,7 @@ export default function Payment() {
   };
 
   return (
-    <View className="flex-1 bg-black">
+    <View className="flex-1 pt-5 bg-black">
       <StatusBar barStyle="light-content" translucent />
       <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 40, paddingBottom: 40 }}>
         <View className="absolute -top-12 -right-6 h-36 w-36 rounded-full bg-orange-500" style={{ opacity: 0.12 }} />
