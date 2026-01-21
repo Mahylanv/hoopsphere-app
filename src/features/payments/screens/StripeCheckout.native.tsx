@@ -38,7 +38,8 @@ type CheckoutConfig = {
 
 type CheckoutMessage =
   | { type: "payment_success" }
-  | { type: "payment_error"; message?: string };
+  | { type: "payment_error"; message?: string }
+  | { type: "go_back" };
 
 const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
   const htmlConfig = {
@@ -128,6 +129,22 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
       .hero {
         text-align: center;
         margin-bottom: 20px;
+      }
+
+      .back-link {
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 14px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+        cursor: pointer;
+        max-width: fit-content;
       }
 
       .lock-circle {
@@ -294,6 +311,9 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
     <div class="orb blue"></div>
 
     <div class="container">
+      <button id="back-button" class="back-link" type="button">
+        ← Retour
+      </button>
       <div class="hero">
         <div class="lock-circle">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -398,9 +418,20 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
         const buttonText = document.getElementById("button-text");
         const errorEl = document.getElementById("error");
         const stripeFields = Array.from(document.querySelectorAll(".stripe-field"));
+        const backButton = document.getElementById("back-button");
 
         if (config.prefillEmail) {
           emailInput.value = config.prefillEmail;
+        }
+
+        if (backButton) {
+          backButton.addEventListener("click", () => {
+            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+              window.ReactNativeWebView.postMessage(
+                JSON.stringify({ type: "go_back" })
+              );
+            }
+          });
         }
 
         let activeStripeElement = null;
@@ -657,6 +688,11 @@ export default function StripeCheckout() {
 
     if (!data) return;
 
+    if (data.type === "go_back") {
+      navigation.goBack();
+      return;
+    }
+
     if (data.type === "payment_error") {
       setError(data.message || "Une erreur est survenue.");
       return;
@@ -708,43 +744,44 @@ export default function StripeCheckout() {
   return (
     <SafeAreaView className="flex-1 bg-black">
       <StatusBar barStyle="light-content" />
+      <View className="flex-1">
+        {loading && (
+          <View className="flex-1 items-center justify-center px-6">
+            <ActivityIndicator size="large" color="#F97316" />
+            <Text className="text-white mt-4 text-base">
+              Chargement du paiement securise...
+            </Text>
+          </View>
+        )}
 
-      {loading && (
-        <View className="flex-1 items-center justify-center px-6">
-          <ActivityIndicator size="large" color="#F97316" />
-          <Text className="text-white mt-4 text-base">
-            Chargement du paiement securise...
-          </Text>
-        </View>
-      )}
+        {!loading && error && (
+          <View className="flex-1 items-center justify-center px-6">
+            <Text className="text-red-400 text-center mb-4">{error}</Text>
+            <Pressable
+              onPress={startCheckout}
+              className="bg-orange-600 px-5 py-3 rounded-full"
+            >
+              <Text className="text-white font-semibold">Reessayer</Text>
+            </Pressable>
+            <Pressable onPress={() => navigation.goBack()} className="mt-6">
+              <Text className="text-gray-400">Retour</Text>
+            </Pressable>
+          </View>
+        )}
 
-      {!loading && error && (
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-red-400 text-center mb-4">{error}</Text>
-          <Pressable
-            onPress={startCheckout}
-            className="bg-orange-600 px-5 py-3 rounded-full"
-          >
-            <Text className="text-white font-semibold">Reessayer</Text>
-          </Pressable>
-          <Pressable onPress={() => navigation.goBack()} className="mt-6">
-            <Text className="text-gray-400">Retour</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {!loading && !error && config && (
-        <WebView
-          originWhitelist={["*"]}
-          source={{ html }}
-          onMessage={handleMessage}
-          javaScriptEnabled
-          domStorageEnabled
-          startInLoadingState
-          showsVerticalScrollIndicator={false}
-          style={{ backgroundColor: "#0E0D0D" }}
-        />
-      )}
+        {!loading && !error && config && (
+          <WebView
+            originWhitelist={["*"]}
+            source={{ html }}
+            onMessage={handleMessage}
+            javaScriptEnabled
+            domStorageEnabled
+            startInLoadingState
+            showsVerticalScrollIndicator={false}
+            style={{ flex: 1, backgroundColor: "#0E0D0D" }}
+          />
+        )}
+      </View>
     </SafeAreaView>
   );
 }
