@@ -20,6 +20,7 @@ import { useClubs } from "../hooks/useClubs";
 import type { RootStackParamList } from "../../../types";
 import PremiumWall from "../../../shared/components/PremiumWall";
 import { usePremiumStatus } from "../../../shared/hooks/usePremiumStatus";
+import PremiumBadge from "../../../shared/components/PremiumBadge";
 
 type FirestoreClub = {
   id: string;
@@ -27,6 +28,8 @@ type FirestoreClub = {
   logo?: string;
   city?: string;
   categories?: string[];
+  premium?: boolean;
+  isPremium?: boolean;
 };
 
 type FavoriteSort = "recent" | "name_asc" | "categories_count";
@@ -172,9 +175,16 @@ export default function FavoriteClubsTab() {
                     )}
 
                     <View className="flex-1">
-                      <Text className="text-white text-lg font-semibold">
-                        {item.name || "Club sans nom"}
-                      </Text>
+                      <View className="flex-row items-center flex-wrap">
+                        <Text className="text-white text-lg font-semibold">
+                          {item.name || "Club sans nom"}
+                        </Text>
+                        {(item.premium || item.isPremium) && (
+                          <View className="ml-2">
+                            <PremiumBadge compact />
+                          </View>
+                        )}
+                      </View>
 
                       <Text className="text-gray-400">{item.city || "—"}</Text>
 

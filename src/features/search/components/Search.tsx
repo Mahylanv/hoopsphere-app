@@ -42,6 +42,7 @@ import { useFavoriteClubs } from "../hooks/useFavoriteClubs";
 import FavoriteClubsTab from "../screens/FavoriteClubsTab";
 import PremiumWall from "../../../shared/components/PremiumWall";
 import { usePremiumStatus } from "../../../shared/hooks/usePremiumStatus";
+import PremiumBadge from "../../../shared/components/PremiumBadge";
 
 type SearchNavProp = NativeStackNavigationProp<RootStackParamList, "Search">;
 const Tab = createMaterialTopTabNavigator();
@@ -59,6 +60,8 @@ type FirestoreClub = {
   description?: string;
   createdAt?: any;
   updatedAt?: any;
+  premium?: boolean;
+  isPremium?: boolean;
 };
 
 const brand = {
@@ -174,12 +177,18 @@ function ClubsTab({ isPremium, onUpgrade }: PremiumProps) {
                   (x): x is string => typeof x === "string" && x.length > 0
                 )
               : [],
+            premium: !!(d?.premium ?? d?.isPremium),
             email: d?.email || "",
             description: d?.description || "",
             createdAt: d?.createdAt,
             updatedAt: d?.updatedAt,
           });
         });
+        list.sort(
+          (a, b) =>
+            Number(!!b.premium || !!b.isPremium) -
+            Number(!!a.premium || !!a.isPremium)
+        );
         setClubs(list);
         setLoading(false);
       },
@@ -368,9 +377,16 @@ function ClubsTab({ isPremium, onUpgrade }: PremiumProps) {
                       )}
 
                       <View className="flex-1">
-                        <Text className="text-white text-lg font-semibold">
-                          {item.name || "Club sans nom"}
-                        </Text>
+                        <View className="flex-row items-center flex-wrap">
+                          <Text className="text-white text-lg font-semibold">
+                            {item.name || "Club sans nom"}
+                          </Text>
+                          {(item.premium || item.isPremium) && (
+                            <View className="ml-2">
+                              <PremiumBadge compact />
+                            </View>
+                          )}
+                        </View>
 
                         <Text className="text-gray-400">{item.city || "—"}</Text>
 

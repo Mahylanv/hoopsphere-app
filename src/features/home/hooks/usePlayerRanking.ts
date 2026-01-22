@@ -1,7 +1,7 @@
 // src/hooks/usePlayerRanking.ts
 
-import { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { useEffect, useRef, useState } from "react";
+import { collection, getDocs, onSnapshot } from "firebase/firestore";
 import { db } from "../../../config/firebaseConfig";
 import {
   computePlayerStats,
@@ -37,85 +37,105 @@ export type RankingPlayer = {
 export default function usePlayerRanking() {
   const [ranking, setRanking] = useState<RankingPlayer[]>([]);
   const [loading, setLoading] = useState(true);
+  const initialLoadRef = useRef(false);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
-    const loadRanking = async () => {
-      try {
-        const playersSnap = await getDocs(collection(db, "joueurs"));
-        const allPlayers: RankingPlayer[] = [];
+    let isMounted = true;
+    const playersRef = collection(db, "joueurs");
 
-        for (const playerDoc of playersSnap.docs) {
-          const uid = playerDoc.id;
-          const playerData = playerDoc.data();
+    const unsubscribe = onSnapshot(playersRef, (playersSnap) => {
+      const requestId = ++requestIdRef.current;
 
-          if (!playerData?.premium) {
-            continue;
-          }
-
-          // Charger les matchs du joueur
-          const matchesSnap = await getDocs(
-            collection(db, "joueurs", uid, "matches")
+      const loadRanking = async () => {
+        try {
+          const premiumDocs = playersSnap.docs.filter(
+            (playerDoc) => !!playerDoc.data()?.premium
           );
 
-          const matches = matchesSnap.docs.map((m) => {
-            const d = m.data();
-            return {
-              points: d.points ?? 0,
-              threes: d.threes ?? 0,
-              two_int: d.two_int ?? 0,
-              two_ext: d.two_ext ?? 0,
-              ft_made: d.ft_made ?? 0,
-              fouls_committed: d.fouls_committed ?? 0,
-            };
+          const allPlayers = await Promise.all(
+            premiumDocs.map(async (playerDoc) => {
+              const uid = playerDoc.id;
+              const playerData = playerDoc.data();
+
+              // Charger les matchs du joueur
+              const matchesSnap = await getDocs(
+                collection(db, "joueurs", uid, "matches")
+              );
+
+              const matches = matchesSnap.docs.map((m) => {
+                const d = m.data();
+                return {
+                  points: d.points ?? 0,
+                  threes: d.threes ?? 0,
+                  two_int: d.two_int ?? 0,
+                  two_ext: d.two_ext ?? 0,
+                  ft_made: d.ft_made ?? 0,
+                  fouls_committed: d.fouls_committed ?? 0,
+                };
+              });
+
+              const averages = computePlayerStats(matches);
+              const rating = computePlayerRating(averages, playerData.poste);
+
+              return {
+                uid,
+                prenom: playerData.prenom ?? "",
+                nom: playerData.nom ?? "",
+                avatar:
+                  playerData.avatar && playerData.avatar.trim() !== ""
+                    ? playerData.avatar
+                    : "https://via.placeholder.com/200.png",
+
+                poste: playerData.poste ?? "",
+                premium: !!playerData.premium,
+
+                // Champs nécessaires pour JoueurCard
+                email: playerData.email ?? "",
+                dob: playerData.dob ?? "",
+                taille: playerData.taille ?? "",
+                poids: playerData.poids ?? "",
+                main: playerData.main ?? "",
+                departement: playerData.departement ?? "",
+                club: playerData.club ?? "",
+                genre: playerData.genre ?? "",
+                createdAt: playerData.createdAt ?? null,
+
+                stats: averages,
+                rating,
+              } as RankingPlayer;
+            })
+          );
+
+          // Classement : priorité rating → puis points
+          allPlayers.sort((a, b) => {
+            if (b.rating !== a.rating) return b.rating - a.rating;
+            return b.stats.pts - a.stats.pts;
           });
 
-          const averages = computePlayerStats(matches);
-          const rating = computePlayerRating(averages, playerData.poste);
-
-          // 🔥 Construire un joueur complet compatible JoueurCard
-          allPlayers.push({
-            uid,
-            prenom: playerData.prenom ?? "",
-            nom: playerData.nom ?? "",
-            avatar:
-              playerData.avatar && playerData.avatar.trim() !== ""
-                ? playerData.avatar
-                : "https://via.placeholder.com/200.png",
-
-            poste: playerData.poste ?? "",
-            premium: !!playerData.premium,
-
-            // Champs nécessaires pour JoueurCard
-            email: playerData.email ?? "",
-            dob: playerData.dob ?? "",
-            taille: playerData.taille ?? "",
-            poids: playerData.poids ?? "",
-            main: playerData.main ?? "",
-            departement: playerData.departement ?? "",
-            club: playerData.club ?? "",
-            genre: playerData.genre ?? "",
-            createdAt: playerData.createdAt ?? null,
-
-            stats: averages,
-            rating,
-          });
+          if (isMounted && requestId === requestIdRef.current) {
+            setRanking(allPlayers);
+          }
+        } catch (err) {
+          console.error("Erreur chargement classement :", err);
+          if (isMounted && requestId === requestIdRef.current) {
+            setRanking([]);
+          }
+        } finally {
+          if (isMounted && !initialLoadRef.current) {
+            setLoading(false);
+            initialLoadRef.current = true;
+          }
         }
+      };
 
-        // Classement : priorité rating → puis points
-        allPlayers.sort((a, b) => {
-          if (b.rating !== a.rating) return b.rating - a.rating;
-          return b.stats.pts - a.stats.pts;
-        });
+      loadRanking();
+    });
 
-        setRanking(allPlayers);
-      } catch (err) {
-        console.error("Erreur chargement classement :", err);
-      } finally {
-        setLoading(false);
-      }
+    return () => {
+      isMounted = false;
+      unsubscribe();
     };
-
-    loadRanking();
   }, []);
 
   return { ranking, loading };

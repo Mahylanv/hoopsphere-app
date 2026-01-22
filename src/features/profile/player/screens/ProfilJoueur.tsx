@@ -31,6 +31,8 @@ import PostGridSection from "../components/PostGridSection";
 import usePlayerPosts from "../hooks/usePlayerPosts";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import Svg, { Path } from "react-native-svg";
 
 const CARD_WIDTH = Dimensions.get("window").width * 0.9;
 const CARD_HEIGHT = CARD_WIDTH * 1.3;
@@ -345,6 +347,32 @@ export default function ProfilJoueur() {
               <Text className="text-gray-400 mt-1">
                 Active l’offre Premium pour suivre tes courbes et progresser avec plus de détails.
               </Text>
+              <View className="mt-4 rounded-xl overflow-hidden border border-white/10 bg-[#111]">
+                <View className="px-4 pt-3">
+                  <Text className="text-gray-400 text-xs uppercase">
+                    Apercu des graphiques
+                  </Text>
+                </View>
+                <View className="h-32 px-4 pb-4">
+                  <View className="flex-1 justify-center">
+                    <Svg width="100%" height="100%" viewBox="0 0 300 120">
+                      <Path
+                        d="M0 90 C 40 40, 80 110, 120 70 C 160 30, 200 80, 240 40 C 265 20, 285 30, 300 20"
+                        stroke="#FDBA74"
+                        strokeWidth={4}
+                        fill="none"
+                        opacity={0.95}
+                      />
+                    </Svg>
+                  </View>
+                  <BlurView intensity={35} tint="dark" className="absolute inset-0" />
+                  <View className="absolute inset-0 items-center justify-center">
+                    <View className="bg-black/60 border border-white/20 rounded-full p-3">
+                      <Ionicons name="lock-closed" size={20} color="#fff" />
+                    </View>
+                  </View>
+                </View>
+              </View>
 
               <TouchableOpacity
                 onPress={() => navigation.navigate("Payment")}

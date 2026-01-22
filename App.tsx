@@ -34,6 +34,7 @@ import MainTabNavigatorClub from "./src/navigation/tabs/ClubTabs";
 import ChatDetail from "./src/legacy/ChatDetail";
 import OfferDetail from "./src/legacy/OfferDetail";
 import Payment from "./src/legacy/Payment";
+import StripeCheckout from "./src/features/payments/screens/StripeCheckout";
 import EditOffer from "./src/features/profile/club/screens/EditOffer";
 import JoueurDetail from "./src/features/profile/player/screens/JoueurDetail";
 import EditClubProfile from "./src/features/profile/club/screens/EditClubProfile";
@@ -51,6 +52,7 @@ import CreatePostScreen from "./src/features/profile/player/screens/Post/CreateP
 import EditPostScreen from "./src/features/profile/player/screens/Post/EditPostScreen";
 import LikedPostsScreen from "./src/features/home/screens/LikedPostsScreen";
 import PostLikesScreen from "./src/features/home/screens/PostLikesScreen";
+import StripeWrapper from "./src/providers/StripeWrapper";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -145,7 +147,10 @@ function RootNavigator() {
           component={VisitorsScreen} // on le créera à l'étape suivante
           options={{ title: "Visiteurs du Profil" }}
         />
-        <Stack.Screen name="ClubLikedVideos" component={ClubLikedVideosScreen} />
+        <Stack.Screen
+          name="ClubLikedVideos"
+          component={ClubLikedVideosScreen}
+        />
         <Stack.Screen name="ClubVisitors" component={ClubVisitorsScreen} />
 
         <Stack.Screen
@@ -168,6 +173,7 @@ function RootNavigator() {
         <Stack.Screen name="TestPrenium" component={TestPrenium} />
         <Stack.Screen name="OfferDetail" component={OfferDetail} />
         <Stack.Screen name="Payment" component={Payment} />
+        <Stack.Screen name="StripeCheckout" component={StripeCheckout} />
         <Stack.Screen name="EditOffer" component={EditOffer} />
         <Stack.Screen name="JoueurDetail" component={JoueurDetail} />
         <Stack.Screen
@@ -196,22 +202,24 @@ function RootNavigator() {
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-          <StatusBar
-            translucent
-            backgroundColor="transparent"
-            barStyle="light-content"
-          />
+    <StripeWrapper>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <AuthProvider>
+          <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+            <StatusBar
+              translucent
+              backgroundColor="transparent"
+              barStyle="light-content"
+            />
 
-          <MenuProvider skipInstanceCheck>
-            <PersistedNavContainer>
-              <RootNavigator />
-            </PersistedNavContainer>
-          </MenuProvider>
-        </SafeAreaProvider>
-      </AuthProvider>
-    </GestureHandlerRootView>
+            <MenuProvider skipInstanceCheck>
+              <PersistedNavContainer>
+                <RootNavigator />
+              </PersistedNavContainer>
+            </MenuProvider>
+          </SafeAreaProvider>
+        </AuthProvider>
+      </GestureHandlerRootView>
+    </StripeWrapper>
   );
 }

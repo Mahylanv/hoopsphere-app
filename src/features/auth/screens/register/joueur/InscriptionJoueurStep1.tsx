@@ -8,6 +8,7 @@ import {
   Pressable,
   StatusBar,
   TouchableOpacity,
+  ImageBackground,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -51,25 +52,38 @@ export default function InscriptionJoueurStep1() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0E0D0D] px-6">
-      <StatusBar barStyle="light-content" />
+    <View className="flex-1 bg-black">
+      <StatusBar barStyle="light-content" translucent />
+      <ImageBackground
+        source={require("../../../../../../assets/player.jpeg")}
+        resizeMode="cover"
+        className="flex-1"
+        imageStyle={{ opacity: 0.6 }}
+      >
+        <View className="absolute inset-0 bg-black/55" />
+        <SafeAreaView className="flex-1 px-6">
+          {/* ---------- HEADER ---------- */}
+          <View className="flex-row items-center mt-6 mb-8">
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              className="mr-3 p-2"
+            >
+              <Ionicons name="arrow-back" size={26} color="#fff" />
+            </TouchableOpacity>
 
-      {/* ---------- HEADER ---------- */}
-      <View className="flex-row items-center mt-6 mb-8">
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          className="mr-3 p-2"
-        >
-          <Ionicons name="arrow-back" size={26} color="#fff" />
-        </TouchableOpacity>
+            <Text className="text-white text-xl font-semibold">
+              Inscription joueur
+            </Text>
+          </View>
 
-        <Text className="text-white text-xl font-semibold">
-          Inscription joueur
-        </Text>
-      </View>
-
-      {/* ---------- PAGE CENTRÉE ---------- */}
-      <View className="flex-1 justify-center">
+          {/* ---------- PAGE CENTRÉE ---------- */}
+          <View className="flex-1 justify-center">
+            <Text className="text-white text-3xl font-bold text-center mb-3">
+              Crée ton profil joueur
+            </Text>
+            <Text className="text-gray-300 text-center mb-8">
+              Étape 1 — Identifiants du compte
+            </Text>
         {/* ---------- EMAIL ---------- */}
         <TextInput
           value={email}
@@ -154,8 +168,10 @@ export default function InscriptionJoueurStep1() {
           <View className="w-6 h-[2px] bg-gray-600 mx-1" />
           <View className="w-2 h-2 rounded-full bg-gray-600" />
         </View>
-      </View>
-    </SafeAreaView>
+          </View>
+        </SafeAreaView>
+      </ImageBackground>
+    </View>
   );
 }
 

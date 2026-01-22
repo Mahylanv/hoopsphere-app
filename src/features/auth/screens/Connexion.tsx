@@ -1,6 +1,6 @@
 // src/Components/Connexion.tsx
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,11 +8,12 @@ import {
   Pressable,
   StatusBar,
   ActivityIndicator,
+  ImageBackground,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
+import { Asset } from "expo-asset";
 
 import { RootStackParamList } from "../../../types";
 import clsx from "clsx";
@@ -27,6 +28,8 @@ type ConnexionNavProp = NativeStackNavigationProp<
   "Connexion"
 >;
 
+const backgroundImage = require("../../../../assets/connexion-basket.jpeg");
+
 export default function Connexion() {
   const navigation = useNavigation<ConnexionNavProp>();
   const [email, setEmail] = useState("");
@@ -35,6 +38,10 @@ export default function Connexion() {
   const [loading, setLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Asset.fromModule(backgroundImage).downloadAsync().catch(() => null);
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) return;
@@ -94,9 +101,16 @@ export default function Connexion() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0E0D0D] px-6 justify-center">
-      <StatusBar barStyle="light-content" />
-      <View className="space-y-6">
+    <View className="flex-1 bg-black">
+      <StatusBar barStyle="light-content" translucent />
+      <ImageBackground
+        source={backgroundImage}
+        resizeMode="cover"
+        className="flex-1"
+        imageStyle={{ opacity: 0.6 }}
+      >
+        <View className="absolute inset-0 bg-black/55" />
+        <View className="flex-1 px-6 justify-center space-y-6">
         <Text className="text-white text-3xl font-bold text-center mb-4">
           Connexion
         </Text>
@@ -162,21 +176,23 @@ export default function Connexion() {
         </Pressable>
         <Pressable
           onPress={() => navigation.navigate("ForgotPassword")}
-          className="items-center -mt-2 mb-4"
+          className="self-center mt-4 mb-2 px-3 py-1 rounded-full bg-orange-500/20 border border-orange-500/40"
         >
-          <Text
-            className="mt-8 underline font-semibold"
-            style={{ color: "#F97316" }}
-          >
+          <Text className="text-orange-200 font-semibold text-sm">
             Mot de passe oublié ?
           </Text>
         </Pressable>
 
         {/* ⚡ Message d'erreur */}
-        <Pressable className="items-center mt-2" onPress={() => navigation.goBack()}>
+        <Pressable
+          className="items-center mt-2 flex-row justify-center gap-2"
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={18} color="#fff" />
           <Text className="text-white underline">Retour</Text>
         </Pressable>
       </View>
-    </SafeAreaView>
+      </ImageBackground>
+    </View>
   );
 }

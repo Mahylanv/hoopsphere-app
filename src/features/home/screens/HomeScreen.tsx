@@ -131,11 +131,7 @@ export default function HomeScreen({ forClub = false }: Props) {
 
   useEffect(() => {
     const fetchVisitors = async () => {
-      if (!allowedPremium) {
-        setVisitors([]);
-        return;
-      }
-      const uid = currentUid;
+      const uid = auth.currentUser?.uid;
       if (!uid) return;
       setVisitorsLoading(true);
       try {
@@ -387,13 +383,12 @@ export default function HomeScreen({ forClub = false }: Props) {
             )}
           </View>
 
-          {allowedPremium ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              className="mt-4"
-              contentContainerStyle={{ paddingRight: 24 }}
-            >
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="mt-4"
+            contentContainerStyle={{ paddingRight: 24 }}
+          >
               {visitorsLoading && (
                 <View className="mr-4 items-center justify-center w-16 h-16">
                   <ActivityIndicator size="small" color={brand.orange} />
@@ -409,59 +404,70 @@ export default function HomeScreen({ forClub = false }: Props) {
               )}
 
               {!visitorsLoading &&
-                visitors.map((visitor) => (
-                  <TouchableOpacity
-                    key={visitor.uid}
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      if (visitor.type === "club") {
-                        navigation.navigate("ProfilClub", {
-                          club: { uid: visitor.uid, id: visitor.uid },
-                        });
-                      } else {
-                        navigation.navigate("JoueurDetail", { uid: visitor.uid });
-                      }
-                    }}
-                    className="mr-4 items-center"
-                  >
-                    <LinearGradient
-                      colors={[brand.orange, brand.blueDark, brand.blue]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={{ padding: 2, borderRadius: 9999 }}
+                visitors.map((visitor) => {
+                  const isLocked = !allowedPremium;
+                  return (
+                    <TouchableOpacity
+                      key={visitor.uid}
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        if (isLocked) {
+                          navigation.navigate("Payment");
+                          return;
+                        }
+                        if (visitor.type === "club") {
+                          navigation.navigate("ProfilClub", {
+                            club: { uid: visitor.uid, id: visitor.uid },
+                          });
+                        } else {
+                          navigation.navigate("JoueurDetail", {
+                            uid: visitor.uid,
+                          });
+                        }
+                      }}
+                      className="mr-4 items-center"
                     >
-                      <View className="w-16 h-16 rounded-full bg-black items-center justify-center overflow-hidden">
-                        <Image
-                          source={{
-                            uri:
-                              visitor.avatar && visitor.avatar.trim() !== ""
-                                ? visitor.avatar
-                                : "https://via.placeholder.com/200.png",
-                          }}
-                          className="w-full h-full"
-                        />
-                      </View>
-                    </LinearGradient>
-                    <View className="flex-row items-center justify-center mt-2 w-16">
-                      <Text
-                        className="text-gray-200 text-xs text-center"
-                        numberOfLines={1}
+                      <LinearGradient
+                        colors={[brand.orange, brand.blueDark, brand.blue]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={{ padding: 2, borderRadius: 9999 }}
                       >
-                        {visitor.name || "Visiteur"}
-                      </Text>
-                      {visitor.premium && (
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={14}
-                          color="#38bdf8"
-                          style={{ marginLeft: 3 }}
-                        />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                ))}
-            </ScrollView>
-          ) : null}
+                        <View className="w-16 h-16 rounded-full bg-black items-center justify-center overflow-hidden">
+                          <Image
+                            source={{
+                              uri:
+                                visitor.avatar && visitor.avatar.trim() !== ""
+                                  ? visitor.avatar
+                                  : "https://via.placeholder.com/200.png",
+                            }}
+                            className="w-full h-full"
+                            blurRadius={isLocked ? 12 : 0}
+                          />
+                        </View>
+                      </LinearGradient>
+                      <View className="flex-row items-center justify-center mt-2 w-16">
+                        <Text
+                          className={`text-xs text-center ${
+                            isLocked ? "text-gray-500" : "text-gray-200"
+                          }`}
+                          numberOfLines={1}
+                        >
+                          {isLocked ? "Visiteur" : visitor.name || "Visiteur"}
+                        </Text>
+                        {!isLocked && visitor.premium && (
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={14}
+                            color="#38bdf8"
+                            style={{ marginLeft: 3 }}
+                          />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+          </ScrollView>
         </View>
 
         {/* Actions rapides */}

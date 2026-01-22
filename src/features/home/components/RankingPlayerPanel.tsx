@@ -162,6 +162,7 @@ export default function RankingPlayerPanel({
     genre: player.genre ?? "",
     createdAt: player.createdAt ?? null,
     premium: player.premium,
+    cardStyle: player.premium ? "premium" : "normal",
   };
 
   return (
@@ -230,6 +231,7 @@ export default function RankingPlayerPanel({
                   departement: joueurFull.departement,
                   club: joueurFull.club,
                   premium: joueurFull.premium,
+                  cardStyle: joueurFull.cardStyle,
                 }}
                 onEditAvatar={async () => {}}
                 avatarLoading={false}
