@@ -13,12 +13,12 @@ import {
 
 import {
   doc,
-  getDoc,
   updateDoc,
   collection,
   addDoc,
   deleteDoc,
   getDocs,
+  onSnapshot,
   serverTimestamp,
 } from "firebase/firestore";
 
@@ -112,12 +112,10 @@ export default function usePlayerProfile() {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!currentUser) return;
+    if (!currentUser) return;
 
-      const refUser = doc(db, "joueurs", currentUser.uid);
-      const snap = await getDoc(refUser);
-
+    const refUser = doc(db, "joueurs", currentUser.uid);
+    const unsubscribe = onSnapshot(refUser, (snap) => {
       if (snap.exists()) {
         const data = snap.data();
 
@@ -141,17 +139,33 @@ export default function usePlayerProfile() {
           premium: data.premium ?? false,
         };
 
-        setUser({ uid: currentUser.uid, ...loaded });
+        setUser({
+          uid: currentUser.uid,
+          ...loaded,
+          stripeCustomerId: data.stripeCustomerId || null,
+          stripeSubscriptionId: data.stripeSubscriptionId || null,
+          subscriptionStatus: data.subscriptionStatus || null,
+          subscriptionPriceId: data.subscriptionPriceId || null,
+          subscriptionInterval: data.subscriptionInterval || null,
+          subscriptionCancelAtPeriodEnd: data.subscriptionCancelAtPeriodEnd ?? false,
+          subscriptionCurrentPeriodStart:
+            data.subscriptionCurrentPeriodStart || null,
+          subscriptionCurrentPeriodEnd:
+            data.subscriptionCurrentPeriodEnd || null,
+        });
         setFields(loaded);
-        setEditFields(loaded); // ← valeurs initiales dans le modal
+        setEditFields(loaded); // ��? valeurs initiales dans le modal
       }
 
-      await loadGallery();
       setLoading(false);
-    };
+    });
 
-    fetchData();
-  }, []);
+    loadGallery();
+
+    return () => {
+      unsubscribe();
+    };
+  }, [currentUser]);
 
   /* ============================================================
        CHARGEMENT DES STATS
@@ -470,3 +484,4 @@ export default function usePlayerProfile() {
     saveProfileView,
   };
 }
+

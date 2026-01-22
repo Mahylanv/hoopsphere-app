@@ -103,6 +103,7 @@ export type RootStackParamList = {
   EditClubProfile: undefined;
 
   Payment: undefined;
+  SubscriptionSettings: undefined;
   StripeCheckout: { interval: "month" | "year" };
   EditOffer: { offer: Offer }; // nouvelle page de modification
   SearchJoueur: undefined;
