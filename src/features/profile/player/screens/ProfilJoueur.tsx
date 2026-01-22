@@ -337,7 +337,30 @@ export default function ProfilJoueur() {
           </LinearGradient>
         </View>
         {user?.premium ? (
-          <StatsChartSection playerUid={user?.uid} />
+          <View className="mt-2">
+            <StatsChartSection playerUid={user?.uid} />
+            <View className="px-5 mt-4">
+              <TouchableOpacity
+                onPress={() => navigation.navigate("SubscriptionSettings")}
+                className="bg-[#111] border border-white/10 rounded-2xl px-4 py-4 flex-row items-center justify-between"
+              >
+                <View className="flex-row items-center">
+                  <View className="w-10 h-10 rounded-full bg-orange-500/20 items-center justify-center mr-3">
+                    <Ionicons name="settings-outline" size={20} color="#FDBA74" />
+                  </View>
+                  <View>
+                    <Text className="text-white font-semibold">
+                      Parametres abonnement
+                    </Text>
+                    <Text className="text-gray-400 text-xs mt-1">
+                      Gerer ton premium
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+          </View>
         ) : (
           <View className="mt-6 px-5">
             <View className="bg-[#1A1A1A] border border-gray-800 rounded-2xl p-4">
