@@ -33,6 +33,7 @@ type CheckoutConfig = {
   planLabel: string;
   priceLabel: string;
   renewalLabel: string;
+  prefillName: string;
   prefillEmail: string;
 };
 
@@ -49,6 +50,7 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
     planLabel: config.planLabel,
     priceLabel: config.priceLabel,
     renewalLabel: config.renewalLabel,
+    prefillName: config.prefillName,
     prefillEmail: config.prefillEmail,
   };
 
@@ -267,6 +269,21 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
         gap: 12px;
       }
 
+      .checkbox-field {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .checkbox-field input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent);
+      }
+
       button {
         width: 100%;
         border: none;
@@ -359,6 +376,11 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
           />
         </div>
 
+        <div class="checkbox-field">
+          <input id="receipt" name="receipt" type="checkbox" />
+          <label for="receipt">Recevoir un recu par email</label>
+        </div>
+
         <div class="field">
           <label>Numero de carte</label>
           <div id="card-number" class="stripe-field"></div>
@@ -414,14 +436,20 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
 
         const nameInput = document.getElementById("name");
         const emailInput = document.getElementById("email");
+        const receiptInput = document.getElementById("receipt");
         const submitButton = document.getElementById("submit");
         const buttonText = document.getElementById("button-text");
         const errorEl = document.getElementById("error");
         const stripeFields = Array.from(document.querySelectorAll(".stripe-field"));
         const backButton = document.getElementById("back-button");
 
+        if (config.prefillName) {
+          nameInput.value = config.prefillName;
+        }
+
         if (config.prefillEmail) {
           emailInput.value = config.prefillEmail;
+          receiptInput.checked = true;
         }
 
         if (backButton) {
@@ -510,20 +538,27 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
           setError("");
           setLoading(true);
 
+          const emailValue = emailInput.value ? emailInput.value.trim() : "";
           const billingDetails = {
             name: nameInput.value || undefined,
-            email: emailInput.value || undefined,
+            email: emailValue || undefined,
           };
 
           let result;
           try {
             if (config.intentType === "payment") {
-              result = await stripe.confirmCardPayment(config.clientSecret, {
+              const shouldSendReceipt = receiptInput.checked && emailValue;
+              const confirmOptions = {
                 payment_method: {
                   card: cardNumber,
                   billing_details: billingDetails,
                 },
-              });
+                ...(shouldSendReceipt ? { receipt_email: emailValue } : {}),
+              };
+              result = await stripe.confirmCardPayment(
+                config.clientSecret,
+                confirmOptions
+              );
             } else {
               result = await stripe.confirmCardSetup(config.clientSecret, {
                 payment_method: {
@@ -658,12 +693,15 @@ export default function StripeCheckout() {
       const renewalLabel =
         interval === "year" ? "Chaque annee" : "Chaque mois";
 
+      const prefillName = await getPrefillName();
+
       setConfig({
         clientSecret: clientSecret || setupIntentClientSecret,
         intentType: clientSecret ? "payment" : "setup",
         planLabel,
         priceLabel,
         renewalLabel,
+        prefillName,
         prefillEmail: auth.currentUser?.email ?? "",
       });
       setLoading(false);
