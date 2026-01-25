@@ -37,6 +37,7 @@
     "firebase-admin": "^13.6.0",
     "firebase-functions": "^7.0.2",
     "nativewind": "^4.2.1",
+    "nodemailer": "^7.0.12",
     "papaparse": "^5.5.3",
     "prettier-plugin-tailwindcss": "^0.5.11",
     "react": "19.1.0",
