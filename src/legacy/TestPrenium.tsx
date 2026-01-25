@@ -26,7 +26,7 @@ import AddressAutocomplete from "../shared/components/AddressAutocomplete";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "TestPrenium">;
 const { width } = Dimensions.get("window");
-const CARD_PREVIEW_WIDTH = width * 0.6;
+const CARD_PREVIEW_WIDTH = width * 0.42;
 
 export default function TestPrenium() {
   const { user } = usePlayerProfile();
@@ -239,13 +239,13 @@ export default function TestPrenium() {
                           className="mr-4"
                         >
                           <View
-                            className={`rounded-2xl overflow-hidden border bg-[#0f0f0f] ${
-                              isActive ? "border-orange-500" : "border-gray-700"
+                            className={`rounded-2xl overflow-hidden border bg-[#0b0b0b] shadow-lg shadow-black/40 ${
+                              isActive ? "border-orange-500" : "border-gray-800"
                             }`}
                             style={{
                               width: CARD_PREVIEW_WIDTH,
                               aspectRatio: 0.68,
-                              padding: 10,
+                              padding: 6,
                             }}
                           >
                             <Image
@@ -261,9 +261,21 @@ export default function TestPrenium() {
                               </View>
                             )}
                           </View>
-                          <Text className="text-white text-center mt-3">
-                            {option.label}
-                          </Text>
+                          <View
+                            className={`mt-2 self-center px-3 py-1 rounded-full border ${
+                              isActive
+                                ? "bg-orange-500/15 border-orange-500/40"
+                                : "bg-white/5 border-white/10"
+                            }`}
+                          >
+                            <Text
+                              className={`text-xs font-semibold ${
+                                isActive ? "text-orange-200" : "text-gray-200"
+                              }`}
+                            >
+                              {option.label}
+                            </Text>
+                          </View>
                         </Pressable>
                       );
                     })}

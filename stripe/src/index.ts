@@ -8,15 +8,37 @@ import Stripe from "stripe";
 admin.initializeApp();
 const db = admin.firestore();
 
-// ðŸ” Stripe (clÃ© secrÃ¨te depuis functions:config)
-// Stripe secrets via params
+// ðŸ” Stripe (secrets via params)
 const stripeSecretKey = defineSecret("STRIPE_SECRET");
 const stripeWebhookSecretKey = defineSecret("STRIPE_WEBHOOK_SECRET");
 
-const getStripe = () => {
-  const secret = stripeSecretKey.value();
-  if (!secret) return null;
-  return new Stripe(secret, {apiVersion: "2025-12-15.clover"});
+const resolveStripeSecret = () => {
+  const secret = stripeSecretKey.value() || process.env.STRIPE_SECRET;
+  if (!secret) {
+    return {
+      secret: null,
+      error: "Stripe secret manquant. Verifie STRIPE_SECRET.",
+    };
+  }
+  if (!/^sk_(test|live)_/i.test(secret)) {
+    return {
+      secret: null,
+      error:
+        "Stripe secret invalide. Il doit commencer par sk_test_ ou sk_live_.",
+    };
+  }
+  return { secret, error: null };
+};
+
+const getStripeOrThrow = () => {
+  const { secret, error } = resolveStripeSecret();
+  if (!secret) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      error || "Stripe secret manquant."
+    );
+  }
+  return new Stripe(secret, { apiVersion: "2025-12-15.clover" });
 };
 
 // ðŸ’³ IDs Stripe des abonnements
@@ -117,13 +139,7 @@ export const createPaymentIntent = functions
         "User not authenticated"
       );
     }
-    const stripe = getStripe();
-    if (!stripe) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "Stripe secret manquant."
-      );
-    }
+    const stripe = getStripeOrThrow();
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: 499, // 4,99 â‚¬
@@ -152,13 +168,7 @@ export const createSubscription = functions
         "User not authenticated"
       );
     }
-    const stripe = getStripe();
-    if (!stripe) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "Stripe secret manquant."
-      );
-    }
+    const stripe = getStripeOrThrow();
 
     const plan = data?.plan as "month" | "year";
 
@@ -315,7 +325,7 @@ export const createBillingPortalSession = functions
         "User not authenticated"
       );
     }
-    const stripe = getStripe();
+    const stripe = getStripeOrThrow();
     if (!stripe) {
       throw new functions.https.HttpsError(
         "failed-precondition",
@@ -364,7 +374,7 @@ export const getSubscriptionInfo = functions
         "User not authenticated"
       );
     }
-    const stripe = getStripe();
+    const stripe = getStripeOrThrow();
     if (!stripe) {
       throw new functions.https.HttpsError(
         "failed-precondition",
@@ -423,7 +433,7 @@ export const setCancelAtPeriodEnd = functions
         "User not authenticated"
       );
     }
-    const stripe = getStripe();
+    const stripe = getStripeOrThrow();
     if (!stripe) {
       throw new functions.https.HttpsError(
         "failed-precondition",
@@ -478,7 +488,7 @@ export const cancelSubscriptionNow = functions
         "User not authenticated"
       );
     }
-    const stripe = getStripe();
+    const stripe = getStripeOrThrow();
     if (!stripe) {
       throw new functions.https.HttpsError(
         "failed-precondition",
@@ -528,7 +538,7 @@ export const changeSubscriptionPlan = functions
         "User not authenticated"
       );
     }
-    const stripe = getStripe();
+    const stripe = getStripeOrThrow();
     if (!stripe) {
       throw new functions.https.HttpsError(
         "failed-precondition",
@@ -593,7 +603,7 @@ export const changeSubscriptionPlan = functions
 export const stripeWebhook = functions
   .runWith({ secrets: [stripeSecretKey, stripeWebhookSecretKey] })
   .https.onRequest(async (req, res) => {
-  const stripe = getStripe();
+  const stripe = getStripeOrThrow();
   const stripeWebhookSecret = stripeWebhookSecretKey.value();
   if (!stripe || !stripeWebhookSecret) {
     res.status(500).send("Stripe secret manquant.");
