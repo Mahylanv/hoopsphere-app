@@ -36,6 +36,7 @@ import OfferDetail from "./src/legacy/OfferDetail";
 import Payment from "./src/legacy/Payment";
 import StripeCheckout from "./src/features/payments/screens/StripeCheckout";
 import SubscriptionSettings from "./src/features/payments/screens/SubscriptionSettings";
+import InAppWebView from "./src/features/payments/screens/InAppWebView";
 import EditOffer from "./src/features/profile/club/screens/EditOffer";
 import JoueurDetail from "./src/features/profile/player/screens/JoueurDetail";
 import EditClubProfile from "./src/features/profile/club/screens/EditClubProfile";
@@ -179,6 +180,7 @@ function RootNavigator() {
           component={SubscriptionSettings}
         />
         <Stack.Screen name="StripeCheckout" component={StripeCheckout} />
+        <Stack.Screen name="InAppWebView" component={InAppWebView} />
         <Stack.Screen name="EditOffer" component={EditOffer} />
         <Stack.Screen name="JoueurDetail" component={JoueurDetail} />
         <Stack.Screen

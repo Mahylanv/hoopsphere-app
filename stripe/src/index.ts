@@ -4,19 +4,98 @@ import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import { defineSecret } from "firebase-functions/params";
 import Stripe from "stripe";
+import * as nodemailer from "nodemailer";
 
 admin.initializeApp();
 const db = admin.firestore();
 
-// ðŸ” Stripe (clÃ© secrÃ¨te depuis functions:config)
-// Stripe secrets via params
+// ðŸ” Stripe (secrets via params)
 const stripeSecretKey = defineSecret("STRIPE_SECRET");
 const stripeWebhookSecretKey = defineSecret("STRIPE_WEBHOOK_SECRET");
+const smtpHost = defineSecret("SMTP_HOST");
+const smtpPort = defineSecret("SMTP_PORT");
+const smtpUser = defineSecret("SMTP_USER");
+const smtpPass = defineSecret("SMTP_PASS");
+const smtpFrom = defineSecret("SMTP_FROM");
 
-const getStripe = () => {
-  const secret = stripeSecretKey.value();
-  if (!secret) return null;
-  return new Stripe(secret, {apiVersion: "2025-12-15.clover"});
+const resolveStripeSecret = () => {
+  const raw = stripeSecretKey.value() || process.env.STRIPE_SECRET;
+  const secret = raw ? raw.trim() : "";
+  if (!secret) {
+    return {
+      secret: null,
+      error: "Stripe secret manquant. Verifie STRIPE_SECRET.",
+    };
+  }
+  if (/\s/.test(secret)) {
+    return {
+      secret: null,
+      error:
+        "Stripe secret invalide (espaces detectes). Copie la cle sans espaces.",
+    };
+  }
+  if (secret.startsWith("pk_")) {
+    return {
+      secret: null,
+      error:
+        "Cle publique detectee. Utilise une cle secrete sk_test_ ou sk_live_.",
+    };
+  }
+  if (!/^sk_(test|live)_/.test(secret)) {
+    return {
+      secret: null,
+      error:
+        "Stripe secret invalide. Il doit commencer par sk_test_ ou sk_live_.",
+    };
+  }
+  return { secret, error: null };
+};
+
+const getStripeOrThrow = () => {
+  const { secret, error } = resolveStripeSecret();
+  if (!secret) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      error || "Stripe secret manquant."
+    );
+  }
+  return new Stripe(secret, { apiVersion: "2025-12-15.clover" });
+};
+
+const resolveSmtpConfig = () => {
+  const host = smtpHost.value() || process.env.SMTP_HOST;
+  const portRaw = smtpPort.value() || process.env.SMTP_PORT;
+  const user = smtpUser.value() || process.env.SMTP_USER;
+  const pass = smtpPass.value() || process.env.SMTP_PASS;
+  const from = smtpFrom.value() || process.env.SMTP_FROM;
+  if (!host || !user || !pass || !from) {
+    return null;
+  }
+  const port = Number(portRaw);
+  return {
+    host,
+    port: Number.isFinite(port) ? port : 465,
+    user,
+    pass,
+    from,
+  };
+};
+
+const handleStripeError = (err: any, fallback: string) => {
+  if (err instanceof functions.https.HttpsError) {
+    throw err;
+  }
+  if (err?.type === "StripeAuthenticationError") {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "Cle Stripe invalide. Verifie STRIPE_SECRET."
+    );
+  }
+  if (err?.code === "resource_missing") {
+    throw new functions.https.HttpsError("not-found", "Aucun abonnement actif.");
+  }
+  const message = typeof err?.message === "string" ? err.message : fallback;
+  throw new functions.https.HttpsError("internal", message);
 };
 
 // ðŸ’³ IDs Stripe des abonnements
@@ -44,6 +123,35 @@ const resolveUserDoc = async (uid: string): Promise<UserDocInfo> => {
   }
 
   return { ref: joueurRef, data: joueurSnap.data() ?? null, type: "joueur" };
+};
+
+const resolveUserByStripeCustomerId = async (
+  customerId: string
+): Promise<UserDocInfo | null> => {
+  const [joueurSnap, clubSnap] = await Promise.all([
+    db
+      .collection("joueurs")
+      .where("stripeCustomerId", "==", customerId)
+      .limit(1)
+      .get(),
+    db
+      .collection("clubs")
+      .where("stripeCustomerId", "==", customerId)
+      .limit(1)
+      .get(),
+  ]);
+
+  if (!joueurSnap.empty) {
+    const doc = joueurSnap.docs[0];
+    return { ref: doc.ref, data: doc.data(), type: "joueur" };
+  }
+
+  if (!clubSnap.empty) {
+    const doc = clubSnap.docs[0];
+    return { ref: doc.ref, data: doc.data(), type: "club" };
+  }
+
+  return null;
 };
 
 const buildSubscriptionUpdate = (subscription: Stripe.Subscription) => {
@@ -88,6 +196,79 @@ const resolveSubscriptionId = async (
   return subs.data[0]?.id ?? null;
 };
 
+const formatAmountLabel = (
+  amount: number | null | undefined,
+  currency?: string | null
+) => {
+  if (typeof amount !== "number") return null;
+  const safeCurrency = currency ? currency.toUpperCase() : "EUR";
+  return `${(amount / 100).toFixed(2)} ${safeCurrency}`;
+};
+
+const sendSubscriptionEmail = async (invoice: Stripe.Invoice) => {
+  const smtp = resolveSmtpConfig();
+  if (!smtp) {
+    console.log("SMTP non configuré, email ignoré.");
+    return;
+  }
+
+  const customerId =
+    typeof invoice.customer === "string"
+      ? invoice.customer
+      : invoice.customer?.id ?? null;
+
+  const userDoc = customerId
+    ? await resolveUserByStripeCustomerId(customerId)
+    : null;
+  const email =
+    invoice.customer_email ||
+    (userDoc?.data?.email as string | undefined) ||
+    null;
+
+  if (!email) {
+    console.log("Email client introuvable, email ignoré.");
+    return;
+  }
+
+  const amountLabel = formatAmountLabel(
+    invoice.amount_paid,
+    invoice.currency
+  );
+  const invoiceNumber = invoice.number || invoice.id;
+  const pdfUrl = invoice.invoice_pdf || null;
+  const hostedUrl = invoice.hosted_invoice_url || null;
+
+  const lines = [
+    "Bonjour,",
+    "",
+    "Votre abonnement Hoopsphere est confirmé.",
+    amountLabel ? `Montant : ${amountLabel}` : null,
+    invoiceNumber ? `Facture : ${invoiceNumber}` : null,
+    pdfUrl ? `PDF : ${pdfUrl}` : hostedUrl ? `Facture en ligne : ${hostedUrl}` : null,
+    "",
+    "Merci pour votre confiance.",
+    "",
+    "L'équipe Hoopsphere",
+  ].filter(Boolean);
+
+  const transporter = nodemailer.createTransport({
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.port === 465,
+    auth: {
+      user: smtp.user,
+      pass: smtp.pass,
+    },
+  });
+
+  await transporter.sendMail({
+    from: smtp.from,
+    to: email,
+    subject: "Confirmation d'abonnement Hoopsphere",
+    text: lines.join("\n"),
+  });
+};
+
 const resolveUidFromSubscription = async (
   stripe: Stripe,
   subscription: Stripe.Subscription
@@ -117,13 +298,7 @@ export const createPaymentIntent = functions
         "User not authenticated"
       );
     }
-    const stripe = getStripe();
-    if (!stripe) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "Stripe secret manquant."
-      );
-    }
+    const stripe = getStripeOrThrow();
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: 499, // 4,99 â‚¬
@@ -146,19 +321,14 @@ export const createSubscription = functions
   .runWith({ secrets: [stripeSecretKey] })
   .https.onCall(
   async (data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User not authenticated"
-      );
-    }
-    const stripe = getStripe();
-    if (!stripe) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "Stripe secret manquant."
-      );
-    }
+    try {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+          "unauthenticated",
+          "User not authenticated"
+        );
+      }
+      const stripe = getStripeOrThrow();
 
     const plan = data?.plan as "month" | "year";
 
@@ -176,9 +346,14 @@ export const createSubscription = functions
     let customerId = userDoc.data?.stripeCustomerId as string | undefined;
 
     if (!customerId) {
-      const customer = await stripe.customers.create({
+      const customerPayload: Stripe.CustomerCreateParams = {
         metadata: {uid},
-      });
+      };
+      const customerEmail = userDoc.data?.email as string | undefined;
+      if (customerEmail) {
+        customerPayload.email = customerEmail;
+      }
+      const customer = await stripe.customers.create(customerPayload);
       customerId = customer.id;
       await userDoc.ref.set({stripeCustomerId: customerId}, {merge: true});
     }
@@ -292,13 +467,28 @@ export const createSubscription = functions
 
     await userDoc.ref.set(buildSubscriptionUpdate(subscription), {merge: true});
 
-    return {
-      clientSecret: paymentIntentClientSecret,
-      setupIntentClientSecret,
-      subscriptionId: subscription.id,
-      customerId,
-      ephemeralKeySecret: ephemeralKey.secret,
-    };
+      return {
+        clientSecret: paymentIntentClientSecret,
+        setupIntentClientSecret,
+        subscriptionId: subscription.id,
+        customerId,
+        ephemeralKeySecret: ephemeralKey.secret,
+      };
+    } catch (err: any) {
+      if (err instanceof functions.https.HttpsError) {
+        throw err;
+      }
+      if (err?.type === "StripeAuthenticationError") {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Stripe secret invalide. Verifie STRIPE_SECRET."
+        );
+      }
+      throw new functions.https.HttpsError(
+        "internal",
+        "Erreur lors du paiement Stripe."
+      );
+    }
   }
 );
 
@@ -315,7 +505,7 @@ export const createBillingPortalSession = functions
         "User not authenticated"
       );
     }
-    const stripe = getStripe();
+    const stripe = getStripeOrThrow();
     if (!stripe) {
       throw new functions.https.HttpsError(
         "failed-precondition",
@@ -329,7 +519,7 @@ export const createBillingPortalSession = functions
     if (!customerId) {
       throw new functions.https.HttpsError(
         "failed-precondition",
-        "Aucun customer Stripe lie a ce compte."
+        "Aucun customer Stripe lié à ce compte."
       );
     }
 
@@ -352,6 +542,74 @@ export const createBillingPortalSession = functions
 );
 
 // --------------------------------------------------
+// 🔹 Dernière facture PDF
+// --------------------------------------------------
+export const getLatestInvoicePdf = functions
+  .runWith({ secrets: [stripeSecretKey] })
+  .https.onCall(
+  async (_data, context) => {
+    try {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+          "unauthenticated",
+          "User not authenticated"
+        );
+      }
+      const stripe = getStripeOrThrow();
+
+      const uid = context.auth.uid;
+      const userDoc = await resolveUserDoc(uid);
+      const customerId = userDoc.data?.stripeCustomerId as string | undefined;
+      if (!customerId) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Aucun customer Stripe lié à ce compte."
+        );
+      }
+
+      let invoice = null as Stripe.Invoice | null;
+      const paidInvoices = await stripe.invoices.list({
+        customer: customerId,
+        limit: 1,
+        status: "paid",
+      });
+      invoice = paidInvoices.data[0] ?? null;
+
+      if (!invoice) {
+        const anyInvoices = await stripe.invoices.list({
+          customer: customerId,
+          limit: 1,
+        });
+        invoice = anyInvoices.data[0] ?? null;
+      }
+
+      if (!invoice) {
+        throw new functions.https.HttpsError(
+          "not-found",
+          "Aucune facture disponible."
+        );
+      }
+
+      const pdfUrl = invoice.invoice_pdf || null;
+      const hostedUrl = invoice.hosted_invoice_url || null;
+      if (!pdfUrl && !hostedUrl) {
+        throw new functions.https.HttpsError(
+          "not-found",
+          "Aucune facture PDF disponible."
+        );
+      }
+
+      return {
+        url: pdfUrl ?? hostedUrl,
+        hostedUrl,
+      };
+    } catch (err) {
+      handleStripeError(err, "Impossible de récupérer la facture.");
+    }
+  }
+);
+
+// --------------------------------------------------
 // ÃY"Ã» Infos abonnement
 // --------------------------------------------------
 export const getSubscriptionInfo = functions
@@ -364,7 +622,7 @@ export const getSubscriptionInfo = functions
         "User not authenticated"
       );
     }
-    const stripe = getStripe();
+    const stripe = getStripeOrThrow();
     if (!stripe) {
       throw new functions.https.HttpsError(
         "failed-precondition",
@@ -378,7 +636,7 @@ export const getSubscriptionInfo = functions
     if (!customerId) {
       throw new functions.https.HttpsError(
         "failed-precondition",
-        "Aucun customer Stripe lie a ce compte."
+        "Aucun customer Stripe lié à ce compte."
       );
     }
 
@@ -417,51 +675,49 @@ export const setCancelAtPeriodEnd = functions
   .runWith({ secrets: [stripeSecretKey] })
   .https.onCall(
   async (data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User not authenticated"
+    try {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+          "unauthenticated",
+          "User not authenticated"
+        );
+      }
+      const stripe = getStripeOrThrow();
+
+      const uid = context.auth.uid;
+      const cancelAtPeriodEnd = Boolean(data?.cancelAtPeriodEnd);
+
+      const userDoc = await resolveUserDoc(uid);
+      const customerId = userDoc.data?.stripeCustomerId as string | undefined;
+      if (!customerId) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Aucun customer Stripe lié à ce compte."
+        );
+      }
+
+      const subscriptionId = await resolveSubscriptionId(
+        stripe,
+        customerId,
+        userDoc.data?.stripeSubscriptionId
       );
+      if (!subscriptionId) {
+        throw new functions.https.HttpsError(
+          "not-found",
+          "Aucun abonnement actif."
+        );
+      }
+
+      const subscription = await stripe.subscriptions.update(subscriptionId, {
+        cancel_at_period_end: cancelAtPeriodEnd,
+      });
+
+      await userDoc.ref.set(buildSubscriptionUpdate(subscription), {merge: true});
+
+      return { status: subscription.status };
+    } catch (err) {
+      handleStripeError(err, "Impossible de modifier le renouvellement.");
     }
-    const stripe = getStripe();
-    if (!stripe) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "Stripe secret manquant."
-      );
-    }
-
-    const uid = context.auth.uid;
-    const cancelAtPeriodEnd = Boolean(data?.cancelAtPeriodEnd);
-
-    const userDoc = await resolveUserDoc(uid);
-    const customerId = userDoc.data?.stripeCustomerId as string | undefined;
-    if (!customerId) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "Aucun customer Stripe lie a ce compte."
-      );
-    }
-
-    const subscriptionId = await resolveSubscriptionId(
-      stripe,
-      customerId,
-      userDoc.data?.stripeSubscriptionId
-    );
-    if (!subscriptionId) {
-      throw new functions.https.HttpsError(
-        "not-found",
-        "Aucun abonnement actif."
-      );
-    }
-
-    const subscription = await stripe.subscriptions.update(subscriptionId, {
-      cancel_at_period_end: cancelAtPeriodEnd,
-    });
-
-    await userDoc.ref.set(buildSubscriptionUpdate(subscription), {merge: true});
-
-    return { status: subscription.status };
   }
 );
 
@@ -472,46 +728,44 @@ export const cancelSubscriptionNow = functions
   .runWith({ secrets: [stripeSecretKey] })
   .https.onCall(
   async (_data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User not authenticated"
-      );
-    }
-    const stripe = getStripe();
-    if (!stripe) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "Stripe secret manquant."
-      );
-    }
+    try {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+          "unauthenticated",
+          "User not authenticated"
+        );
+      }
+      const stripe = getStripeOrThrow();
 
-    const uid = context.auth.uid;
-    const userDoc = await resolveUserDoc(uid);
-    const customerId = userDoc.data?.stripeCustomerId as string | undefined;
-    if (!customerId) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "Aucun customer Stripe lie a ce compte."
+      const uid = context.auth.uid;
+      const userDoc = await resolveUserDoc(uid);
+      const customerId = userDoc.data?.stripeCustomerId as string | undefined;
+      if (!customerId) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Aucun customer Stripe lié à ce compte."
+        );
+      }
+
+      const subscriptionId = await resolveSubscriptionId(
+        stripe,
+        customerId,
+        userDoc.data?.stripeSubscriptionId
       );
+      if (!subscriptionId) {
+        throw new functions.https.HttpsError(
+          "not-found",
+          "Aucun abonnement actif."
+        );
+      }
+
+      const subscription = await stripe.subscriptions.cancel(subscriptionId);
+      await userDoc.ref.set(buildSubscriptionUpdate(subscription), {merge: true});
+
+      return { status: subscription.status };
+    } catch (err) {
+      handleStripeError(err, "Impossible d'annuler l'abonnement.");
     }
-
-    const subscriptionId = await resolveSubscriptionId(
-      stripe,
-      customerId,
-      userDoc.data?.stripeSubscriptionId
-    );
-    if (!subscriptionId) {
-      throw new functions.https.HttpsError(
-        "not-found",
-        "Aucun abonnement actif."
-      );
-    }
-
-    const subscription = await stripe.subscriptions.cancel(subscriptionId);
-    await userDoc.ref.set(buildSubscriptionUpdate(subscription), {merge: true});
-
-    return { status: subscription.status };
   }
 );
 
@@ -522,68 +776,68 @@ export const changeSubscriptionPlan = functions
   .runWith({ secrets: [stripeSecretKey] })
   .https.onCall(
   async (data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User not authenticated"
+    try {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+          "unauthenticated",
+          "User not authenticated"
+        );
+      }
+      const stripe = getStripeOrThrow();
+
+      const plan = data?.plan as "month" | "year";
+      if (!plan || !PRICE_IDS[plan]) {
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "Plan invalide. Utiliser 'month' ou 'year'."
+        );
+      }
+
+      const uid = context.auth.uid;
+      const userDoc = await resolveUserDoc(uid);
+      const customerId = userDoc.data?.stripeCustomerId as string | undefined;
+      if (!customerId) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Aucun customer Stripe lié à ce compte."
+        );
+      }
+
+      const subscriptionId = await resolveSubscriptionId(
+        stripe,
+        customerId,
+        userDoc.data?.stripeSubscriptionId
       );
+      if (!subscriptionId) {
+        throw new functions.https.HttpsError(
+          "not-found",
+          "Aucun abonnement actif."
+        );
+      }
+
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const itemId = subscription.items.data[0]?.id;
+      if (!itemId) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Impossible de modifier cet abonnement."
+        );
+      }
+
+      const updated = await stripe.subscriptions.update(subscriptionId, {
+        cancel_at_period_end: false,
+        // Applique le nouveau tarif au prochain cycle sans facturer tout de suite.
+        billing_cycle_anchor: "unchanged",
+        proration_behavior: "none",
+        items: [{id: itemId, price: PRICE_IDS[plan]}],
+      });
+
+      await userDoc.ref.set(buildSubscriptionUpdate(updated), {merge: true});
+
+      return { status: updated.status };
+    } catch (err) {
+      handleStripeError(err, "Impossible de changer l'abonnement.");
     }
-    const stripe = getStripe();
-    if (!stripe) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "Stripe secret manquant."
-      );
-    }
-
-    const plan = data?.plan as "month" | "year";
-    if (!plan || !PRICE_IDS[plan]) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Plan invalide. Utiliser 'month' ou 'year'."
-      );
-    }
-
-    const uid = context.auth.uid;
-    const userDoc = await resolveUserDoc(uid);
-    const customerId = userDoc.data?.stripeCustomerId as string | undefined;
-    if (!customerId) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "Aucun customer Stripe lie a ce compte."
-      );
-    }
-
-    const subscriptionId = await resolveSubscriptionId(
-      stripe,
-      customerId,
-      userDoc.data?.stripeSubscriptionId
-    );
-    if (!subscriptionId) {
-      throw new functions.https.HttpsError(
-        "not-found",
-        "Aucun abonnement actif."
-      );
-    }
-
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-    const itemId = subscription.items.data[0]?.id;
-    if (!itemId) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "Impossible de modifier cet abonnement."
-      );
-    }
-
-    const updated = await stripe.subscriptions.update(subscriptionId, {
-      cancel_at_period_end: false,
-      proration_behavior: "create_prorations",
-      items: [{id: itemId, price: PRICE_IDS[plan]}],
-    });
-
-    await userDoc.ref.set(buildSubscriptionUpdate(updated), {merge: true});
-
-    return { status: updated.status };
   }
 );
 
@@ -591,9 +845,19 @@ export const changeSubscriptionPlan = functions
 // ÃY"Ã» Webhooks Stripe (temps rÃ‡Â©el)
 // --------------------------------------------------
 export const stripeWebhook = functions
-  .runWith({ secrets: [stripeSecretKey, stripeWebhookSecretKey] })
+  .runWith({
+    secrets: [
+      stripeSecretKey,
+      stripeWebhookSecretKey,
+      smtpHost,
+      smtpPort,
+      smtpUser,
+      smtpPass,
+      smtpFrom,
+    ],
+  })
   .https.onRequest(async (req, res) => {
-  const stripe = getStripe();
+  const stripe = getStripeOrThrow();
   const stripeWebhookSecret = stripeWebhookSecretKey.value();
   if (!stripe || !stripeWebhookSecret) {
     res.status(500).send("Stripe secret manquant.");
@@ -634,8 +898,12 @@ export const stripeWebhook = functions
         break;
       }
       case "invoice.paid":
+      case "invoice.payment_succeeded":
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
+        const shouldSendEmail =
+          event.type === "invoice.paid" ||
+          event.type === "invoice.payment_succeeded";
         const subscriptionRaw =
           (invoice as any).subscription ??
           (invoice as any).subscription_details?.subscription ??
@@ -657,6 +925,14 @@ export const stripeWebhook = functions
         await userDoc.ref.set(buildSubscriptionUpdate(subscription), {
           merge: true,
         });
+
+        if (shouldSendEmail) {
+          try {
+            await sendSubscriptionEmail(invoice);
+          } catch (err) {
+            console.error("Erreur envoi email abonnement:", err);
+          }
+        }
         break;
       }
       default:

@@ -322,7 +322,7 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
             />
           </svg>
         </div>
-        <h1>Paiement securise</h1>
+        <h1>Paiement sécurisé</h1>
         <p>Finalise ton abonnement Premium en quelques secondes.</p>
         <div class="price-pill">${config.priceLabel}</div>
       </div>
@@ -382,7 +382,7 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
         </button>
 
         <div class="footer-note">
-          Paiement securise par Stripe. Vos informations ne sont jamais stockees.
+          Paiement sécurisé par Stripe. Vos informations ne sont jamais stockées.
         </div>
       </div>
     </div>
@@ -533,7 +533,7 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
               });
             }
           } catch (error) {
-            setError("Une erreur est survenue. Merci de reessayer.");
+            setError("Une erreur est survenue. Merci de réessayer.");
             setLoading(false);
             return;
           }
@@ -557,7 +557,7 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
               );
             }
           } else {
-            setError("Le paiement n'a pas ete valide. Merci de reessayer.");
+            setError("Le paiement n'a pas été validé. Merci de réessayer.");
             setLoading(false);
           }
         });
@@ -648,7 +648,7 @@ export default function StripeCheckout() {
       const setupIntentClientSecret = res?.data?.setupIntentClientSecret;
 
       if (!clientSecret && !setupIntentClientSecret) {
-        throw new Error("Impossible de demarrer le paiement.");
+        throw new Error("Impossible de démarrer le paiement.");
       }
 
       const planLabel = interval === "year" ? "Annuel" : "Mensuel";
@@ -702,36 +702,40 @@ export default function StripeCheckout() {
       hasCompletedRef.current = true;
       try {
         const navType = await markPremium();
-        Alert.alert("Succes", "Abonnement active !", [
-          {
-            text: "OK",
-            onPress: () => {
-              if (navType === "club") {
-                navigation.reset({
-                  index: 0,
-                  routes: [
-                    {
-                      name: "MainTabsClub",
-                      params: { screen: "Home" },
-                    },
-                  ],
-                });
-              } else {
-                navigation.reset({
-                  index: 0,
-                  routes: [
-                    {
-                      name: "MainTabs",
-                      params: { screen: "HomeScreen" },
-                    },
-                  ],
-                });
-              }
+        Alert.alert(
+          "Succès",
+          "Abonnement activé ! Un email de confirmation avec la facture sera envoyé.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                if (navType === "club") {
+                  navigation.reset({
+                    index: 0,
+                    routes: [
+                      {
+                        name: "MainTabsClub",
+                        params: { screen: "Home" },
+                      },
+                    ],
+                  });
+                } else {
+                  navigation.reset({
+                    index: 0,
+                    routes: [
+                      {
+                        name: "MainTabs",
+                        params: { screen: "HomeScreen" },
+                      },
+                    ],
+                  });
+                }
+              },
             },
-          },
-        ]);
+          ]
+        );
       } catch (err: any) {
-        setError(err?.message || "Erreur lors de la mise a jour du compte.");
+        setError(err?.message || "Erreur lors de la mise à jour du compte.");
       }
     }
   };
@@ -749,7 +753,7 @@ export default function StripeCheckout() {
           <View className="flex-1 items-center justify-center px-6">
             <ActivityIndicator size="large" color="#F97316" />
             <Text className="text-white mt-4 text-base">
-              Chargement du paiement securise...
+              Chargement du paiement sécurisé...
             </Text>
           </View>
         )}
@@ -761,7 +765,7 @@ export default function StripeCheckout() {
               onPress={startCheckout}
               className="bg-orange-600 px-5 py-3 rounded-full"
             >
-              <Text className="text-white font-semibold">Reessayer</Text>
+              <Text className="text-white font-semibold">Réessayer</Text>
             </Pressable>
             <Pressable onPress={() => navigation.goBack()} className="mt-6">
               <Text className="text-gray-400">Retour</Text>
