@@ -627,6 +627,7 @@ export default function StripeCheckout() {
     return target.navType;
   };
 
+
   const startCheckout = async () => {
     if (!publishableKey) {
       setError("Cle Stripe manquante. Merci de verifier la configuration.");
@@ -704,7 +705,7 @@ export default function StripeCheckout() {
         const navType = await markPremium();
         Alert.alert(
           "Succès",
-          "Abonnement activé ! Un email de confirmation avec la facture sera envoyé.",
+          "Abonnement activé ! Un email de confirmation avec la facture a bien été envoyé.",
           [
             {
               text: "OK",
