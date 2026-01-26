@@ -226,6 +226,7 @@ export default function InscriptionJoueurStep2() {
                 <DateTimePicker
                   value={dobDate}
                   mode="date"
+                  locale="fr-FR"
                   maximumDate={new Date()}
                   display={Platform.OS === "ios" ? "spinner" : "default"}
                   onChange={(event, selectedDate) => {
