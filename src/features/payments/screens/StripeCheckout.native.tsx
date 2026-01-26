@@ -662,6 +662,33 @@ export default function StripeCheckout() {
     return target.navType;
   };
 
+  const getPrefillName = async (): Promise<string> => {
+    const user = auth.currentUser;
+    if (!user) return "";
+
+    const authName = user.displayName?.trim();
+    if (authName) return authName;
+
+    try {
+      const target = await resolvePremiumTarget(user.uid);
+      const snap = await getDoc(target.ref);
+      if (!snap.exists()) return "";
+
+      const data = snap.data() as Record<string, any>;
+      if (target.navType === "club") {
+        return (data.nom || data.name || "").toString().trim();
+      }
+
+      const fullName = (data.fullName || "").toString().trim();
+      if (fullName) return fullName;
+
+      const firstName = (data.prenom || "").toString().trim();
+      const lastName = (data.nom || "").toString().trim();
+      return `${firstName} ${lastName}`.trim();
+    } catch {
+      return "";
+    }
+  };
 
   const startCheckout = async () => {
     if (!publishableKey) {
