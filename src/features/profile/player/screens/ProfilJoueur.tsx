@@ -491,7 +491,6 @@ export default function ProfilJoueur() {
         </View>
         {user?.premium ? (
           <View className="mt-2">
-            <StatsChartSection playerUid={user?.uid} />
             <View className="px-5 mt-4">
               <TouchableOpacity
                 onPress={() => navigation.navigate("SubscriptionSettings")}
@@ -503,16 +502,17 @@ export default function ProfilJoueur() {
                   </View>
                   <View>
                     <Text className="text-white font-semibold">
-                      Parametres abonnement
+                      Paramètres d'abonnement
                     </Text>
                     <Text className="text-gray-400 text-xs mt-1">
-                      Gerer ton premium
+                      Gère ton abonnement
                     </Text>
                   </View>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
               </TouchableOpacity>
             </View>
+            <StatsChartSection playerUid={user?.uid} />
           </View>
         ) : (
           <View className="mt-6 px-5">
@@ -578,7 +578,6 @@ export default function ProfilJoueur() {
                 Actions
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
           </View>
           <View className="flex-row flex-wrap gap-3 mt-3">
             {quickActions.map((action) => (
