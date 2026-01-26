@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
+import { getApp } from "firebase/app";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 import { auth, db } from "../../config/firebaseConfig";
 
@@ -25,6 +27,20 @@ export function usePremiumStatus() {
     }
 
     setLoading(true);
+
+    const functions = getFunctions(getApp());
+    const refreshSubscription = async () => {
+      try {
+        const getSubscriptionInfo = httpsCallable(
+          functions,
+          "getSubscriptionInfo"
+        );
+        await getSubscriptionInfo({});
+      } catch {
+        // No-op: we keep cached Firestore data if sync fails.
+      }
+    };
+    refreshSubscription();
 
     const joueurRef = doc(db, "joueurs", uid);
     const clubRef = doc(db, "clubs", uid);

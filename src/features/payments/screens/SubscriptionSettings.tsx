@@ -181,17 +181,11 @@ export default function SubscriptionSettings() {
     ? scheduledStartDate.getTime() > Date.now()
     : false;
   const switchPlan =
-    user?.subscriptionInterval === "year"
-      ? "month"
-      : user?.subscriptionInterval === "month"
-        ? "year"
-        : null;
+    user?.subscriptionInterval === "month" ? "year" : null;
   const switchLabel =
-    user?.subscriptionInterval === "year"
-      ? "Passer au mensuel"
-      : user?.subscriptionInterval === "month"
-        ? "Pré-payer l'annuel"
-        : null;
+    user?.subscriptionInterval === "month"
+      ? "Passage à l'abonnement annuel"
+      : null;
 
   const openChangeModal = () => {
     if (switchPlan === "year") {
@@ -520,7 +514,7 @@ export default function SubscriptionSettings() {
                     {scheduledIntervalLabel} à partir du {scheduledStartLabel}
                   </Text>
                 </View>
-                <Text className="text-gray-500 text-xs mt-1">
+                <Text className="text-gray-500 text-xs mt-4">
                   Annulation possible jusqu'au {scheduledStartLabel}. Après
                   cette date, aucun remboursement.
                 </Text>
@@ -588,11 +582,11 @@ export default function SubscriptionSettings() {
               className={`rounded-2xl py-3 px-4 items-center mb-3 flex-row border ${
                 loadingAction || !canCancelScheduledChange
                   ? "bg-white/5 border-white/10 opacity-50"
-                  : "bg-red-500/15 border-red-500/40"
+                  : "bg-red-600 border-red-500"
               }`}
             >
-              <View className="h-9 w-9 rounded-full bg-red-500/20 border border-red-500/40 items-center justify-center mr-3">
-                <Ionicons name="close-circle-outline" size={18} color="#FCA5A5" />
+              <View className="h-9 w-9 rounded-full bg-red-500/20 border border-red-500/50 items-center justify-center mr-3">
+                <Ionicons name="close-circle-outline" size={18} color="#FEE2E2" />
               </View>
               <Text className="text-white font-semibold">
                 Annuler le changement programmé

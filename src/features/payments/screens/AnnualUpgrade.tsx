@@ -187,7 +187,7 @@ export default function AnnualUpgrade() {
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </Pressable>
           <Text className="text-white text-2xl font-extrabold">
-            Passage à l'annuel
+            Passage à l'abonnement annuel
           </Text>
           <View className="w-8" />
         </View>
@@ -199,7 +199,7 @@ export default function AnnualUpgrade() {
             </Text>
           </View>
           <Text className="text-white text-xl font-bold mt-3">
-            Tu passes à l'annuel
+            Tu passes à l'abonnement annuel
           </Text>
           <Text className="text-gray-400 text-sm mt-1">
             Paiement immédiat, activation à la date choisie.
@@ -212,7 +212,7 @@ export default function AnnualUpgrade() {
               </Text>
             </View>
             <View className="flex-row justify-between py-2 border-b border-white/10">
-              <Text className="text-gray-400">Prix annuel</Text>
+              <Text className="text-gray-400">Prix abonnement annuel</Text>
               <Text className="text-white">
                 {loadingPrice ? "…" : priceLabel}
               </Text>
@@ -374,7 +374,7 @@ export default function AnnualUpgrade() {
           <Text className="text-white text-lg font-bold">
             {amountLabel !== "—"
               ? `Payer ${amountLabel}`
-              : "Payer l'annuel"}
+              : "Payer l'abonnement annuel"}
           </Text>
         </Pressable>
       </ScrollView>

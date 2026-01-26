@@ -38,7 +38,7 @@ type CheckoutConfig = {
 };
 
 type CheckoutMessage =
-  | { type: "payment_success"; intentId?: string }
+  | { type: "payment_success"; intentId?: string; paymentMethodId?: string }
   | { type: "payment_error"; message?: string }
   | { type: "go_back" };
 
@@ -284,6 +284,12 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
         accent-color: var(--accent);
       }
 
+      .checkbox-field label {
+        display: inline-block;
+        margin: 0;
+        line-height: 1.2;
+      }
+
       button {
         width: 100%;
         border: none;
@@ -378,7 +384,7 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
 
         <div class="checkbox-field">
           <input id="receipt" name="receipt" type="checkbox" />
-          <label for="receipt">Recevoir un recu par email</label>
+          <label for="receipt">Recevoir un reçu par email</label>
         </div>
 
         <div class="field">
@@ -582,6 +588,8 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
           const intent = result.paymentIntent || result.setupIntent;
           const status = intent && intent.status;
           const intentId = intent && intent.id;
+          const paymentMethodId =
+            intent && "payment_method" in intent ? intent.payment_method : null;
           if (
             status === "succeeded" ||
             status === "processing" ||
@@ -589,7 +597,11 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
           ) {
             if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
               window.ReactNativeWebView.postMessage(
-                JSON.stringify({ type: "payment_success", intentId })
+                JSON.stringify({
+                  type: "payment_success",
+                  intentId,
+                  paymentMethodId,
+                })
               );
             }
           } else {
@@ -616,6 +628,7 @@ export default function StripeCheckout() {
   const [error, setError] = useState<string | null>(null);
   const [config, setConfig] = useState<CheckoutConfig | null>(null);
   const [upgradeIntentId, setUpgradeIntentId] = useState<string | null>(null);
+  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   const hasCompletedRef = useRef(false);
 
   const functions = getFunctions(getApp());
@@ -745,7 +758,8 @@ export default function StripeCheckout() {
 
         const amountLabel = formatAmountLabel(amount, currency);
         const startLabel = formatDateLabel(scheduledStartAt);
-        const planLabel = interval === "year" ? "Annuel" : "Mensuel";
+        const planLabel =
+          interval === "year" ? "Abonnement annuel" : "Abonnement mensuel";
         const priceLabel = amountLabel
           ? `${amountLabel} (paiement immédiat)`
           : interval === "year"
@@ -777,7 +791,46 @@ export default function StripeCheckout() {
 
       const clientSecret = res?.data?.clientSecret;
       const setupIntentClientSecret = res?.data?.setupIntentClientSecret;
-
+      const needsInvoicePayment = Boolean(res?.data?.setupIntentClientSecret);
+      const createdSubscriptionId = res?.data?.subscriptionId ?? null;
+      const noPaymentRequired = Boolean(res?.data?.noPaymentRequired);
+      if (!clientSecret && noPaymentRequired) {
+        const navType = await markPremium();
+        Alert.alert(
+          "Succès",
+          "Abonnement activé ! Aucun paiement supplémentaire n'était requis.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                if (navType === "club") {
+                  navigation.reset({
+                    index: 0,
+                    routes: [
+                      {
+                        name: "MainTabsClub",
+                        params: { screen: "Home" },
+                      },
+                    ],
+                  });
+                } else {
+                  navigation.reset({
+                    index: 0,
+                    routes: [
+                      {
+                        name: "MainTabs",
+                        params: { screen: "HomeScreen" },
+                      },
+                    ],
+                  });
+                }
+              },
+            },
+          ]
+        );
+        setLoading(false);
+        return;
+      }
       if (!clientSecret && !setupIntentClientSecret) {
         throw new Error("Impossible de démarrer le paiement.");
       }
@@ -790,9 +843,10 @@ export default function StripeCheckout() {
 
       const prefillName = await getPrefillName();
 
+      setSubscriptionId(createdSubscriptionId);
       setConfig({
         clientSecret: clientSecret || setupIntentClientSecret,
-        intentType: clientSecret ? "payment" : "setup",
+        intentType: needsInvoicePayment ? "setup" : "payment",
         planLabel,
         priceLabel,
         renewalLabel,
@@ -878,6 +932,52 @@ export default function StripeCheckout() {
           return;
         }
 
+        if (config?.intentType === "setup") {
+          const paymentMethodId = data.paymentMethodId;
+          if (!paymentMethodId || !subscriptionId) {
+            throw new Error(
+              "Paiement validé mais identifiant de carte manquant."
+            );
+          }
+          const confirmSubscriptionPayment = httpsCallable(
+            functions,
+            "confirmSubscriptionPayment"
+          );
+          await confirmSubscriptionPayment({
+            paymentMethodId,
+            subscriptionId,
+          });
+        }
+
+        const getSubscriptionInfo = httpsCallable(
+          functions,
+          "getSubscriptionInfo"
+        );
+        const res: any = await getSubscriptionInfo({});
+        const status = res?.data?.subscription?.status as
+          | string
+          | null
+          | undefined;
+        if (status !== "active" && status !== "trialing") {
+          Alert.alert(
+            "Paiement en cours",
+            "Le paiement est en cours de confirmation. Ton abonnement sera activé dès validation (tu peux rafraîchir dans les paramètres d’abonnement).",
+            [
+              {
+                text: "OK",
+                onPress: () => {
+                  if (navigation?.canGoBack?.()) {
+                    navigation.goBack();
+                  } else {
+                    navigation.navigate("SubscriptionSettings");
+                  }
+                },
+              },
+            ]
+          );
+          return;
+        }
+
         const navType = await markPremium();
         Alert.alert(
           "Succès",
@@ -924,7 +1024,13 @@ export default function StripeCheckout() {
             [
               {
                 text: "OK",
-                onPress: () => navigation.goBack(),
+                onPress: () => {
+                  if (navigation?.canGoBack?.()) {
+                    navigation.pop(2);
+                  } else {
+                    navigation.navigate("SubscriptionSettings");
+                  }
+                },
               },
             ]
           );
