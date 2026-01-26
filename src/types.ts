@@ -104,7 +104,12 @@ export type RootStackParamList = {
 
   Payment: undefined;
   SubscriptionSettings: undefined;
-  StripeCheckout: { interval: "month" | "year" };
+  AnnualUpgrade: undefined;
+  StripeCheckout: {
+    interval: "month" | "year";
+    flow?: "subscription" | "upgrade";
+    startAt?: number;
+  };
   InAppWebView: { url: string; title: string };
   EditOffer: { offer: Offer }; // nouvelle page de modification
   SearchJoueur: undefined;

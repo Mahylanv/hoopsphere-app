@@ -152,6 +152,9 @@ export default function usePlayerProfile() {
             data.subscriptionCurrentPeriodStart || null,
           subscriptionCurrentPeriodEnd:
             data.subscriptionCurrentPeriodEnd || null,
+          subscriptionScheduledInterval:
+            data.subscriptionScheduledInterval || null,
+          subscriptionScheduledAt: data.subscriptionScheduledAt || null,
         });
         setFields(loaded);
         setEditFields(loaded); // ��? valeurs initiales dans le modal
@@ -484,4 +487,3 @@ export default function usePlayerProfile() {
     saveProfileView,
   };
 }
-

@@ -28,6 +28,7 @@ export type RankingPlayer = {
   genre: string;
   createdAt: any | null;
   premium: boolean;
+  cardStyle?: "normal" | "premium";
 
   // Stats & notes
   stats: PlayerAverages;
@@ -89,6 +90,7 @@ export default function usePlayerRanking() {
 
                 poste: playerData.poste ?? "",
                 premium: !!playerData.premium,
+                cardStyle: playerData.cardStyle ?? "normal",
 
                 // Champs nécessaires pour JoueurCard
                 email: playerData.email ?? "",

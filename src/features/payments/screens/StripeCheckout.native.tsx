@@ -38,7 +38,7 @@ type CheckoutConfig = {
 };
 
 type CheckoutMessage =
-  | { type: "payment_success" }
+  | { type: "payment_success"; intentId?: string }
   | { type: "payment_error"; message?: string }
   | { type: "go_back" };
 
@@ -581,6 +581,7 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
 
           const intent = result.paymentIntent || result.setupIntent;
           const status = intent && intent.status;
+          const intentId = intent && intent.id;
           if (
             status === "succeeded" ||
             status === "processing" ||
@@ -588,7 +589,7 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
           ) {
             if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
               window.ReactNativeWebView.postMessage(
-                JSON.stringify({ type: "payment_success" })
+                JSON.stringify({ type: "payment_success", intentId })
               );
             }
           } else {
@@ -608,11 +609,13 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
 export default function StripeCheckout() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProps>();
-  const { interval } = route.params;
+  const { interval, flow = "subscription", startAt } = route.params;
+  const isUpgrade = flow === "upgrade";
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [config, setConfig] = useState<CheckoutConfig | null>(null);
+  const [upgradeIntentId, setUpgradeIntentId] = useState<string | null>(null);
   const hasCompletedRef = useRef(false);
 
   const functions = getFunctions(getApp());
@@ -690,6 +693,22 @@ export default function StripeCheckout() {
     }
   };
 
+  const formatAmountLabel = (
+    amount?: number | null,
+    currency?: string | null
+  ) => {
+    if (typeof amount !== "number") return null;
+    const safeCurrency = currency ? currency.toUpperCase() : "EUR";
+    return `${(amount / 100).toFixed(2)} ${safeCurrency}`;
+  };
+
+  const formatDateLabel = (value?: number | null) => {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleDateString("fr-FR");
+  };
+
   const startCheckout = async () => {
     if (!publishableKey) {
       setError("Cle Stripe manquante. Merci de verifier la configuration.");
@@ -702,6 +721,55 @@ export default function StripeCheckout() {
     hasCompletedRef.current = false;
 
     try {
+      if (isUpgrade) {
+        const createUpgradePaymentIntent = httpsCallable(
+          functions,
+          "createUpgradePaymentIntent"
+        );
+        const res: any = await createUpgradePaymentIntent({
+          plan: interval,
+          startAt,
+        });
+        const clientSecret = res?.data?.clientSecret;
+        const paymentIntentId = res?.data?.paymentIntentId ?? null;
+        const amount = res?.data?.amount as number | null | undefined;
+        const currency = res?.data?.currency as string | null | undefined;
+        const scheduledStartAt =
+          typeof res?.data?.switchAt === "number"
+            ? res.data.switchAt * 1000
+            : startAt ?? null;
+
+        if (!clientSecret) {
+          throw new Error("Impossible de démarrer le paiement.");
+        }
+
+        const amountLabel = formatAmountLabel(amount, currency);
+        const startLabel = formatDateLabel(scheduledStartAt);
+        const planLabel = interval === "year" ? "Annuel" : "Mensuel";
+        const priceLabel = amountLabel
+          ? `${amountLabel} (paiement immédiat)`
+          : interval === "year"
+            ? "19,99 EUR (paiement immédiat)"
+            : "2,49 EUR (paiement immédiat)";
+        const renewalLabel = startLabel
+          ? `Débute le ${startLabel}`
+          : "Débute à la fin de la période";
+        const prefillName = await getPrefillName();
+
+        setUpgradeIntentId(paymentIntentId);
+        setConfig({
+          clientSecret,
+          intentType: "payment",
+          planLabel,
+          priceLabel,
+          renewalLabel,
+          prefillName,
+          prefillEmail: auth.currentUser?.email ?? "",
+        });
+        setLoading(false);
+        return;
+      }
+
       const createSubscription = httpsCallable(functions, "createSubscription");
       const res: any = await createSubscription({
         plan: interval === "year" ? "year" : "month",
@@ -740,7 +808,7 @@ export default function StripeCheckout() {
 
   useEffect(() => {
     startCheckout();
-  }, [interval]);
+  }, [interval, flow, startAt]);
 
   const handleMessage = async (event: WebViewMessageEvent) => {
     if (hasCompletedRef.current) return;
@@ -767,6 +835,49 @@ export default function StripeCheckout() {
     if (data.type === "payment_success") {
       hasCompletedRef.current = true;
       try {
+        if (isUpgrade) {
+          const intentId = data.intentId || upgradeIntentId;
+          if (!intentId) {
+            throw new Error(
+              "Paiement validé mais identifiant de transaction manquant."
+            );
+          }
+          if (auth.currentUser) {
+            await auth.currentUser.getIdToken(true);
+          }
+          const confirmUpgradePayment = httpsCallable(
+            functions,
+            "confirmUpgradePayment"
+          );
+          const res: any = await confirmUpgradePayment({
+            paymentIntentId: intentId,
+          });
+          const startLabel = formatDateLabel(
+            typeof res?.data?.switchAt === "number"
+              ? res.data.switchAt * 1000
+              : startAt
+          );
+          Alert.alert(
+            "Upgrade annuel confirmé",
+            startLabel
+              ? `Ton abonnement annuel démarrera le ${startLabel}.`
+              : "Ton abonnement annuel a bien été programmé.",
+            [
+              {
+                text: "OK",
+                onPress: () => {
+                  if (navigation?.canGoBack?.()) {
+                    navigation.pop(2);
+                  } else {
+                    navigation.navigate("SubscriptionSettings");
+                  }
+                },
+              },
+            ]
+          );
+          return;
+        }
+
         const navType = await markPremium();
         Alert.alert(
           "Succès",
@@ -801,6 +912,24 @@ export default function StripeCheckout() {
           ]
         );
       } catch (err: any) {
+        const code = err?.code || "";
+        const message = err?.message || "";
+        if (isUpgrade && (code === "unauthenticated" || message === "unauthenticated")) {
+          const startLabel = formatDateLabel(startAt);
+          Alert.alert(
+            "Paiement reçu",
+            startLabel
+              ? `Ton paiement est confirmé. L'upgrade sera appliqué d'ici quelques instants (début le ${startLabel}).`
+              : "Ton paiement est confirmé. L'upgrade sera appliqué d'ici quelques instants.",
+            [
+              {
+                text: "OK",
+                onPress: () => navigation.goBack(),
+              },
+            ]
+          );
+          return;
+        }
         setError(err?.message || "Erreur lors de la mise à jour du compte.");
       }
     }
