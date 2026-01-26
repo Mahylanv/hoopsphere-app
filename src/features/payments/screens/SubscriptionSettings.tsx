@@ -140,14 +140,14 @@ export default function SubscriptionSettings() {
       setLoadingAction(true);
       showActionStatus("loading", "Récupération de la facture...");
       const res: any = await getLatestInvoicePdf();
-      const url = res?.data?.url || res?.data?.hostedUrl;
+      const url = res?.data?.hostedUrl || res?.data?.url;
       if (!url) {
         throw new Error("Aucune facture disponible.");
       }
       showActionStatus("success", "Facture ouverte.");
       setTimeout(() => {
         navigation.navigate("InAppWebView", {
-          title: "Facture PDF",
+          title: "Facture",
           url,
         });
       }, 300);

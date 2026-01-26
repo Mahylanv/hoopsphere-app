@@ -205,7 +205,10 @@ const formatAmountLabel = (
   return `${(amount / 100).toFixed(2)} ${safeCurrency}`;
 };
 
-const sendSubscriptionEmail = async (invoice: Stripe.Invoice) => {
+const sendSubscriptionEmail = async (
+  invoice: Stripe.Invoice,
+  userDoc?: UserDocInfo | null
+) => {
   const smtp = resolveSmtpConfig();
   if (!smtp) {
     console.log("SMTP non configuré, email ignoré.");
@@ -217,12 +220,11 @@ const sendSubscriptionEmail = async (invoice: Stripe.Invoice) => {
       ? invoice.customer
       : invoice.customer?.id ?? null;
 
-  const userDoc = customerId
-    ? await resolveUserByStripeCustomerId(customerId)
-    : null;
+  const resolvedUserDoc =
+    userDoc ?? (customerId ? await resolveUserByStripeCustomerId(customerId) : null);
   const email =
     invoice.customer_email ||
-    (userDoc?.data?.email as string | undefined) ||
+    (resolvedUserDoc?.data?.email as string | undefined) ||
     null;
 
   if (!email) {
@@ -267,6 +269,88 @@ const sendSubscriptionEmail = async (invoice: Stripe.Invoice) => {
     subject: "Confirmation d'abonnement Hoopsphere",
     text: lines.join("\n"),
   });
+};
+
+const sendSubscriptionEmailIfNeeded = async (invoice: Stripe.Invoice) => {
+  const customerId =
+    typeof invoice.customer === "string"
+      ? invoice.customer
+      : invoice.customer?.id ?? null;
+  const userDoc = customerId
+    ? await resolveUserByStripeCustomerId(customerId)
+    : null;
+  const isPaid =
+    invoice.status === "paid" || (invoice.amount_paid ?? 0) > 0;
+
+  if (!isPaid) {
+    console.log("facture non payee, email ignore:", {
+      id: invoice.id,
+      status: invoice.status,
+      amount_paid: invoice.amount_paid ?? 0,
+    });
+    return;
+  }
+  const lastInvoiceId = userDoc?.data?.lastInvoiceEmailedId as
+    | string
+    | undefined;
+
+  if (lastInvoiceId && lastInvoiceId === invoice.id) {
+    console.log("email deja envoye pour la facture", invoice.id);
+    return;
+  }
+
+  await sendSubscriptionEmail(invoice, userDoc);
+
+  if (userDoc) {
+    await userDoc.ref.set(
+      {
+        lastInvoiceEmailedId: invoice.id,
+        lastInvoiceEmailedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+};
+
+const handlePaymentIntentSucceeded = async (
+  stripe: Stripe,
+  paymentIntent: Stripe.PaymentIntent
+) => {
+  try {
+    const customerId =
+      typeof paymentIntent.customer === "string"
+        ? paymentIntent.customer
+        : paymentIntent.customer?.id ?? null;
+    if (!customerId) {
+      console.log("payment_intent sans customer:", paymentIntent.id);
+      return;
+    }
+    const invoices = await stripe.invoices.list({
+      customer: customerId,
+      limit: 5,
+    });
+    const resolveInvoicePaymentIntentId = (invoice: Stripe.Invoice) => {
+      const raw = (invoice as any).payment_intent;
+      if (!raw) return null;
+      return typeof raw === "string" ? raw : raw.id ?? null;
+    };
+    const invoice =
+      invoices.data.find(
+        (item) => resolveInvoicePaymentIntentId(item) === paymentIntent.id
+      ) ?? null;
+    if (!invoice) {
+      console.log("payment_intent sans facture associee:", paymentIntent.id);
+      return;
+    }
+    console.log("facture via payment_intent:", {
+      id: invoice.id,
+      status: invoice.status,
+      customer_email: invoice.customer_email,
+    });
+    await sendSubscriptionEmailIfNeeded(invoice);
+  } catch (err) {
+    console.error("Erreur facture via payment_intent:", err);
+  }
 };
 
 const resolveUidFromSubscription = async (
@@ -883,11 +967,20 @@ export const stripeWebhook = functions
   }
 
   try {
+    console.log("stripeWebhook event:", event.type);
     switch (event.type) {
       case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
+        console.log("subscription event:", {
+          id: subscription.id,
+          status: subscription.status,
+          latest_invoice:
+            typeof subscription.latest_invoice === "string"
+              ? subscription.latest_invoice
+              : subscription.latest_invoice?.id,
+        });
         const uid = await resolveUidFromSubscription(stripe, subscription);
         if (!uid) break;
 
@@ -895,12 +988,44 @@ export const stripeWebhook = functions
         await userDoc.ref.set(buildSubscriptionUpdate(subscription), {
           merge: true,
         });
+
+        if (subscription.latest_invoice) {
+          const invoiceId =
+            typeof subscription.latest_invoice === "string"
+              ? subscription.latest_invoice
+              : subscription.latest_invoice?.id;
+          if (invoiceId) {
+            const invoice = await stripe.invoices.retrieve(invoiceId);
+            console.log("latest invoice from subscription:", {
+              id: invoice.id,
+              status: invoice.status,
+              customer_email: invoice.customer_email,
+            });
+            await sendSubscriptionEmailIfNeeded(invoice);
+          }
+        }
+        break;
+      }
+      case "payment_intent.succeeded": {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        console.log("payment_intent.succeeded:", {
+          id: paymentIntent.id,
+          amount: paymentIntent.amount,
+          currency: paymentIntent.currency,
+        });
+        await handlePaymentIntentSucceeded(stripe, paymentIntent);
         break;
       }
       case "invoice.paid":
       case "invoice.payment_succeeded":
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
+        console.log("invoice event:", {
+          id: invoice.id,
+          status: invoice.status,
+          customer: invoice.customer,
+          customer_email: invoice.customer_email,
+        });
         const shouldSendEmail =
           event.type === "invoice.paid" ||
           event.type === "invoice.payment_succeeded";
@@ -928,10 +1053,13 @@ export const stripeWebhook = functions
 
         if (shouldSendEmail) {
           try {
-            await sendSubscriptionEmail(invoice);
+            await sendSubscriptionEmailIfNeeded(invoice);
+            console.log("email abonnement envoye");
           } catch (err) {
             console.error("Erreur envoi email abonnement:", err);
           }
+        } else {
+          console.log("email abonnement ignore pour event:", event.type);
         }
         break;
       }
