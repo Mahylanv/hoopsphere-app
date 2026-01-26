@@ -690,19 +690,26 @@ export const createSubscription = functions
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{price: priceId}],
+      collection_method: "charge_automatically",
       payment_behavior: "default_incomplete",
       payment_settings: {
         save_default_payment_method: "on_subscription",
+        payment_method_types: ["card"],
       },
       expand: ["latest_invoice.payment_intent", "pending_setup_intent"],
       metadata: {uid},
     });
 
-    const latestInvoice = subscription.latest_invoice;
+    const expandedSubscription = await stripe.subscriptions.retrieve(
+      subscription.id,
+      { expand: ["latest_invoice.payment_intent"] }
+    );
+    const latestInvoice = expandedSubscription.latest_invoice;
 
     let paymentIntentId: string | null = null;
     let paymentIntentClientSecret: string | null = null;
     let setupIntentClientSecret: string | null = null;
+    let noPaymentRequired = false;
 
     // 1ï¸âƒ£ latest_invoice est un ID string
     if (typeof latestInvoice === "string") {
@@ -747,35 +754,68 @@ export const createSubscription = functions
       }
     }
 
-    const pendingSetupIntent =
-      subscription.pending_setup_intent as
-        | string
-        | Stripe.SetupIntent
-        | null
-        | undefined;
+    if (!paymentIntentClientSecret && paymentIntentId) {
+      const paymentIntent =
+        await stripe.paymentIntents.retrieve(paymentIntentId);
+      paymentIntentClientSecret = paymentIntent.client_secret;
+    }
 
-    if (typeof pendingSetupIntent === "string") {
-      const setupIntent =
-        await stripe.setupIntents.retrieve(pendingSetupIntent);
-      setupIntentClientSecret = setupIntent.client_secret;
-    } else if (
-      pendingSetupIntent &&
-      typeof pendingSetupIntent === "object"
-    ) {
-      if (typeof pendingSetupIntent.client_secret === "string") {
-        setupIntentClientSecret = pendingSetupIntent.client_secret;
-      } else if (typeof pendingSetupIntent.id === "string") {
-        const setupIntent =
-          await stripe.setupIntents.retrieve(pendingSetupIntent.id);
-        setupIntentClientSecret = setupIntent.client_secret;
+    if (!paymentIntentClientSecret) {
+      const latestInvoiceId =
+        typeof latestInvoice === "string"
+          ? latestInvoice
+          : latestInvoice?.id ?? null;
+      if (latestInvoiceId) {
+        let invoice =
+          typeof latestInvoice === "object" && latestInvoice !== null
+            ? (latestInvoice as Stripe.Invoice)
+            : await stripe.invoices.retrieve(latestInvoiceId, {
+                expand: ["payment_intent"],
+              });
+
+        if (invoice.status === "draft") {
+          invoice = await stripe.invoices.finalizeInvoice(invoice.id);
+        }
+
+        const invoiceIntent = (invoice as Stripe.Invoice & {
+          payment_intent?: string | Stripe.PaymentIntent | null;
+        }).payment_intent;
+        if (typeof invoiceIntent === "string") {
+          const paymentIntent =
+            await stripe.paymentIntents.retrieve(invoiceIntent);
+          paymentIntentClientSecret = paymentIntent.client_secret;
+        } else if (invoiceIntent && typeof invoiceIntent === "object") {
+          paymentIntentClientSecret = invoiceIntent.client_secret ?? null;
+          if (!paymentIntentClientSecret && invoiceIntent.id) {
+            const paymentIntent =
+              await stripe.paymentIntents.retrieve(invoiceIntent.id);
+            paymentIntentClientSecret = paymentIntent.client_secret;
+          }
+        }
+
+        if (
+          !paymentIntentClientSecret &&
+          invoice.amount_due === 0 &&
+          (invoice.status === "paid" ||
+            subscription.status === "active" ||
+            subscription.status === "trialing")
+        ) {
+          noPaymentRequired = true;
+        }
+
+        if (!paymentIntentClientSecret && !noPaymentRequired) {
+          console.warn("createSubscription: payment_intent manquant", {
+            subscriptionId: subscription.id,
+            invoiceId: invoice.id,
+            invoiceStatus: invoice.status,
+            collectionMethod: (invoice as any).collection_method,
+            amountDue: invoice.amount_due,
+          });
+        }
       }
     }
 
-    if (
-      !paymentIntentClientSecret &&
-      !paymentIntentId &&
-      !setupIntentClientSecret
-    ) {
+    if (!paymentIntentClientSecret && !noPaymentRequired) {
       const setupIntent = await stripe.setupIntents.create({
         customer: customerId,
         usage: "off_session",
@@ -783,10 +823,11 @@ export const createSubscription = functions
       setupIntentClientSecret = setupIntent.client_secret;
     }
 
-    if (!paymentIntentClientSecret && paymentIntentId) {
-      const paymentIntent =
-        await stripe.paymentIntents.retrieve(paymentIntentId);
-      paymentIntentClientSecret = paymentIntent.client_secret;
+    if (!paymentIntentClientSecret && !setupIntentClientSecret && !noPaymentRequired) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "Impossible de créer le paiement. Merci de réessayer."
+      );
     }
 
     await userDoc.ref.set(buildSubscriptionUpdate(subscription), {merge: true});
@@ -794,6 +835,7 @@ export const createSubscription = functions
       return {
         clientSecret: paymentIntentClientSecret,
         setupIntentClientSecret,
+        noPaymentRequired,
         subscriptionId: subscription.id,
         customerId,
         ephemeralKeySecret: ephemeralKey.secret,
@@ -815,6 +857,103 @@ export const createSubscription = functions
     }
   }
 );
+
+// --------------------------------------------------
+// 🔹 Finaliser le paiement d'une subscription (fallback setup intent)
+// --------------------------------------------------
+export const confirmSubscriptionPayment = functions
+  .runWith({ secrets: [stripeSecretKey] })
+  .https.onCall(async (data, context) => {
+    try {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+          "unauthenticated",
+          "User not authenticated"
+        );
+      }
+      const stripe = getStripeOrThrow();
+
+      const uid = context.auth.uid;
+      const paymentMethodId = data?.paymentMethodId as string | undefined;
+      const subscriptionIdOverride = data?.subscriptionId as string | undefined;
+
+      if (!paymentMethodId) {
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "paymentMethodId manquant."
+        );
+      }
+
+      const userDoc = await resolveUserDoc(uid);
+      const customerId = userDoc.data?.stripeCustomerId as string | undefined;
+      if (!customerId) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Aucun customer Stripe lié à ce compte."
+        );
+      }
+
+      const subscriptionId = subscriptionIdOverride
+        ? subscriptionIdOverride
+        : await resolveSubscriptionId(
+            stripe,
+            customerId,
+            userDoc.data?.stripeSubscriptionId
+          );
+      if (!subscriptionId) {
+        throw new functions.https.HttpsError(
+          "not-found",
+          "Aucun abonnement actif."
+        );
+      }
+
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const latestInvoiceId =
+        typeof subscription.latest_invoice === "string"
+          ? subscription.latest_invoice
+          : subscription.latest_invoice?.id ?? null;
+
+      try {
+        await stripe.paymentMethods.attach(paymentMethodId, {
+          customer: customerId,
+        });
+      } catch (err: any) {
+        if (err?.code !== "resource_already_exists") {
+          throw err;
+        }
+      }
+
+      await stripe.customers.update(customerId, {
+        invoice_settings: { default_payment_method: paymentMethodId },
+      });
+      await stripe.subscriptions.update(subscriptionId, {
+        default_payment_method: paymentMethodId,
+      });
+
+      if (latestInvoiceId) {
+        let invoice = await stripe.invoices.retrieve(latestInvoiceId);
+        if (invoice.status === "draft") {
+          invoice = await stripe.invoices.finalizeInvoice(invoice.id);
+        }
+        if (invoice.status === "open") {
+          await stripe.invoices.pay(invoice.id, {
+            payment_method: paymentMethodId,
+          });
+        }
+      }
+
+      const updatedSubscription = await stripe.subscriptions.retrieve(
+        subscriptionId
+      );
+      await userDoc.ref.set(buildSubscriptionUpdate(updatedSubscription), {
+        merge: true,
+      });
+
+      return { status: updatedSubscription.status };
+    } catch (err) {
+      handleStripeError(err, "Impossible de finaliser le paiement.");
+    }
+  });
 
 // --------------------------------------------------
 // ÃY"Ã» Stripe Customer Portal
@@ -1032,13 +1171,155 @@ export const setCancelAtPeriodEnd = functions
         );
       }
 
-      const subscription = await stripe.subscriptions.update(subscriptionId, {
-        cancel_at_period_end: cancelAtPeriodEnd,
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const scheduleId =
+        typeof subscription.schedule === "string"
+          ? subscription.schedule
+          : subscription.schedule?.id ?? null;
+      let schedule: Stripe.SubscriptionSchedule | null = null;
+      if (scheduleId) {
+        schedule = await stripe.subscriptionSchedules.retrieve(scheduleId);
+        if (schedule.status === "canceled" || schedule.status === "released") {
+          schedule = null;
+        }
+      }
+
+      if (schedule) {
+        const item = subscription.items.data[0];
+        const currentPeriodEnd = item?.current_period_end ?? null;
+        const currentPeriodStart = item?.current_period_start ?? null;
+        const currentPriceId = item?.price?.id ?? null;
+        const currentQuantity = item?.quantity ?? 1;
+
+        if (!currentPeriodEnd || !currentPeriodStart || !currentPriceId) {
+          throw new functions.https.HttpsError(
+            "failed-precondition",
+            "Impossible de modifier cet abonnement."
+          );
+        }
+
+        const normalizePhase = (
+          phase: Stripe.SubscriptionSchedule.Phase
+        ): Stripe.SubscriptionScheduleUpdateParams.Phase => {
+          const items = (phase.items ?? [])
+            .map((phaseItem) => ({
+              price:
+                typeof phaseItem.price === "string"
+                  ? phaseItem.price
+                  : phaseItem.price?.id ?? null,
+              quantity: phaseItem.quantity ?? 1,
+            }))
+            .filter((phaseItem) => phaseItem.price);
+
+          const normalized: Stripe.SubscriptionScheduleUpdateParams.Phase = {
+            start_date: phase.start_date ?? currentPeriodStart,
+            items,
+          };
+          if (phase.end_date) {
+            normalized.end_date = phase.end_date;
+          }
+          if (phase.billing_cycle_anchor) {
+            normalized.billing_cycle_anchor = phase.billing_cycle_anchor;
+          }
+          if (phase.proration_behavior) {
+            normalized.proration_behavior = phase.proration_behavior;
+          }
+          return normalized;
+        };
+
+        let phases = (schedule.phases ?? [])
+          .map(normalizePhase)
+          .filter((phase) => phase.items.length > 0);
+
+        if (phases.length === 0) {
+          phases = [
+            {
+              start_date: currentPeriodStart,
+              end_date: currentPeriodEnd,
+              items: [{ price: currentPriceId, quantity: currentQuantity }],
+              proration_behavior: "none",
+            },
+          ];
+        }
+
+        if (cancelAtPeriodEnd) {
+          const cutoff = currentPeriodEnd;
+          let index = phases.findIndex((phase) => {
+            const phaseStart =
+              typeof phase.start_date === "number"
+                ? phase.start_date
+                : currentPeriodStart;
+            const phaseEnd =
+              typeof phase.end_date === "number"
+                ? phase.end_date
+                : phase.end_date === "now"
+                  ? Math.floor(Date.now() / 1000)
+                  : Number.POSITIVE_INFINITY;
+            return phaseStart <= cutoff && phaseEnd >= cutoff;
+          });
+          if (index === -1) {
+            index = phases.length - 1;
+          }
+          const trimmed = phases.slice(0, index + 1);
+          trimmed[index] = {
+            ...trimmed[index],
+            end_date: cutoff,
+          };
+
+          await stripe.subscriptionSchedules.update(schedule.id, {
+            end_behavior: "cancel",
+            phases: trimmed,
+          });
+
+          await userDoc.ref.set(
+            {
+              ...buildSubscriptionUpdate(subscription),
+              subscriptionCancelAtPeriodEnd: true,
+              subscriptionScheduledInterval: null,
+              subscriptionScheduledAt: null,
+            },
+            { merge: true }
+          );
+
+          return { status: subscription.status };
+        }
+
+        const lastIndex = phases.length - 1;
+        if (lastIndex >= 0) {
+          phases[lastIndex] = {
+            ...phases[lastIndex],
+            end_date: undefined,
+          };
+        }
+
+        await stripe.subscriptionSchedules.update(schedule.id, {
+          end_behavior: "release",
+          phases,
+        });
+
+        await userDoc.ref.set(
+          {
+            ...buildSubscriptionUpdate(subscription),
+            subscriptionCancelAtPeriodEnd: false,
+          },
+          { merge: true }
+        );
+
+        return { status: subscription.status };
+      }
+
+      const updatedSubscription = await stripe.subscriptions.update(
+        subscriptionId,
+        {
+          cancel_at_period_end: cancelAtPeriodEnd,
+        }
+      );
+
+      await userDoc.ref.set(buildSubscriptionUpdate(updatedSubscription), {
+        merge: true,
       });
 
-      await userDoc.ref.set(buildSubscriptionUpdate(subscription), {merge: true});
-
-      return { status: subscription.status };
+      return { status: updatedSubscription.status };
     } catch (err) {
       handleStripeError(err, "Impossible de modifier le renouvellement.");
     }
