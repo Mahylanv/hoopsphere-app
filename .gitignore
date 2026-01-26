@@ -69,3 +69,6 @@ functions/package.json
 functions/package-lock.json
 
 scripts/serviceAccountKey.json
+
+
+stripe/firebase-debug.log
