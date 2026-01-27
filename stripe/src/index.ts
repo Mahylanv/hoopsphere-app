@@ -859,6 +859,42 @@ export const createSubscription = functions
 );
 
 // --------------------------------------------------
+// 🔹 Nettoyage des données à la suppression Auth
+// --------------------------------------------------
+export const cleanupUserOnDelete = functions.auth.user().onDelete(
+  async (user) => {
+    const uid = user.uid;
+    const joueurRef = db.collection("joueurs").doc(uid);
+    const clubRef = db.collection("clubs").doc(uid);
+
+    const safeDeleteDoc = async (
+      ref: FirebaseFirestore.DocumentReference
+    ) => {
+      if (typeof (admin.firestore() as any).recursiveDelete === "function") {
+        await (admin.firestore() as any).recursiveDelete(ref);
+      } else {
+        await ref.delete();
+      }
+    };
+
+    try {
+      await Promise.all([safeDeleteDoc(joueurRef), safeDeleteDoc(clubRef)]);
+    } catch (err) {
+      console.error("cleanupUserOnDelete: Firestore delete failed", err);
+    }
+
+    try {
+      await admin
+        .storage()
+        .bucket()
+        .deleteFiles({ prefix: `avatars/${uid}` });
+    } catch (err) {
+      console.error("cleanupUserOnDelete: Storage delete failed", err);
+    }
+  }
+);
+
+// --------------------------------------------------
 // 🔹 Finaliser le paiement d'une subscription (fallback setup intent)
 // --------------------------------------------------
 export const confirmSubscriptionPayment = functions

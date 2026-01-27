@@ -9,6 +9,8 @@ import {
   StatusBar,
   ActivityIndicator,
   ImageBackground,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -106,17 +108,19 @@ export default function Connexion() {
     }
   };
 
+
   return (
-    <View className="flex-1 bg-black">
-      <StatusBar barStyle="light-content" translucent />
-      <ImageBackground
-        source={backgroundImage}
-        resizeMode="cover"
-        className="flex-1"
-        imageStyle={{ opacity: 0.6 }}
-      >
-        <View className="absolute inset-0 bg-black/55" />
-        <View className="flex-1 px-6 justify-center space-y-6">
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View className="flex-1 bg-black">
+        <StatusBar barStyle="light-content" translucent />
+        <ImageBackground
+          source={backgroundImage}
+          resizeMode="cover"
+          className="flex-1"
+          imageStyle={{ opacity: 0.6 }}
+        >
+          <View className="absolute inset-0 bg-black/55" />
+          <View className="flex-1 px-6 justify-center space-y-6">
         <Text className="text-white text-3xl font-bold text-center mb-4">
           Connexion
         </Text>
@@ -193,6 +197,7 @@ export default function Connexion() {
           </View>
         )}
 
+
         <Pressable
           onPress={handleLogin}
           disabled={!email || !password || loading}
@@ -226,8 +231,9 @@ export default function Connexion() {
           <Ionicons name="arrow-back" size={18} color="#fff" />
           <Text className="text-white underline">Retour</Text>
         </Pressable>
+          </View>
+        </ImageBackground>
       </View>
-      </ImageBackground>
-    </View>
+    </TouchableWithoutFeedback>
   );
 }

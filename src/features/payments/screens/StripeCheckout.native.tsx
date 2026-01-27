@@ -839,7 +839,7 @@ export default function StripeCheckout() {
       const priceLabel =
         interval === "year" ? "19,99 EUR / an" : "2,49 EUR / mois";
       const renewalLabel =
-        interval === "year" ? "Chaque annee" : "Chaque mois";
+        interval === "year" ? "Chaque année" : "Chaque mois";
 
       const prefillName = await getPrefillName();
 

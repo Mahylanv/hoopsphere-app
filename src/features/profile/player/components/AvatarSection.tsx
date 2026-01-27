@@ -12,7 +12,11 @@ import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import CardOverlay from "./CardOverlay";
 import PremiumBadge from "../../../../shared/components/PremiumBadge";
-import { CARD_PREMIUM, CARD_NORMAL } from "../../../../constants/images";
+import {
+  CARD_PREMIUM,
+  CARD_NORMAL,
+  PROFILE_PLACEHOLDER,
+} from "../../../../constants/images";
 
 type PlayerStats = {
   gamesPlayed: number;
@@ -55,6 +59,14 @@ export default function AvatarSection({
   rating,
   editable = true,
 }: Props) {
+  const avatarSize = 147;
+  const avatarUri =
+    typeof user.avatar === "string" &&
+    user.avatar.trim() !== "" &&
+    user.avatar !== "null" &&
+    user.avatar !== "undefined"
+      ? user.avatar
+      : null;
   const cardSource =
   user.premium && user.cardStyle === "premium"
     ? CARD_PREMIUM
@@ -99,22 +111,28 @@ export default function AvatarSection({
       >
         {/* 🟦 Avatar dans le rond */}
         <View
-          className="absolute bg-[#111] overflow-hidden"
+          className="absolute overflow-hidden"
           style={{
-            top: 76,
-            right: 106,
-            width: 141,
-            height: 141,
-            borderRadius: 134 / 2,
+            top: 73.3,
+            right: 103.8,
+            width: avatarSize,
+            height: avatarSize,
+            borderRadius: avatarSize / 2,
             zIndex: 20,
           }}
         >
-          <Image
-            source={{
-              uri: user.avatar || "https://i.pravatar.cc/300?img=12",
-            }}
-            className="w-full h-full"
-          />
+          {avatarUri ? (
+            <Image
+              source={{ uri: avatarUri }}
+              className="w-full h-full"
+            />
+          ) : (
+            <Image
+              source={PROFILE_PLACEHOLDER}
+              className="w-full h-full"
+              resizeMode="cover"
+            />
+          )}
 
           {/* ✏️ Bouton modifier avatar */}
           {editable && (

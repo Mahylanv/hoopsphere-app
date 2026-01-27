@@ -6,13 +6,14 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { RankingFilter } from "../../search/utils/sortPlayers";
 import PremiumBadge from "../../../shared/components/PremiumBadge";
+import { PROFILE_PLACEHOLDER } from "../../../constants/images";
 
 interface RankingItemProps {
   player: {
     uid: string;
     rank: number;
     name: string;
-    avatar: string;
+    avatar: string | null;
     average: number;
     rating: number;
     trend: "up" | "down" | "same";
@@ -47,6 +48,13 @@ export default function RankingItem({
       : player.trend === "down"
         ? "arrow-down"
         : "remove";
+  const avatarUri =
+    typeof player.avatar === "string" &&
+    player.avatar.trim() !== "" &&
+    player.avatar !== "null" &&
+    player.avatar !== "undefined"
+      ? player.avatar
+      : null;
 
   const getStatText = () => {
     switch (filter) {
@@ -91,12 +99,7 @@ export default function RankingItem({
           </View>
 
           <Image
-            source={{
-              uri:
-                player.avatar && player.avatar.trim() !== ""
-                  ? player.avatar
-                  : "https://via.placeholder.com/200.png",
-            }}
+            source={avatarUri ? { uri: avatarUri } : PROFILE_PLACEHOLDER}
             className="w-12 h-12 rounded-full mr-4 bg-gray-700"
             resizeMode="cover"
           />

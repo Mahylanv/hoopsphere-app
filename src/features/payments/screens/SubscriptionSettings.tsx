@@ -211,8 +211,10 @@ export default function SubscriptionSettings() {
     try {
       setLoadingAction(true);
       showActionStatus("loading", "Ouverture du portail...");
+      const portalReturnUrl =
+        "https://hoopsphere-df315.firebaseapp.com/billing-return";
       const res: any = await createPortalSession({
-        returnUrl: Linking.createURL("https://billing.stripe.com/p/login/test_6oU4gyetlaDyeFX7Vi33W00"),
+        returnUrl: portalReturnUrl,
       });
       const url = res?.data?.url;
       if (!url) throw new Error("Lien de portail indisponible.");
@@ -582,11 +584,11 @@ export default function SubscriptionSettings() {
               className={`rounded-2xl py-3 px-4 items-center mb-3 flex-row border ${
                 loadingAction || !canCancelScheduledChange
                   ? "bg-white/5 border-white/10 opacity-50"
-                  : "bg-red-600 border-red-500"
+                  : "bg-amber-500/15 border-amber-500/40"
               }`}
             >
-              <View className="h-9 w-9 rounded-full bg-red-500/20 border border-red-500/50 items-center justify-center mr-3">
-                <Ionicons name="close-circle-outline" size={18} color="#FEE2E2" />
+              <View className="h-9 w-9 rounded-full bg-amber-500/20 border border-amber-500/50 items-center justify-center mr-3">
+                <Ionicons name="close-circle-outline" size={18} color="#FCD34D" />
               </View>
               <Text className="text-white font-semibold">
                 Annuler le changement programmé

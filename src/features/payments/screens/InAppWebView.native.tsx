@@ -15,6 +15,8 @@ export default function InAppWebView() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProps>();
   const { title, url } = route.params;
+  const portalReturnUrl =
+    "https://hoopsphere-df315.firebaseapp.com/billing-return";
   const [loading, setLoading] = useState(true);
   const isPdf =
     /\.pdf($|\?)/i.test(url) || url.toLowerCase().includes("invoice_pdf");
@@ -38,6 +40,14 @@ export default function InAppWebView() {
       <WebView
         source={{ uri: displayUrl }}
         originWhitelist={["*"]}
+        onShouldStartLoadWithRequest={(request) => {
+          const nextUrl = request?.url ?? "";
+          if (nextUrl.startsWith(portalReturnUrl)) {
+            navigation.goBack();
+            return false;
+          }
+          return true;
+        }}
         onLoadStart={() => setLoading(true)}
         onLoadEnd={() => setLoading(false)}
         style={{ flex: 1 }}

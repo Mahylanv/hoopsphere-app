@@ -143,7 +143,6 @@ export type MainTabParamListJoueur = {
   HomeScreen: undefined;
   Match: undefined;
   // Chat: undefined;
-  TestPrenium: undefined;
   Search: undefined;
   Profil: undefined;
 };
@@ -157,7 +156,6 @@ export type MainTabParamListClub = {
   SearchJoueur: undefined;
   ProfilClub: undefined;
   SearchJoueurTabs: undefined;
-  ClubPremium: undefined;
   ClubLikedVideos: undefined;
   ClubVisitors: undefined;
 };

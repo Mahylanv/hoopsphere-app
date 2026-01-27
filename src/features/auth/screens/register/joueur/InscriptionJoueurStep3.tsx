@@ -33,7 +33,13 @@ import { auth } from "../../../../../config/firebaseConfig";
 
 const tailles = Array.from({ length: 71 }, (_, i) => `${150 + i} cm`);
 const poidsOptions = Array.from({ length: 101 }, (_, i) => `${40 + i} kg`);
-const postes = ["Meneur", "Arrière", "Ailier", "Ailier fort", "Pivot"];
+const postes = [
+  { label: "Meneur", value: "MEN" },
+  { label: "Arrière", value: "ARR" },
+  { label: "Ailier", value: "AIL" },
+  { label: "Ailier fort", value: "AF" },
+  { label: "Pivot", value: "PIV" },
+];
 
 type Nav3Prop = NativeStackNavigationProp<
   RootStackParamList,
@@ -256,7 +262,9 @@ export default function InscriptionJoueurStep3() {
               poste ? "text-white" : "text-gray-400"
             )}
           >
-            {poste || "Sélectionne ton poste"}
+            {postes.find((p) => p.value === poste)?.label ||
+              poste ||
+              "Sélectionne ton poste"}
           </Text>
         </TouchableOpacity>
 
@@ -334,9 +342,11 @@ export default function InscriptionJoueurStep3() {
 }
 
 /* --------------------------- MODALE SIMPLE (TAILLE / POIDS / POSTE) --------------------------- */
+type PickerItem = string | { label: string; value: string };
+
 function renderPickerModal(
   title: string,
-  list: string[],
+  list: PickerItem[],
   onSelect: (v: string) => void,
   close: (arg: any) => void
 ) {
@@ -346,18 +356,22 @@ function renderPickerModal(
         <View className="bg-zinc-900 rounded-xl w-[80%] max-h-[70%] p-5">
           <Text className="text-white text-lg font-bold mb-4">{title}</Text>
           <ScrollView className="mb-4">
-            {list.map((item) => (
+            {list.map((item) => {
+              const label = typeof item === "string" ? item : item.label;
+              const value = typeof item === "string" ? item : item.value;
+              return (
               <TouchableOpacity
-                key={item}
+                key={value}
                 onPress={() => {
-                  onSelect(item);
+                  onSelect(value);
                   close(null);
                 }}
                 className="py-3 border-b border-gray-700"
               >
-                <Text className="text-white">{item}</Text>
+                <Text className="text-white">{label}</Text>
               </TouchableOpacity>
-            ))}
+              );
+            })}
           </ScrollView>
 
           <TouchableOpacity

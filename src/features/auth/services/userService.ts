@@ -1,8 +1,9 @@
 // src/services/userService.ts
 
 import { auth, db, storage } from "../../../config/firebaseConfig";
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL, deleteObject, listAll} from "firebase/storage";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 
 export const getUserProfile = async () => {
   const uid = auth.currentUser?.uid;
@@ -33,29 +34,23 @@ export const updateAvatar = async (imageUri: string) => {
   return url;
 };
 
-export const deleteUserAccount = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
-  
-    try {
-      const uid = user.uid;
-  
-      // 1️⃣ Supprimer les fichiers de l'utilisateur (avatars, etc.)
-      const userFolderRef = ref(storage, `avatars/${uid}`);
-      const files = await listAll(userFolderRef);
-      for (const fileRef of files.items) {
-        await deleteObject(fileRef);
-      }
-  
-      // 2️⃣ Supprimer le document Firestore
-      await deleteDoc(doc(db, "joueurs", uid));
-  
-      // 3️⃣ Supprimer le compte Auth
-      await user.delete();
-  
-      return true;
-    } catch (error) {
-      console.error("Erreur lors de la suppression du compte :", error);
-      throw error;
+export const deleteUserAccount = async (password?: string) => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  try {
+    if (password && user.email) {
+      const cred = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, cred);
     }
-  };
+
+    // Supprime uniquement Auth. Les données Firestore/Storage sont nettoyées
+    // via la fonction backend cleanupUserOnDelete.
+    await user.delete();
+
+    return true;
+  } catch (error) {
+    console.error("Erreur lors de la suppression du compte :", error);
+    throw error;
+  }
+};
