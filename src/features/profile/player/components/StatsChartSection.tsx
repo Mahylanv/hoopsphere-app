@@ -118,7 +118,7 @@ export default function StatsChartSection({
     const chartData = useMemo(
         () =>
             rows.map((r, idx) => ({
-                x: idx + 1, // 1..N
+                x: idx, // 0..N-1 pour coller le 1er point a l'axe Y
                 y: isFiniteNumber((r as any)[metric]) ? Number((r as any)[metric]) : 0,
                 label: makePointLabel(r, metric, idx),
             })),
@@ -142,7 +142,14 @@ export default function StatsChartSection({
         return { yDomain: [0, Math.max(1, top)] as [number, number], yTicks: ticks };
     }, [chartData]);
 
-    const xTicks = useMemo(() => rows.map((_, i) => i + 1), [rows]);
+    const xTicks = useMemo(() => rows.map((_, i) => i), [rows]);
+    const xTickValues = useMemo(() => {
+        const count = xTicks.length;
+        if (count <= 6) return xTicks;
+        const step = Math.ceil(count / 6);
+        const last = count - 1;
+        return xTicks.filter((v) => v % step === 0 || v === last);
+    }, [xTicks]);
 
     const [containerW, setContainerW] = useState<number>(0);
     const PX_PER_POINT = 28;
@@ -151,6 +158,19 @@ export default function StatsChartSection({
         const content = xTicks.length * PX_PER_POINT + PAD_LEFT + PAD_RIGHT;
         return Math.max(containerW || 0, content || 0);
     }, [containerW, xTicks]);
+
+    const formatXAxisTick = (value: number) => {
+        const row = rows[value];
+        if (!row) return String(value);
+        const date = row.matchDate?.toDate?.();
+        if (date) {
+            return new Date(date).toLocaleDateString("fr-FR", {
+                day: "2-digit",
+                month: "2-digit",
+            });
+        }
+        return row.matchNumber ? `M${row.matchNumber}` : `M${value + 1}`;
+    };
     function addHeadroom(maxVal: number, ratio = 0.15): number {
         if (maxVal <= 0) return 1;      // au moins 0→1
         if (maxVal <= 5) return maxVal + 1; // petits compteurs: +1
@@ -229,8 +249,8 @@ export default function StatsChartSection({
                                         width={chartWidth}
                                         padding={{ top: 24, bottom: 50, left: PAD_LEFT, right: PAD_RIGHT }}
                                         theme={VictoryTheme.material}
-                                        domain={{ x: [1, Math.max(1, xTicks.length)], y: yDomain }}
-                                        domainPadding={{ x: 8, y: 12 }}
+                                        domain={{ x: [0, Math.max(1, xTicks.length - 1)], y: yDomain }}
+                                        domainPadding={{ x: 0, y: 12 }}
                                     >
                                         <VictoryAxis
                                             dependentAxis
@@ -238,28 +258,34 @@ export default function StatsChartSection({
                                             tickFormat={(t) => String(t)}
                                             style={{
                                                 axis: { stroke: "#4B5563" },
-                                                tickLabels: { fill: "#D1D5DB", fontSize: 12 },
-                                                grid: { stroke: "#374151" },
+                                                tickLabels: { fill: "#E5E7EB", fontSize: 12 },
+                                                grid: { stroke: "#374151", strokeDasharray: "4,6" },
                                             }}
                                         />
                                         <VictoryAxis
-                                            tickValues={xTicks}          
-                                            tickFormat={(t) => String(t)} 
+                                            tickValues={xTickValues}
+                                            tickFormat={(t) => formatXAxisTick(Number(t))}
                                             style={{
                                                 axis: { stroke: "#4B5563" },
-                                                tickLabels: { fill: "#9CA3AF", fontSize: 12 },
+                                                tickLabels: {
+                                                    fill: "#9CA3AF",
+                                                    fontSize: 11,
+                                                    angle: -30,
+                                                    textAnchor: "end",
+                                                    padding: 10,
+                                                },
                                                 grid: { stroke: "transparent" },
                                             }}
                                         />
                                         <VictoryLine
                                             data={chartData}
                                             interpolation="monotoneX"
-                                            style={{ data: { stroke: "#F97316", strokeWidth: 3 } }}
+                                            style={{ data: { stroke: "#FCA85D", strokeWidth: 3 } }}
                                         />
                                         <VictoryScatter
                                             data={chartData}
-                                            size={4}
-                                            style={{ data: { fill: "#FDBA74" } }}
+                                            size={5}
+                                            style={{ data: { fill: "#F97316", stroke: "#111827", strokeWidth: 1 } }}
                                             labels={({ datum }) => datum.label}
                                             labelComponent={
                                                 <VictoryTooltip

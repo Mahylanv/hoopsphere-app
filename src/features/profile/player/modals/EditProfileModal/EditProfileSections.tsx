@@ -190,6 +190,7 @@ export default function EditProfileSections(props: Props) {
                   : new Date(2005, 0, 1)
               }
               mode="date"
+              locale="fr-FR"
               display={Platform.OS === "ios" ? "spinner" : "calendar"}
               themeVariant="dark" // ⭐ IMPORTANT : rend le texte visible
               textColor="#ffffff" // ⭐ iOS : force le texte en blanc

@@ -1,4 +1,4 @@
-// src/Components/Connexion.tsx
+﻿// src/Components/Connexion.tsx
 
 import React, { useEffect, useState } from "react";
 import {
@@ -9,6 +9,8 @@ import {
   StatusBar,
   ActivityIndicator,
   ImageBackground,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -38,6 +40,8 @@ export default function Connexion() {
   const [loading, setLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     Asset.fromModule(backgroundImage).downloadAsync().catch(() => null);
@@ -47,11 +51,17 @@ export default function Connexion() {
     if (!email || !password) return;
     setLoading(true);
     setError(null);
+    setEmailError(null);
+    setPasswordError(null);
 
     try {
-      console.log("Email tapé:", email);
-      console.log("Email normalisé:", email.trim().toLowerCase());
       const cleanEmail = email.trim().toLowerCase();
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail);
+      if (!emailOk) {
+        setEmailError("Adresse email invalide.");
+        setLoading(false);
+        return;
+      }
 
       const userCredential = await signInWithEmailAndPassword(
         auth,
@@ -70,7 +80,7 @@ export default function Connexion() {
         return;
       }
 
-      // 🔎 Vérifie dans "clubs"
+      // Verify in clubs
       const clubDoc = await getDoc(doc(db, "clubs", uid));
       if (clubDoc.exists()) {
         await AsyncStorage.setItem("userType", "club");
@@ -81,43 +91,46 @@ export default function Connexion() {
         return;
       }
 
-      // ⚠️ Si ni joueur ni club trouvé
-      setError("Compte introuvable dans la base de données.");
+      // Not found
+      setError("Compte introuvable dans la base de donnees.");
     } catch (err: any) {
-      console.error("Erreur connexion:", err.code, err.message);
-
       if (err.code === "auth/invalid-email") {
-        setError("Adresse email invalide.");
+        setEmailError("Adresse email invalide.");
       } else if (err.code === "auth/user-not-found") {
-        setError("Aucun utilisateur trouvé avec cet email.");
+        setEmailError("Aucun utilisateur trouve avec cet email.");
       } else if (err.code === "auth/wrong-password") {
-        setError("Mot de passe incorrect.");
+        setPasswordError("Mot de passe incorrect.");
       } else {
-        setError("Échec de la connexion. Veuillez réessayer.");
+        setError("Echec de la connexion. Veuillez reessayer.");
       }
     } finally {
       setLoading(false);
     }
   };
 
+
   return (
-    <View className="flex-1 bg-black">
-      <StatusBar barStyle="light-content" translucent />
-      <ImageBackground
-        source={backgroundImage}
-        resizeMode="cover"
-        className="flex-1"
-        imageStyle={{ opacity: 0.6 }}
-      >
-        <View className="absolute inset-0 bg-black/55" />
-        <View className="flex-1 px-6 justify-center space-y-6">
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View className="flex-1 bg-black">
+        <StatusBar barStyle="light-content" translucent />
+        <ImageBackground
+          source={backgroundImage}
+          resizeMode="cover"
+          className="flex-1"
+          imageStyle={{ opacity: 0.6 }}
+        >
+          <View className="absolute inset-0 bg-black/55" />
+          <View className="flex-1 px-6 justify-center space-y-6">
         <Text className="text-white text-3xl font-bold text-center mb-4">
           Connexion
         </Text>
 
         <TextInput
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(value) => {
+            setEmail(value);
+            if (emailError) setEmailError(null);
+          }}
           placeholder="Email"
           placeholderTextColor="#999"
           keyboardType="email-address"
@@ -125,22 +138,41 @@ export default function Connexion() {
           onFocus={() => setFocusedInput("email")}
           onBlur={() => setFocusedInput(null)}
           className={clsx(
-            "border-2 rounded-lg h-14 px-4 text-white text-base mb-5",
-            focusedInput === "email" ? "border-orange-500" : "border-white"
+            "border-2 rounded-lg h-14 px-4 text-white text-base",
+            emailError
+              ? "border-red-500 mb-2"
+              : focusedInput === "email"
+                ? "border-orange-500 mb-5"
+                : "border-white mb-5"
           )}
         />
+        {emailError && (
+          <Text className="text-red-400 text-sm -mt-1 mb-4 text-center">
+            {emailError}
+          </Text>
+        )}
 
-        <View className="flex-row items-center px-4 mb-5 bg-[#1A1A1A] rounded-lg h-14">
+        <View
+          className={clsx(
+            "flex-row items-center px-4 rounded-lg h-14 border-2",
+            passwordError
+              ? "border-red-500 bg-[#1A1A1A] mb-2"
+              : "border-transparent bg-[#1A1A1A] mb-5"
+          )}
+        >
           <TextInput
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(value) => {
+              setPassword(value);
+              if (passwordError) setPasswordError(null);
+            }}
             placeholder="Mot de passe"
             placeholderTextColor="#999"
             secureTextEntry={!showPassword}
             onFocus={() => setFocusedInput("password")}
             onBlur={() => setFocusedInput(null)}
-            underlineColorAndroid="transparent" // ✅ SUPPRIME le border Android
-            selectionColor="#F97316" // (optionnel) couleur du curseur
+            underlineColorAndroid="transparent"
+            selectionColor="#F97316"
             className="flex-1 text-white text-base"
           />
 
@@ -152,11 +184,19 @@ export default function Connexion() {
             />
           </Pressable>
         </View>
-
-        {/* ⚡ Message d'erreur */}
-        {error && (
-          <Text className="text-red-500 text-center mb-2">{error}</Text>
+        {passwordError && (
+          <Text className="text-red-400 text-sm -mt-1 mb-4 text-center">
+            {passwordError}
+          </Text>
         )}
+
+        {/* âš¡ Message d'erreur */}
+        {error && (
+          <View className="bg-red-500/10 border border-red-500/40 rounded-xl px-4 py-3 mb-4">
+            <Text className="text-red-300 text-center">{error}</Text>
+          </View>
+        )}
+
 
         <Pressable
           onPress={handleLogin}
@@ -183,7 +223,7 @@ export default function Connexion() {
           </Text>
         </Pressable>
 
-        {/* ⚡ Message d'erreur */}
+        {/* âš¡ Message d'erreur */}
         <Pressable
           className="items-center mt-2 flex-row justify-center gap-2"
           onPress={() => navigation.goBack()}
@@ -191,8 +231,9 @@ export default function Connexion() {
           <Ionicons name="arrow-back" size={18} color="#fff" />
           <Text className="text-white underline">Retour</Text>
         </Pressable>
+          </View>
+        </ImageBackground>
       </View>
-      </ImageBackground>
-    </View>
+    </TouchableWithoutFeedback>
   );
 }

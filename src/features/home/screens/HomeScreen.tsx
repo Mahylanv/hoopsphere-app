@@ -31,6 +31,7 @@ import { RankingPlayer } from "../hooks/usePlayerRanking";
 import { VideoItem } from "../../../types";
 import { db, auth } from "../../../config/firebaseConfig";
 import { usePremiumStatus } from "../../../shared/hooks/usePremiumStatus";
+import { PROFILE_PLACEHOLDER } from "../../../constants/images";
 
 type Props = {
   forClub?: boolean;
@@ -434,16 +435,25 @@ export default function HomeScreen({ forClub = false }: Props) {
                         style={{ padding: 2, borderRadius: 9999 }}
                       >
                         <View className="w-16 h-16 rounded-full bg-black items-center justify-center overflow-hidden">
-                          <Image
-                            source={{
-                              uri:
-                                visitor.avatar && visitor.avatar.trim() !== ""
-                                  ? visitor.avatar
-                                  : "https://via.placeholder.com/200.png",
-                            }}
-                            className="w-full h-full"
-                            blurRadius={isLocked ? 12 : 0}
-                          />
+                          {(() => {
+                            const avatarUri =
+                              typeof visitor.avatar === "string"
+                                ? visitor.avatar.trim()
+                                : "";
+                            const avatarSource =
+                              avatarUri &&
+                              avatarUri !== "null" &&
+                              avatarUri !== "undefined"
+                                ? { uri: avatarUri }
+                                : PROFILE_PLACEHOLDER;
+                            return (
+                              <Image
+                                source={avatarSource}
+                                className="w-full h-full"
+                                blurRadius={isLocked ? 12 : 0}
+                              />
+                            );
+                          })()}
                         </View>
                       </LinearGradient>
                       <View className="flex-row items-center justify-center mt-2 w-16">

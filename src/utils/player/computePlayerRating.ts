@@ -5,8 +5,12 @@ import { PlayerAverages } from "./computePlayerStats";
 export function computePlayerRating(stats: PlayerAverages, poste?: string): number {
   if (!stats || !poste) return 50; // note minimale
 
-  // Normaliser le poste
+  // Normaliser le poste (labels FR + codes)
   const p = poste.toLowerCase();
+  const normalized = p
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\s-]/g, "");
 
   // --------------------------------
   // ⭐ SOUS-NOTES /100 (FUT AMATEUR)
@@ -36,7 +40,7 @@ export function computePlayerRating(stats: PlayerAverages, poste?: string): numb
 
   let overall = 0;
 
-  if (p.includes("meneur") || p.includes("pg")) {
+  if (normalized.includes("meneur") || normalized.includes("men") || normalized.includes("pg")) {
     // Meneur : extérieur + scoring léger
     overall =
       scorePTS * 0.30 +
@@ -46,7 +50,7 @@ export function computePlayerRating(stats: PlayerAverages, poste?: string): numb
       scoreF * 0.10;
   }
 
-  else if (p.includes("arrière") || p.includes("sg")) {
+  else if (normalized.includes("arriere") || normalized.includes("arr") || normalized.includes("sg")) {
     // Arrière : scoring + tir extérieur
     overall =
       scorePTS * 0.40 +
@@ -56,7 +60,7 @@ export function computePlayerRating(stats: PlayerAverages, poste?: string): numb
       scoreF * 0.05;
   }
 
-  else if (p.includes("ailier") || p.includes("sf")) {
+  else if (normalized.includes("ailier") || normalized.includes("ail") || normalized.includes("sf") || normalized.includes("af") || normalized.includes("pf")) {
     // Ailier : polyvalence
     overall =
       scorePTS * 0.35 +
@@ -66,7 +70,7 @@ export function computePlayerRating(stats: PlayerAverages, poste?: string): numb
       scoreF * 0.10;
   }
 
-  else if (p.includes("pivot") || p.includes("c")) {
+  else if (normalized.includes("pivot") || normalized.includes("piv") || normalized.includes("c")) {
     // Pivot : 2INT et discipline
     overall =
       scorePTS * 0.20 +

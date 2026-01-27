@@ -30,6 +30,7 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../../types";
 import { toggleLikePost } from "../../../home/services/likeService";
+import { PROFILE_PLACEHOLDER } from "../../../../constants/images";
 
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -59,9 +60,6 @@ export default function ClubPremiumScreen() {
 
   const user = auth.currentUser;
   const isOwner = !!user?.uid;
-
-  const formatViewerBadge = (viewerUid: string) =>
-    viewerUid ? viewerUid.slice(0, 2).toUpperCase() : "??";
 
   const ensureMonthlyViewsReset = useCallback(
     async (uid: string) => {
@@ -314,34 +312,40 @@ export default function ClubPremiumScreen() {
                 className="flex-row"
                 contentContainerStyle={{ paddingRight: 12 }}
               >
-                {uniqueViews.map((v, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    className="items-center mr-3"
-                    onPress={() =>
-                      navigation.navigate("JoueurDetail", {
-                        uid: v.viewerUid,
-                      })
-                    }
-                    activeOpacity={0.85}
-                  >
-                    <View className="w-16 h-16 rounded-full border-2 border-orange-500 bg-[#0C1C34] items-center justify-center overflow-hidden">
-                      {viewerProfiles[v.viewerUid]?.avatar ? (
-                        <Image
-                          source={{ uri: viewerProfiles[v.viewerUid].avatar }}
-                          className="w-full h-full"
-                        />
-                      ) : (
-                        <Text className="text-white font-semibold">
-                          {formatViewerBadge(v.viewerUid)}
-                        </Text>
-                      )}
-                    </View>
-                    <Text className="text-gray-200 text-xs mt-1" numberOfLines={1}>
-                      {viewerProfiles[v.viewerUid]?.name || v.viewerUid}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {uniqueViews.map((v, idx) => {
+                  const profile = viewerProfiles[v.viewerUid];
+                  const avatarUri =
+                    typeof profile?.avatar === "string"
+                      ? profile.avatar.trim()
+                      : "";
+                  const avatarSource =
+                    avatarUri && avatarUri !== "null" && avatarUri !== "undefined"
+                      ? { uri: avatarUri }
+                      : PROFILE_PLACEHOLDER;
+
+                  return (
+                    <TouchableOpacity
+                      key={idx}
+                      className="items-center mr-3"
+                      onPress={() =>
+                        navigation.navigate("JoueurDetail", {
+                          uid: v.viewerUid,
+                        })
+                      }
+                      activeOpacity={0.85}
+                    >
+                      <View className="w-16 h-16 rounded-full border-2 border-orange-500 bg-[#0C1C34] items-center justify-center overflow-hidden">
+                        <Image source={avatarSource} className="w-full h-full" />
+                      </View>
+                      <Text
+                        className="text-gray-200 text-xs mt-1"
+                        numberOfLines={1}
+                      >
+                        {profile?.name || v.viewerUid}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
             )}
           </View>

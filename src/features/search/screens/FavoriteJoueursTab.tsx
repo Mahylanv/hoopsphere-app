@@ -20,6 +20,7 @@ import { usePlayers } from "../hooks/usePlayers";
 import PremiumWall from "../../../shared/components/PremiumWall";
 import { usePremiumStatus } from "../../../shared/hooks/usePremiumStatus";
 import PremiumBadge from "../../../shared/components/PremiumBadge";
+import { PROFILE_PLACEHOLDER } from "../../../constants/images";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -153,30 +154,34 @@ export default function FavoriteJoueursTab() {
         keyExtractor={(item) => item.uid}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16 }}
-        renderItem={({ item }) => (
-          <LinearGradient
-            colors={[brand.blue, brand.surface]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ borderRadius: 18, padding: 1.5, marginBottom: 12 }}
-          >
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate("JoueurDetail", { uid: item.uid })
-              }
-              activeOpacity={0.85}
-              className="bg-[#0E0D0D] rounded-[16px] p-4"
+        renderItem={({ item }) => {
+          const avatarUri =
+            typeof item.avatar === "string" ? item.avatar.trim() : "";
+          const avatarSource =
+            avatarUri && avatarUri !== "null" && avatarUri !== "undefined"
+              ? { uri: avatarUri }
+              : PROFILE_PLACEHOLDER;
+
+          return (
+            <LinearGradient
+              colors={[brand.blue, brand.surface]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ borderRadius: 18, padding: 1.5, marginBottom: 12 }}
             >
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center flex-1">
-                  <Image
-                    source={{
-                      uri:
-                        item.avatar ||
-                        "https://i.pravatar.cc/150?img=3",
-                    }}
-                    className="w-16 h-16 rounded-full mr-4 border border-gray-700"
-                  />
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate("JoueurDetail", { uid: item.uid })
+                }
+                activeOpacity={0.85}
+                className="bg-[#0E0D0D] rounded-[16px] p-4"
+              >
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center flex-1">
+                    <Image
+                      source={avatarSource}
+                      className="w-16 h-16 rounded-full mr-4 border border-gray-700"
+                    />
 
                   <View className="flex-1">
                     <View className="flex-row items-center">
@@ -211,10 +216,11 @@ export default function FavoriteJoueursTab() {
                     color="#FACC15"
                   />
                 </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          </LinearGradient>
-        )}
+                </View>
+              </TouchableOpacity>
+            </LinearGradient>
+          );
+        }}
       />
 
       {/* ===== OPTIONS MODAL ===== */}

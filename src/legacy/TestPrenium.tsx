@@ -9,6 +9,9 @@ import {
   Pressable,
   Alert,
   Switch,
+  Image,
+  ScrollView,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -22,6 +25,8 @@ import usePlayerProfile from "../features/profile/player/hooks/usePlayerProfile"
 import AddressAutocomplete from "../shared/components/AddressAutocomplete";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "TestPrenium">;
+const { width } = Dimensions.get("window");
+const CARD_PREVIEW_WIDTH = width * 0.42;
 
 export default function TestPrenium() {
   const { user } = usePlayerProfile();
@@ -30,6 +35,23 @@ export default function TestPrenium() {
   // Premium
   const [premiumToggle, setPremiumToggle] = useState<boolean>(false);
   const [cardStyle, setCardStyle] = useState<"normal" | "premium">("normal");
+  const [showCardChooser, setShowCardChooser] = useState<boolean>(false);
+  const cardOptions: Array<{
+    id: "normal" | "premium";
+    label: string;
+    image: ReturnType<typeof require>;
+  }> = [
+    {
+      id: "normal",
+      label: "Card normale",
+      image: require("../../assets/CARD-NORMAL-FOND.png"),
+    },
+    {
+      id: "premium",
+      label: "Card premium",
+      image: require("../../assets/CARD-PREMIUM.png"),
+    },
+  ];
 
   // Adresse sélectionnée (test)
   const [selectedAddress, setSelectedAddress] = useState<any>(null);
@@ -75,7 +97,10 @@ export default function TestPrenium() {
       </View>
 
       {/* CONTENU */}
-      <View className="flex-1 px-5 mt-8">
+      <ScrollView
+        className="flex-1 px-5 mt-8"
+        contentContainerStyle={{ paddingBottom: 32 }}
+      >
         {/* TOGGLE PREMIUM */}
         <Text className="text-white text-lg font-semibold mb-3">
           Mode Premium (test développeur)
@@ -174,7 +199,97 @@ export default function TestPrenium() {
             </View>
           )}
         </View>
-      </View>
+
+        {/* CHOIX STYLE CARD (PREMIUM ONLY) */}
+        <View className="mt-10">
+          <Text className="text-white text-lg font-semibold mb-3">
+            Choisir sa card
+          </Text>
+
+          {premiumToggle ? (
+            <>
+              <Pressable
+                onPress={() => setShowCardChooser((current) => !current)}
+                className="bg-orange-600 px-4 py-3 rounded-xl mb-4"
+              >
+                <Text className="text-white font-semibold text-center">
+                  {showCardChooser ? "Masquer" : "Afficher"} le choix de la card
+                </Text>
+              </Pressable>
+
+              {showCardChooser && (
+                <>
+                  <Text className="text-gray-300 mb-4">
+                    Slide et clique sur une card pour l'appliquer.
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    snapToInterval={CARD_PREVIEW_WIDTH + 16}
+                    decelerationRate="fast"
+                    contentContainerStyle={{ paddingRight: 16 }}
+                  >
+                    {cardOptions.map((option) => {
+                      const isActive = cardStyle === option.id;
+
+                      return (
+                        <Pressable
+                          key={option.id}
+                          onPress={() => updateCardStyle(option.id)}
+                          className="mr-4"
+                        >
+                          <View
+                            className={`rounded-2xl overflow-hidden border bg-[#0b0b0b] shadow-lg shadow-black/40 ${
+                              isActive ? "border-orange-500" : "border-gray-800"
+                            }`}
+                            style={{
+                              width: CARD_PREVIEW_WIDTH,
+                              aspectRatio: 0.68,
+                              padding: 6,
+                            }}
+                          >
+                            <Image
+                              source={option.image}
+                              className="w-full h-full"
+                              resizeMode="contain"
+                            />
+                            {isActive && (
+                              <View className="absolute top-3 right-3 bg-orange-500 px-2 py-1 rounded-full">
+                                <Text className="text-white text-xs font-bold">
+                                  Activee
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          <View
+                            className={`mt-2 self-center px-3 py-1 rounded-full border ${
+                              isActive
+                                ? "bg-orange-500/15 border-orange-500/40"
+                                : "bg-white/5 border-white/10"
+                            }`}
+                          >
+                            <Text
+                              className={`text-xs font-semibold ${
+                                isActive ? "text-orange-200" : "text-gray-200"
+                              }`}
+                            >
+                              {option.label}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                </>
+              )}
+            </>
+          ) : (
+            <Text className="text-gray-400">
+              Active Premium pour debloquer le choix de la card.
+            </Text>
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

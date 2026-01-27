@@ -14,7 +14,7 @@ export type RankingPlayer = {
   uid: string;
   prenom: string;
   nom: string;
-  avatar: string;
+  avatar: string | null;
   poste: string;
 
   // Champs ajoutés pour correspondre au type Joueur
@@ -28,6 +28,7 @@ export type RankingPlayer = {
   genre: string;
   createdAt: any | null;
   premium: boolean;
+  cardStyle?: "normal" | "premium";
 
   // Stats & notes
   stats: PlayerAverages;
@@ -83,12 +84,14 @@ export default function usePlayerRanking() {
                 prenom: playerData.prenom ?? "",
                 nom: playerData.nom ?? "",
                 avatar:
-                  playerData.avatar && playerData.avatar.trim() !== ""
+                  typeof playerData.avatar === "string" &&
+                  playerData.avatar.trim() !== ""
                     ? playerData.avatar
-                    : "https://via.placeholder.com/200.png",
+                    : null,
 
                 poste: playerData.poste ?? "",
                 premium: !!playerData.premium,
+                cardStyle: playerData.cardStyle ?? "normal",
 
                 // Champs nécessaires pour JoueurCard
                 email: playerData.email ?? "",

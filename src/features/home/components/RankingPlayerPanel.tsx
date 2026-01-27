@@ -162,7 +162,8 @@ export default function RankingPlayerPanel({
     genre: player.genre ?? "",
     createdAt: player.createdAt ?? null,
     premium: player.premium,
-    cardStyle: player.premium ? "premium" : "normal",
+    cardStyle:
+      player.cardStyle ?? (player.premium ? "premium" : "normal"),
   };
 
   return (
