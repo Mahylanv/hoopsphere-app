@@ -9,11 +9,15 @@ import { formatPhone } from "../modals/EditProfileModal/ EditProfileHandlers";
 
 // Mapping codes → labels lisibles
 const POSITION_LABELS: Record<string, string> = {
-  MEN: "Meneur (MEN)",
-  ARR: "Arrière (ARR)",
-  AIL: "Ailier (AIL)",
-  AF: "Ailier fort (AF)",
-  PIV: "Pivot (PIV)",
+  MEN: "Meneur",
+  M: "Meneur",
+  ARR: "Arrière",
+  AR: "Arrière",
+  AIL: "Ailier",
+  AI: "Ailier",
+  AF: "Ailier fort",
+  PIV: "Pivot",
+  P: "Pivot",
 };
 
 export type BioSectionProps = {

@@ -94,8 +94,177 @@ const handleStripeError = (err: any, fallback: string) => {
   if (err?.code === "resource_missing") {
     throw new functions.https.HttpsError("not-found", "Aucun abonnement actif.");
   }
+  if (
+    typeof err?.message === "string" &&
+    err.message.includes("Changing plan intervals")
+  ) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Impossible de changer d'intervalle avec cette date."
+    );
+  }
   const message = typeof err?.message === "string" ? err.message : fallback;
   throw new functions.https.HttpsError("internal", message);
+};
+
+const resolveSwitchAt = (
+  rawStartAt: unknown,
+  currentPeriodEnd: number
+) => {
+  let switchAt = currentPeriodEnd;
+  if (typeof rawStartAt === "number" && Number.isFinite(rawStartAt)) {
+    const candidate =
+      rawStartAt > 1_000_000_000_000
+        ? Math.floor(rawStartAt / 1000)
+        : Math.floor(rawStartAt);
+    if (Number.isFinite(candidate)) {
+      switchAt = candidate;
+    }
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (switchAt < now) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "La date doit être dans le futur."
+    );
+  }
+  if (switchAt < currentPeriodEnd) {
+    const startDate = new Date(switchAt * 1000);
+    const periodEndDate = new Date(currentPeriodEnd * 1000);
+    const sameDay =
+      startDate.getUTCFullYear() === periodEndDate.getUTCFullYear() &&
+      startDate.getUTCMonth() === periodEndDate.getUTCMonth() &&
+      startDate.getUTCDate() === periodEndDate.getUTCDate();
+    if (sameDay) {
+      return currentPeriodEnd;
+    }
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "La date doit être après la fin de la période actuelle."
+    );
+  }
+
+  return switchAt;
+};
+
+const applyScheduledPlanChange = async (params: {
+  stripe: Stripe;
+  userDoc: UserDocInfo;
+  plan: "month" | "year";
+  rawStartAt?: unknown;
+}) => {
+  const { stripe, userDoc, plan, rawStartAt } = params;
+  const customerId = userDoc.data?.stripeCustomerId as string | undefined;
+  if (!customerId) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "Aucun customer Stripe lié à ce compte."
+    );
+  }
+
+  const subscriptionId = await resolveSubscriptionId(
+    stripe,
+    customerId,
+    userDoc.data?.stripeSubscriptionId
+  );
+  if (!subscriptionId) {
+    throw new functions.https.HttpsError(
+      "not-found",
+      "Aucun abonnement actif."
+    );
+  }
+
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const item = subscription.items.data[0];
+  const itemId = item?.id;
+  const currentPriceId = item?.price?.id ?? null;
+  const currentPeriodEnd = item?.current_period_end ?? null;
+  if (!itemId || !currentPriceId || !currentPeriodEnd) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "Impossible de modifier cet abonnement."
+    );
+  }
+
+  const switchAt = resolveSwitchAt(rawStartAt, currentPeriodEnd);
+
+  if (currentPriceId === PRICE_IDS[plan]) {
+    return { subscription, switchAt };
+  }
+
+  let scheduleId: string | null = null;
+  if (subscription.schedule) {
+    scheduleId =
+      typeof subscription.schedule === "string"
+        ? subscription.schedule
+        : subscription.schedule.id;
+  }
+
+  let schedule: Stripe.SubscriptionSchedule | null = null;
+  if (scheduleId) {
+    schedule = await stripe.subscriptionSchedules.retrieve(scheduleId);
+    if (schedule.status === "canceled" || schedule.status === "released") {
+      schedule = null;
+    }
+  }
+  if (!schedule) {
+    schedule = await stripe.subscriptionSchedules.create({
+      from_subscription: subscriptionId,
+    });
+  }
+
+  const phaseStart =
+    (schedule.phases?.[0]?.start_date as number | undefined) ??
+    item.current_period_start ??
+    Math.floor(Date.now() / 1000);
+
+  await stripe.subscriptionSchedules.update(schedule.id, {
+    proration_behavior: "none",
+    phases: [
+      {
+        start_date: phaseStart,
+        end_date: switchAt,
+        items: [
+          {
+            price: currentPriceId,
+            quantity: item.quantity ?? 1,
+          },
+        ],
+        proration_behavior: "none",
+      },
+      {
+        start_date: switchAt,
+        items: [
+          {
+            price: PRICE_IDS[plan],
+            quantity: item.quantity ?? 1,
+          },
+        ],
+        billing_cycle_anchor: "phase_start",
+        proration_behavior: "none",
+      },
+    ],
+  });
+
+  let updatedSubscription = subscription;
+  if (subscription.cancel_at_period_end) {
+    updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
+      cancel_at_period_end: false,
+    });
+  }
+
+  const scheduledAt = admin.firestore.Timestamp.fromMillis(switchAt * 1000);
+      await userDoc.ref.set(
+        {
+          ...buildSubscriptionUpdate(updatedSubscription),
+          subscriptionScheduledInterval: plan,
+          subscriptionScheduledAt: scheduledAt,
+        },
+        {merge: true}
+      );
+
+  return { subscription: updatedSubscription, switchAt };
 };
 
 // ðŸ’³ IDs Stripe des abonnements
@@ -325,6 +494,77 @@ const handlePaymentIntentSucceeded = async (
       console.log("payment_intent sans customer:", paymentIntent.id);
       return;
     }
+    const metadata = paymentIntent.metadata || {};
+    const upgradePlan = metadata.plan as "month" | "year" | undefined;
+    const upgradeType = metadata.upgrade_type;
+    const rawSwitchAt =
+      typeof metadata.switchAt === "string" ? Number(metadata.switchAt) : null;
+    if (
+      upgradeType === "scheduled_change" &&
+      (upgradePlan === "month" || upgradePlan === "year")
+    ) {
+      try {
+        const userDoc = await resolveUserByStripeCustomerId(customerId);
+        if (userDoc) {
+          const pendingId = userDoc.data?.pendingUpgradePaymentIntentId as
+            | string
+            | undefined;
+          if (pendingId && pendingId !== paymentIntent.id) {
+            return;
+          }
+          const pendingPlan = userDoc.data?.pendingUpgradePlan as
+            | "month"
+            | "year"
+            | undefined;
+          if (pendingPlan && pendingPlan !== upgradePlan) {
+            return;
+          }
+          const scheduledAt = userDoc.data?.subscriptionScheduledAt as
+            | admin.firestore.Timestamp
+            | null
+            | undefined;
+          const scheduledAtSeconds =
+            typeof scheduledAt?.seconds === "number"
+              ? scheduledAt.seconds
+              : null;
+          const scheduledPlan =
+            userDoc.data?.subscriptionScheduledInterval as
+              | "month"
+              | "year"
+              | null
+              | undefined;
+          if (
+            !scheduledPlan ||
+            scheduledPlan !== upgradePlan ||
+            (scheduledAtSeconds !== null &&
+              rawSwitchAt !== null &&
+              scheduledAtSeconds !== rawSwitchAt)
+          ) {
+            await applyScheduledPlanChange({
+              stripe,
+              userDoc,
+              plan: upgradePlan,
+              rawStartAt: rawSwitchAt ?? undefined,
+            });
+          }
+          await userDoc.ref.set(
+            {
+              pendingUpgradePaymentIntentId: null,
+              pendingUpgradePlan: null,
+              pendingUpgradeSwitchAt: null,
+              pendingUpgradeCreatedAt: null,
+              lastUpgradePaymentIntentId: paymentIntent.id,
+              lastUpgradePaymentIntentAt:
+                admin.firestore.FieldValue.serverTimestamp(),
+            },
+            {merge: true}
+          );
+        }
+      } catch (err) {
+        console.error("Erreur upgrade via payment_intent:", err);
+      }
+    }
+
     const invoices = await stripe.invoices.list({
       customer: customerId,
       limit: 5,
@@ -450,19 +690,26 @@ export const createSubscription = functions
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{price: priceId}],
+      collection_method: "charge_automatically",
       payment_behavior: "default_incomplete",
       payment_settings: {
         save_default_payment_method: "on_subscription",
+        payment_method_types: ["card"],
       },
       expand: ["latest_invoice.payment_intent", "pending_setup_intent"],
       metadata: {uid},
     });
 
-    const latestInvoice = subscription.latest_invoice;
+    const expandedSubscription = await stripe.subscriptions.retrieve(
+      subscription.id,
+      { expand: ["latest_invoice.payment_intent"] }
+    );
+    const latestInvoice = expandedSubscription.latest_invoice;
 
     let paymentIntentId: string | null = null;
     let paymentIntentClientSecret: string | null = null;
     let setupIntentClientSecret: string | null = null;
+    let noPaymentRequired = false;
 
     // 1ï¸âƒ£ latest_invoice est un ID string
     if (typeof latestInvoice === "string") {
@@ -507,35 +754,68 @@ export const createSubscription = functions
       }
     }
 
-    const pendingSetupIntent =
-      subscription.pending_setup_intent as
-        | string
-        | Stripe.SetupIntent
-        | null
-        | undefined;
+    if (!paymentIntentClientSecret && paymentIntentId) {
+      const paymentIntent =
+        await stripe.paymentIntents.retrieve(paymentIntentId);
+      paymentIntentClientSecret = paymentIntent.client_secret;
+    }
 
-    if (typeof pendingSetupIntent === "string") {
-      const setupIntent =
-        await stripe.setupIntents.retrieve(pendingSetupIntent);
-      setupIntentClientSecret = setupIntent.client_secret;
-    } else if (
-      pendingSetupIntent &&
-      typeof pendingSetupIntent === "object"
-    ) {
-      if (typeof pendingSetupIntent.client_secret === "string") {
-        setupIntentClientSecret = pendingSetupIntent.client_secret;
-      } else if (typeof pendingSetupIntent.id === "string") {
-        const setupIntent =
-          await stripe.setupIntents.retrieve(pendingSetupIntent.id);
-        setupIntentClientSecret = setupIntent.client_secret;
+    if (!paymentIntentClientSecret) {
+      const latestInvoiceId =
+        typeof latestInvoice === "string"
+          ? latestInvoice
+          : latestInvoice?.id ?? null;
+      if (latestInvoiceId) {
+        let invoice =
+          typeof latestInvoice === "object" && latestInvoice !== null
+            ? (latestInvoice as Stripe.Invoice)
+            : await stripe.invoices.retrieve(latestInvoiceId, {
+                expand: ["payment_intent"],
+              });
+
+        if (invoice.status === "draft") {
+          invoice = await stripe.invoices.finalizeInvoice(invoice.id);
+        }
+
+        const invoiceIntent = (invoice as Stripe.Invoice & {
+          payment_intent?: string | Stripe.PaymentIntent | null;
+        }).payment_intent;
+        if (typeof invoiceIntent === "string") {
+          const paymentIntent =
+            await stripe.paymentIntents.retrieve(invoiceIntent);
+          paymentIntentClientSecret = paymentIntent.client_secret;
+        } else if (invoiceIntent && typeof invoiceIntent === "object") {
+          paymentIntentClientSecret = invoiceIntent.client_secret ?? null;
+          if (!paymentIntentClientSecret && invoiceIntent.id) {
+            const paymentIntent =
+              await stripe.paymentIntents.retrieve(invoiceIntent.id);
+            paymentIntentClientSecret = paymentIntent.client_secret;
+          }
+        }
+
+        if (
+          !paymentIntentClientSecret &&
+          invoice.amount_due === 0 &&
+          (invoice.status === "paid" ||
+            subscription.status === "active" ||
+            subscription.status === "trialing")
+        ) {
+          noPaymentRequired = true;
+        }
+
+        if (!paymentIntentClientSecret && !noPaymentRequired) {
+          console.warn("createSubscription: payment_intent manquant", {
+            subscriptionId: subscription.id,
+            invoiceId: invoice.id,
+            invoiceStatus: invoice.status,
+            collectionMethod: (invoice as any).collection_method,
+            amountDue: invoice.amount_due,
+          });
+        }
       }
     }
 
-    if (
-      !paymentIntentClientSecret &&
-      !paymentIntentId &&
-      !setupIntentClientSecret
-    ) {
+    if (!paymentIntentClientSecret && !noPaymentRequired) {
       const setupIntent = await stripe.setupIntents.create({
         customer: customerId,
         usage: "off_session",
@@ -543,10 +823,11 @@ export const createSubscription = functions
       setupIntentClientSecret = setupIntent.client_secret;
     }
 
-    if (!paymentIntentClientSecret && paymentIntentId) {
-      const paymentIntent =
-        await stripe.paymentIntents.retrieve(paymentIntentId);
-      paymentIntentClientSecret = paymentIntent.client_secret;
+    if (!paymentIntentClientSecret && !setupIntentClientSecret && !noPaymentRequired) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "Impossible de créer le paiement. Merci de réessayer."
+      );
     }
 
     await userDoc.ref.set(buildSubscriptionUpdate(subscription), {merge: true});
@@ -554,6 +835,7 @@ export const createSubscription = functions
       return {
         clientSecret: paymentIntentClientSecret,
         setupIntentClientSecret,
+        noPaymentRequired,
         subscriptionId: subscription.id,
         customerId,
         ephemeralKeySecret: ephemeralKey.secret,
@@ -575,6 +857,139 @@ export const createSubscription = functions
     }
   }
 );
+
+// --------------------------------------------------
+// 🔹 Nettoyage des données à la suppression Auth
+// --------------------------------------------------
+export const cleanupUserOnDelete = functions.auth.user().onDelete(
+  async (user) => {
+    const uid = user.uid;
+    const joueurRef = db.collection("joueurs").doc(uid);
+    const clubRef = db.collection("clubs").doc(uid);
+
+    const safeDeleteDoc = async (
+      ref: FirebaseFirestore.DocumentReference
+    ) => {
+      if (typeof (admin.firestore() as any).recursiveDelete === "function") {
+        await (admin.firestore() as any).recursiveDelete(ref);
+      } else {
+        await ref.delete();
+      }
+    };
+
+    try {
+      await Promise.all([safeDeleteDoc(joueurRef), safeDeleteDoc(clubRef)]);
+    } catch (err) {
+      console.error("cleanupUserOnDelete: Firestore delete failed", err);
+    }
+
+    try {
+      await admin
+        .storage()
+        .bucket()
+        .deleteFiles({ prefix: `avatars/${uid}` });
+    } catch (err) {
+      console.error("cleanupUserOnDelete: Storage delete failed", err);
+    }
+  }
+);
+
+// --------------------------------------------------
+// 🔹 Finaliser le paiement d'une subscription (fallback setup intent)
+// --------------------------------------------------
+export const confirmSubscriptionPayment = functions
+  .runWith({ secrets: [stripeSecretKey] })
+  .https.onCall(async (data, context) => {
+    try {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+          "unauthenticated",
+          "User not authenticated"
+        );
+      }
+      const stripe = getStripeOrThrow();
+
+      const uid = context.auth.uid;
+      const paymentMethodId = data?.paymentMethodId as string | undefined;
+      const subscriptionIdOverride = data?.subscriptionId as string | undefined;
+
+      if (!paymentMethodId) {
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "paymentMethodId manquant."
+        );
+      }
+
+      const userDoc = await resolveUserDoc(uid);
+      const customerId = userDoc.data?.stripeCustomerId as string | undefined;
+      if (!customerId) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Aucun customer Stripe lié à ce compte."
+        );
+      }
+
+      const subscriptionId = subscriptionIdOverride
+        ? subscriptionIdOverride
+        : await resolveSubscriptionId(
+            stripe,
+            customerId,
+            userDoc.data?.stripeSubscriptionId
+          );
+      if (!subscriptionId) {
+        throw new functions.https.HttpsError(
+          "not-found",
+          "Aucun abonnement actif."
+        );
+      }
+
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const latestInvoiceId =
+        typeof subscription.latest_invoice === "string"
+          ? subscription.latest_invoice
+          : subscription.latest_invoice?.id ?? null;
+
+      try {
+        await stripe.paymentMethods.attach(paymentMethodId, {
+          customer: customerId,
+        });
+      } catch (err: any) {
+        if (err?.code !== "resource_already_exists") {
+          throw err;
+        }
+      }
+
+      await stripe.customers.update(customerId, {
+        invoice_settings: { default_payment_method: paymentMethodId },
+      });
+      await stripe.subscriptions.update(subscriptionId, {
+        default_payment_method: paymentMethodId,
+      });
+
+      if (latestInvoiceId) {
+        let invoice = await stripe.invoices.retrieve(latestInvoiceId);
+        if (invoice.status === "draft") {
+          invoice = await stripe.invoices.finalizeInvoice(invoice.id);
+        }
+        if (invoice.status === "open") {
+          await stripe.invoices.pay(invoice.id, {
+            payment_method: paymentMethodId,
+          });
+        }
+      }
+
+      const updatedSubscription = await stripe.subscriptions.retrieve(
+        subscriptionId
+      );
+      await userDoc.ref.set(buildSubscriptionUpdate(updatedSubscription), {
+        merge: true,
+      });
+
+      return { status: updatedSubscription.status };
+    } catch (err) {
+      handleStripeError(err, "Impossible de finaliser le paiement.");
+    }
+  });
 
 // --------------------------------------------------
 // ÃY"Ã» Stripe Customer Portal
@@ -792,13 +1207,155 @@ export const setCancelAtPeriodEnd = functions
         );
       }
 
-      const subscription = await stripe.subscriptions.update(subscriptionId, {
-        cancel_at_period_end: cancelAtPeriodEnd,
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const scheduleId =
+        typeof subscription.schedule === "string"
+          ? subscription.schedule
+          : subscription.schedule?.id ?? null;
+      let schedule: Stripe.SubscriptionSchedule | null = null;
+      if (scheduleId) {
+        schedule = await stripe.subscriptionSchedules.retrieve(scheduleId);
+        if (schedule.status === "canceled" || schedule.status === "released") {
+          schedule = null;
+        }
+      }
+
+      if (schedule) {
+        const item = subscription.items.data[0];
+        const currentPeriodEnd = item?.current_period_end ?? null;
+        const currentPeriodStart = item?.current_period_start ?? null;
+        const currentPriceId = item?.price?.id ?? null;
+        const currentQuantity = item?.quantity ?? 1;
+
+        if (!currentPeriodEnd || !currentPeriodStart || !currentPriceId) {
+          throw new functions.https.HttpsError(
+            "failed-precondition",
+            "Impossible de modifier cet abonnement."
+          );
+        }
+
+        const normalizePhase = (
+          phase: Stripe.SubscriptionSchedule.Phase
+        ): Stripe.SubscriptionScheduleUpdateParams.Phase => {
+          const items = (phase.items ?? [])
+            .map((phaseItem) => ({
+              price:
+                typeof phaseItem.price === "string"
+                  ? phaseItem.price
+                  : phaseItem.price?.id ?? null,
+              quantity: phaseItem.quantity ?? 1,
+            }))
+            .filter((phaseItem) => phaseItem.price);
+
+          const normalized: Stripe.SubscriptionScheduleUpdateParams.Phase = {
+            start_date: phase.start_date ?? currentPeriodStart,
+            items,
+          };
+          if (phase.end_date) {
+            normalized.end_date = phase.end_date;
+          }
+          if (phase.billing_cycle_anchor) {
+            normalized.billing_cycle_anchor = phase.billing_cycle_anchor;
+          }
+          if (phase.proration_behavior) {
+            normalized.proration_behavior = phase.proration_behavior;
+          }
+          return normalized;
+        };
+
+        let phases = (schedule.phases ?? [])
+          .map(normalizePhase)
+          .filter((phase) => phase.items.length > 0);
+
+        if (phases.length === 0) {
+          phases = [
+            {
+              start_date: currentPeriodStart,
+              end_date: currentPeriodEnd,
+              items: [{ price: currentPriceId, quantity: currentQuantity }],
+              proration_behavior: "none",
+            },
+          ];
+        }
+
+        if (cancelAtPeriodEnd) {
+          const cutoff = currentPeriodEnd;
+          let index = phases.findIndex((phase) => {
+            const phaseStart =
+              typeof phase.start_date === "number"
+                ? phase.start_date
+                : currentPeriodStart;
+            const phaseEnd =
+              typeof phase.end_date === "number"
+                ? phase.end_date
+                : phase.end_date === "now"
+                  ? Math.floor(Date.now() / 1000)
+                  : Number.POSITIVE_INFINITY;
+            return phaseStart <= cutoff && phaseEnd >= cutoff;
+          });
+          if (index === -1) {
+            index = phases.length - 1;
+          }
+          const trimmed = phases.slice(0, index + 1);
+          trimmed[index] = {
+            ...trimmed[index],
+            end_date: cutoff,
+          };
+
+          await stripe.subscriptionSchedules.update(schedule.id, {
+            end_behavior: "cancel",
+            phases: trimmed,
+          });
+
+          await userDoc.ref.set(
+            {
+              ...buildSubscriptionUpdate(subscription),
+              subscriptionCancelAtPeriodEnd: true,
+              subscriptionScheduledInterval: null,
+              subscriptionScheduledAt: null,
+            },
+            { merge: true }
+          );
+
+          return { status: subscription.status };
+        }
+
+        const lastIndex = phases.length - 1;
+        if (lastIndex >= 0) {
+          phases[lastIndex] = {
+            ...phases[lastIndex],
+            end_date: undefined,
+          };
+        }
+
+        await stripe.subscriptionSchedules.update(schedule.id, {
+          end_behavior: "release",
+          phases,
+        });
+
+        await userDoc.ref.set(
+          {
+            ...buildSubscriptionUpdate(subscription),
+            subscriptionCancelAtPeriodEnd: false,
+          },
+          { merge: true }
+        );
+
+        return { status: subscription.status };
+      }
+
+      const updatedSubscription = await stripe.subscriptions.update(
+        subscriptionId,
+        {
+          cancel_at_period_end: cancelAtPeriodEnd,
+        }
+      );
+
+      await userDoc.ref.set(buildSubscriptionUpdate(updatedSubscription), {
+        merge: true,
       });
 
-      await userDoc.ref.set(buildSubscriptionUpdate(subscription), {merge: true});
-
-      return { status: subscription.status };
+      return { status: updatedSubscription.status };
     } catch (err) {
       handleStripeError(err, "Impossible de modifier le renouvellement.");
     }
@@ -879,6 +1436,330 @@ export const changeSubscriptionPlan = functions
 
       const uid = context.auth.uid;
       const userDoc = await resolveUserDoc(uid);
+      const result = await applyScheduledPlanChange({
+        stripe,
+        userDoc,
+        plan,
+        rawStartAt: data?.startAt,
+      });
+
+      return { status: result.subscription.status, switchAt: result.switchAt };
+    } catch (err) {
+      handleStripeError(err, "Impossible de changer l'abonnement.");
+    }
+  }
+);
+
+// --------------------------------------------------
+// 🔹 Pré-paiement upgrade annuel
+// --------------------------------------------------
+export const createUpgradePaymentIntent = functions
+  .runWith({ secrets: [stripeSecretKey] })
+  .https.onCall(
+  async (data, context) => {
+    try {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+          "unauthenticated",
+          "User not authenticated"
+        );
+      }
+      const stripe = getStripeOrThrow();
+
+      const plan = data?.plan as "month" | "year";
+      if (!plan || !PRICE_IDS[plan]) {
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "Plan invalide. Utiliser 'month' ou 'year'."
+        );
+      }
+
+      const uid = context.auth.uid;
+      const userDoc = await resolveUserDoc(uid);
+      const customerId = userDoc.data?.stripeCustomerId as string | undefined;
+      if (!customerId) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Aucun customer Stripe lié à ce compte."
+        );
+      }
+      if (userDoc.data?.subscriptionScheduledInterval === plan) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Un changement est déjà programmé."
+        );
+      }
+
+      const subscriptionId = await resolveSubscriptionId(
+        stripe,
+        customerId,
+        userDoc.data?.stripeSubscriptionId
+      );
+      if (!subscriptionId) {
+        throw new functions.https.HttpsError(
+          "not-found",
+          "Aucun abonnement actif."
+        );
+      }
+
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const item = subscription.items.data[0];
+      const currentInterval = item?.price?.recurring?.interval ?? null;
+      const currentPeriodEnd = item?.current_period_end ?? null;
+      if (!currentPeriodEnd) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Impossible de modifier cet abonnement."
+        );
+      }
+      if (currentInterval === plan) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Abonnement déjà sur ce plan."
+        );
+      }
+
+      const switchAt = resolveSwitchAt(data?.startAt, currentPeriodEnd);
+      const price = await stripe.prices.retrieve(PRICE_IDS[plan]);
+      const amount = price.unit_amount;
+      if (typeof amount !== "number") {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Prix annuel indisponible."
+        );
+      }
+      const monthlyPrice = await stripe.prices.retrieve(PRICE_IDS.month);
+      const monthlyAmount = monthlyPrice.unit_amount ?? null;
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount,
+        currency: price.currency || "eur",
+        customer: customerId,
+        metadata: {
+          uid,
+          plan,
+          subscriptionId,
+          switchAt: String(switchAt),
+          upgrade_type: "scheduled_change",
+        },
+      });
+
+      const scheduledAt =
+        admin.firestore.Timestamp.fromMillis(switchAt * 1000);
+      await userDoc.ref.set(
+        {
+          pendingUpgradePaymentIntentId: paymentIntent.id,
+          pendingUpgradePlan: plan,
+          pendingUpgradeSwitchAt: scheduledAt,
+          pendingUpgradeCreatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        {merge: true}
+      );
+
+      return {
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        amount,
+        currency: price.currency || "eur",
+        switchAt,
+        priceId: price.id,
+        monthlyAmount,
+        monthlyCurrency: monthlyPrice.currency || "eur",
+      };
+    } catch (err) {
+      handleStripeError(err, "Impossible de préparer l'upgrade.");
+    }
+  }
+);
+
+// --------------------------------------------------
+// 🔹 Confirmer l'upgrade après paiement
+// --------------------------------------------------
+export const confirmUpgradePayment = functions
+  .runWith({ secrets: [stripeSecretKey] })
+  .https.onCall(
+  async (data, context) => {
+    try {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+          "unauthenticated",
+          "User not authenticated"
+        );
+      }
+      const stripe = getStripeOrThrow();
+
+      const paymentIntentId = data?.paymentIntentId as string | undefined;
+      if (!paymentIntentId) {
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "Paiement manquant."
+        );
+      }
+
+      const paymentIntent =
+        await stripe.paymentIntents.retrieve(paymentIntentId);
+      if (paymentIntent.status !== "succeeded") {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Paiement non confirmé."
+        );
+      }
+
+      const metadata = paymentIntent.metadata || {};
+      const upgradeType = metadata.upgrade_type;
+      if (upgradeType !== "scheduled_change") {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Paiement non valide pour un upgrade."
+        );
+      }
+      const plan = metadata.plan as "month" | "year" | undefined;
+      if (!plan || !PRICE_IDS[plan]) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Plan manquant sur le paiement."
+        );
+      }
+      if (metadata.uid && metadata.uid !== context.auth.uid) {
+        throw new functions.https.HttpsError(
+          "permission-denied",
+          "Paiement associé à un autre compte."
+        );
+      }
+
+      const price = await stripe.prices.retrieve(PRICE_IDS[plan]);
+      const expectedAmount = price.unit_amount;
+      if (
+        typeof expectedAmount === "number" &&
+        paymentIntent.amount !== expectedAmount
+      ) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Montant du paiement invalide."
+        );
+      }
+      if (
+        typeof expectedAmount === "number" &&
+        paymentIntent.amount_received < expectedAmount
+      ) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Paiement incomplet."
+        );
+      }
+      if (price.currency && paymentIntent.currency !== price.currency) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Devise du paiement invalide."
+        );
+      }
+
+      const uid = context.auth.uid;
+      const userDoc = await resolveUserDoc(uid);
+
+      const customerId = userDoc.data?.stripeCustomerId as string | undefined;
+      if (!customerId) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Aucun customer Stripe lié à ce compte."
+        );
+      }
+      const paymentCustomerId =
+        typeof paymentIntent.customer === "string"
+          ? paymentIntent.customer
+          : paymentIntent.customer?.id ?? null;
+      if (paymentCustomerId && paymentCustomerId !== customerId) {
+        throw new functions.https.HttpsError(
+          "permission-denied",
+          "Paiement associé à un autre client."
+        );
+      }
+
+      const pendingId = userDoc.data?.pendingUpgradePaymentIntentId as
+        | string
+        | undefined;
+      if (pendingId && pendingId !== paymentIntentId) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Paiement non reconnu."
+        );
+      }
+      const pendingPlan = userDoc.data?.pendingUpgradePlan as
+        | "month"
+        | "year"
+        | undefined;
+      if (pendingPlan && pendingPlan !== plan) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Paiement non reconnu."
+        );
+      }
+      const pendingSwitchAt = userDoc.data?.pendingUpgradeSwitchAt as
+        | admin.firestore.Timestamp
+        | undefined;
+      const pendingSwitchAtSeconds =
+        typeof pendingSwitchAt?.seconds === "number"
+          ? pendingSwitchAt.seconds
+          : null;
+
+      const rawSwitchAt =
+        typeof metadata.switchAt === "string"
+          ? Number(metadata.switchAt)
+          : undefined;
+      if (
+        pendingSwitchAtSeconds !== null &&
+        typeof rawSwitchAt === "number" &&
+        pendingSwitchAtSeconds !== rawSwitchAt
+      ) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Paiement non reconnu."
+        );
+      }
+      const result = await applyScheduledPlanChange({
+        stripe,
+        userDoc,
+        plan,
+        rawStartAt: rawSwitchAt,
+      });
+
+      await userDoc.ref.set(
+        {
+          pendingUpgradePaymentIntentId: null,
+          pendingUpgradePlan: null,
+          pendingUpgradeSwitchAt: null,
+          pendingUpgradeCreatedAt: null,
+          lastUpgradePaymentIntentId: paymentIntent.id,
+          lastUpgradePaymentIntentAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        {merge: true}
+      );
+
+      return { status: result.subscription.status, switchAt: result.switchAt };
+    } catch (err) {
+      handleStripeError(err, "Impossible de confirmer l'upgrade.");
+    }
+  }
+);
+
+// --------------------------------------------------
+// 🔹 Annuler un changement d'abonnement programmé
+// --------------------------------------------------
+export const cancelScheduledPlanChange = functions
+  .runWith({ secrets: [stripeSecretKey] })
+  .https.onCall(
+  async (_data, context) => {
+    try {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+          "unauthenticated",
+          "User not authenticated"
+        );
+      }
+      const stripe = getStripeOrThrow();
+
+      const uid = context.auth.uid;
+      const userDoc = await resolveUserDoc(uid);
       const customerId = userDoc.data?.stripeCustomerId as string | undefined;
       if (!customerId) {
         throw new functions.https.HttpsError(
@@ -900,27 +1781,58 @@ export const changeSubscriptionPlan = functions
       }
 
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      const itemId = subscription.items.data[0]?.id;
-      if (!itemId) {
+      const scheduleId =
+        typeof subscription.schedule === "string"
+          ? subscription.schedule
+          : subscription.schedule?.id ?? null;
+      if (!scheduleId) {
         throw new functions.https.HttpsError(
           "failed-precondition",
-          "Impossible de modifier cet abonnement."
+          "Aucun changement programmé."
         );
       }
 
-      const updated = await stripe.subscriptions.update(subscriptionId, {
-        cancel_at_period_end: false,
-        // Applique le nouveau tarif au prochain cycle sans facturer tout de suite.
-        billing_cycle_anchor: "unchanged",
-        proration_behavior: "none",
-        items: [{id: itemId, price: PRICE_IDS[plan]}],
+      const schedule = await stripe.subscriptionSchedules.retrieve(scheduleId);
+      if (schedule.status !== "not_started" && schedule.status !== "active") {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Aucun changement programmé."
+        );
+      }
+      const scheduledAt = userDoc.data?.subscriptionScheduledAt as
+        | admin.firestore.Timestamp
+        | null
+        | undefined;
+      const scheduledAtSeconds =
+        typeof scheduledAt?.seconds === "number" ? scheduledAt.seconds : null;
+      if (!scheduledAtSeconds) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Aucun changement programmé."
+        );
+      }
+      if (scheduledAtSeconds <= Math.floor(Date.now() / 1000)) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Le changement a déjà commencé, annulation impossible."
+        );
+      }
+
+      await stripe.subscriptionSchedules.release(scheduleId, {
+        preserve_cancel_date: true,
       });
 
-      await userDoc.ref.set(buildSubscriptionUpdate(updated), {merge: true});
+      await userDoc.ref.set(
+        {
+          subscriptionScheduledInterval: null,
+          subscriptionScheduledAt: null,
+        },
+        {merge: true}
+      );
 
-      return { status: updated.status };
+      return { status: subscription.status };
     } catch (err) {
-      handleStripeError(err, "Impossible de changer l'abonnement.");
+      handleStripeError(err, "Impossible d'annuler le changement.");
     }
   }
 );
@@ -985,9 +1897,37 @@ export const stripeWebhook = functions
         if (!uid) break;
 
         const userDoc = await resolveUserDoc(uid);
-        await userDoc.ref.set(buildSubscriptionUpdate(subscription), {
-          merge: true,
-        });
+        const update = buildSubscriptionUpdate(subscription) as Record<
+          string,
+          unknown
+        >;
+        const scheduledInterval = userDoc.data?.subscriptionScheduledInterval as
+          | "month"
+          | "year"
+          | null
+          | undefined;
+        const scheduledAt = userDoc.data?.subscriptionScheduledAt as
+          | admin.firestore.Timestamp
+          | null
+          | undefined;
+        const scheduledAtSeconds =
+          typeof scheduledAt?.seconds === "number"
+            ? scheduledAt.seconds
+            : null;
+        const currentInterval =
+          subscription.items.data[0]?.price?.recurring?.interval ?? null;
+        const currentPeriodStart =
+          subscription.items.data[0]?.current_period_start ?? null;
+        if (scheduledInterval && currentInterval === scheduledInterval) {
+          if (
+            !scheduledAtSeconds ||
+            (currentPeriodStart && currentPeriodStart >= scheduledAtSeconds)
+          ) {
+            update.subscriptionScheduledInterval = null;
+            update.subscriptionScheduledAt = null;
+          }
+        }
+        await userDoc.ref.set(update, {merge: true});
 
         if (subscription.latest_invoice) {
           const invoiceId =

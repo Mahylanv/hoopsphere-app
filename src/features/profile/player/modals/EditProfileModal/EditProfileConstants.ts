@@ -12,11 +12,11 @@ export const POIDS = Array.from({ length: 120 }, (_, i) => 40 + i);
 
 /* 🔸 Liste des postes possibles */
 export const POSTES = [
-  { code: "MEN", label: "Meneur (MEN)" },
-  { code: "ARR", label: "Arrière (ARR)" },
-  { code: "AIL", label: "Ailier (AIL)" },
-  { code: "AF", label: "Ailier fort (AF)" },
-  { code: "PIV", label: "Pivot (PIV)" },
+  { code: "MEN", label: "Meneur" },
+  { code: "ARR", label: "Arrière" },
+  { code: "AIL", label: "Ailier" },
+  { code: "AF", label: "Ailier fort" },
+  { code: "PIV", label: "Pivot" },
 ];
 
 /* 🔸 Mains fortes */

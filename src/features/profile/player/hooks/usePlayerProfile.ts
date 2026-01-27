@@ -101,14 +101,29 @@ export default function usePlayerProfile() {
   ============================================================ */
   const normalizePoste = (poste: string) => {
     if (!poste) return "";
-    const map: Record<string, string> = {
-      Pivot: "PIV",
-      Ailier: "AI",
-      "Ailier Fort": "AF",
-      Meneur: "M",
-      Arrière: "ARR",
+    const normalizeValue = (value: string) => {
+      const raw = value.trim();
+      if (!raw) return "";
+      const normalized = raw
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase();
+      const compact = normalized.replace(/[\s-]/g, "");
+
+      if (["MEN", "MENEUR", "M", "PG"].includes(compact)) return "MEN";
+      if (["ARR", "ARRIERE", "AR", "SG"].includes(compact)) return "ARR";
+      if (["AIL", "AILIER", "SF"].includes(compact)) return "AIL";
+      if (["AF", "AILIERFORT", "PF"].includes(compact)) return "AF";
+      if (["PIV", "PIVOT", "C"].includes(compact)) return "PIV";
+
+      return raw;
     };
-    return map[poste] ?? poste;
+
+    return poste
+      .split(",")
+      .map((p) => normalizeValue(p))
+      .filter(Boolean)
+      .join(", ");
   };
 
   useEffect(() => {
@@ -152,6 +167,9 @@ export default function usePlayerProfile() {
             data.subscriptionCurrentPeriodStart || null,
           subscriptionCurrentPeriodEnd:
             data.subscriptionCurrentPeriodEnd || null,
+          subscriptionScheduledInterval:
+            data.subscriptionScheduledInterval || null,
+          subscriptionScheduledAt: data.subscriptionScheduledAt || null,
         });
         setFields(loaded);
         setEditFields(loaded); // ��? valeurs initiales dans le modal
@@ -484,4 +502,3 @@ export default function usePlayerProfile() {
     saveProfileView,
   };
 }
-

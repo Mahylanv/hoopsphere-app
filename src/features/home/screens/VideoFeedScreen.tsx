@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { Video, ResizeMode, AVPlaybackStatus } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
+import { PROFILE_PLACEHOLDER } from "../../../constants/images";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../types";
@@ -357,11 +358,14 @@ export default function VideoFeedScreen({ route }: Props) {
                 }
               >
                 <Image
-                  source={{
-                    uri:
-                      item.avatar ??
-                      "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-                  }}
+                  source={
+                    item.avatar &&
+                    item.avatar.trim() !== "" &&
+                    item.avatar !== "null" &&
+                    item.avatar !== "undefined"
+                      ? { uri: item.avatar }
+                      : PROFILE_PLACEHOLDER
+                  }
                   className="w-16 h-16 rounded-full border-2 border-white"
                 />
               </TouchableOpacity>

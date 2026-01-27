@@ -104,7 +104,12 @@ export type RootStackParamList = {
 
   Payment: undefined;
   SubscriptionSettings: undefined;
-  StripeCheckout: { interval: "month" | "year" };
+  AnnualUpgrade: undefined;
+  StripeCheckout: {
+    interval: "month" | "year";
+    flow?: "subscription" | "upgrade";
+    startAt?: number;
+  };
   InAppWebView: { url: string; title: string };
   EditOffer: { offer: Offer }; // nouvelle page de modification
   SearchJoueur: undefined;
@@ -138,7 +143,6 @@ export type MainTabParamListJoueur = {
   HomeScreen: undefined;
   Match: undefined;
   // Chat: undefined;
-  TestPrenium: undefined;
   Search: undefined;
   Profil: undefined;
 };
@@ -152,7 +156,6 @@ export type MainTabParamListClub = {
   SearchJoueur: undefined;
   ProfilClub: undefined;
   SearchJoueurTabs: undefined;
-  ClubPremium: undefined;
   ClubLikedVideos: undefined;
   ClubVisitors: undefined;
 };

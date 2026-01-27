@@ -38,7 +38,7 @@ type CheckoutConfig = {
 };
 
 type CheckoutMessage =
-  | { type: "payment_success" }
+  | { type: "payment_success"; intentId?: string; paymentMethodId?: string }
   | { type: "payment_error"; message?: string }
   | { type: "go_back" };
 
@@ -282,6 +282,12 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
         width: 18px;
         height: 18px;
         accent-color: var(--accent);
+      }
+
+      .checkbox-field label {
+        display: inline-block;
+        margin: 0;
+        line-height: 1.2;
       }
 
       button {
@@ -581,6 +587,9 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
 
           const intent = result.paymentIntent || result.setupIntent;
           const status = intent && intent.status;
+          const intentId = intent && intent.id;
+          const paymentMethodId =
+            intent && "payment_method" in intent ? intent.payment_method : null;
           if (
             status === "succeeded" ||
             status === "processing" ||
@@ -588,7 +597,11 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
           ) {
             if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
               window.ReactNativeWebView.postMessage(
-                JSON.stringify({ type: "payment_success" })
+                JSON.stringify({
+                  type: "payment_success",
+                  intentId,
+                  paymentMethodId,
+                })
               );
             }
           } else {
@@ -608,11 +621,14 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
 export default function StripeCheckout() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProps>();
-  const { interval } = route.params;
+  const { interval, flow = "subscription", startAt } = route.params;
+  const isUpgrade = flow === "upgrade";
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [config, setConfig] = useState<CheckoutConfig | null>(null);
+  const [upgradeIntentId, setUpgradeIntentId] = useState<string | null>(null);
+  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   const hasCompletedRef = useRef(false);
 
   const functions = getFunctions(getApp());
@@ -702,6 +718,56 @@ export default function StripeCheckout() {
     hasCompletedRef.current = false;
 
     try {
+      if (isUpgrade) {
+        const createUpgradePaymentIntent = httpsCallable(
+          functions,
+          "createUpgradePaymentIntent"
+        );
+        const res: any = await createUpgradePaymentIntent({
+          plan: interval,
+          startAt,
+        });
+        const clientSecret = res?.data?.clientSecret;
+        const paymentIntentId = res?.data?.paymentIntentId ?? null;
+        const amount = res?.data?.amount as number | null | undefined;
+        const currency = res?.data?.currency as string | null | undefined;
+        const scheduledStartAt =
+          typeof res?.data?.switchAt === "number"
+            ? res.data.switchAt * 1000
+            : startAt ?? null;
+
+        if (!clientSecret) {
+          throw new Error("Impossible de démarrer le paiement.");
+        }
+
+        const amountLabel = formatAmountLabel(amount, currency);
+        const startLabel = formatDateLabel(scheduledStartAt);
+        const planLabel =
+          interval === "year" ? "Abonnement annuel" : "Abonnement mensuel";
+        const priceLabel = amountLabel
+          ? `${amountLabel} (paiement immédiat)`
+          : interval === "year"
+            ? "19,99 EUR (paiement immédiat)"
+            : "2,49 EUR (paiement immédiat)";
+        const renewalLabel = startLabel
+          ? `Débute le ${startLabel}`
+          : "Débute à la fin de la période";
+        const prefillName = await getPrefillName();
+
+        setUpgradeIntentId(paymentIntentId);
+        setConfig({
+          clientSecret,
+          intentType: "payment",
+          planLabel,
+          priceLabel,
+          renewalLabel,
+          prefillName,
+          prefillEmail: auth.currentUser?.email ?? "",
+        });
+        setLoading(false);
+        return;
+      }
+
       const createSubscription = httpsCallable(functions, "createSubscription");
       const res: any = await createSubscription({
         plan: interval === "year" ? "year" : "month",
@@ -709,7 +775,46 @@ export default function StripeCheckout() {
 
       const clientSecret = res?.data?.clientSecret;
       const setupIntentClientSecret = res?.data?.setupIntentClientSecret;
-
+      const needsInvoicePayment = Boolean(res?.data?.setupIntentClientSecret);
+      const createdSubscriptionId = res?.data?.subscriptionId ?? null;
+      const noPaymentRequired = Boolean(res?.data?.noPaymentRequired);
+      if (!clientSecret && noPaymentRequired) {
+        const navType = await markPremium();
+        Alert.alert(
+          "Succès",
+          "Abonnement activé ! Aucun paiement supplémentaire n'était requis.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                if (navType === "club") {
+                  navigation.reset({
+                    index: 0,
+                    routes: [
+                      {
+                        name: "MainTabsClub",
+                        params: { screen: "Home" },
+                      },
+                    ],
+                  });
+                } else {
+                  navigation.reset({
+                    index: 0,
+                    routes: [
+                      {
+                        name: "MainTabs",
+                        params: { screen: "HomeScreen" },
+                      },
+                    ],
+                  });
+                }
+              },
+            },
+          ]
+        );
+        setLoading(false);
+        return;
+      }
       if (!clientSecret && !setupIntentClientSecret) {
         throw new Error("Impossible de démarrer le paiement.");
       }
@@ -718,13 +823,15 @@ export default function StripeCheckout() {
       const priceLabel =
         interval === "year" ? "19,99 EUR / an" : "2,49 EUR / mois";
       const renewalLabel =
-        interval === "year" ? "Chaque annee" : "Chaque mois";
+        interval === "year" ? "Chaque année" : "Chaque mois";
+
+      const prefillName = await getPrefillName();
 
       const prefillName = await getPrefillName();
 
       setConfig({
         clientSecret: clientSecret || setupIntentClientSecret,
-        intentType: clientSecret ? "payment" : "setup",
+        intentType: needsInvoicePayment ? "setup" : "payment",
         planLabel,
         priceLabel,
         renewalLabel,
@@ -740,7 +847,7 @@ export default function StripeCheckout() {
 
   useEffect(() => {
     startCheckout();
-  }, [interval]);
+  }, [interval, flow, startAt]);
 
   const handleMessage = async (event: WebViewMessageEvent) => {
     if (hasCompletedRef.current) return;
@@ -767,6 +874,95 @@ export default function StripeCheckout() {
     if (data.type === "payment_success") {
       hasCompletedRef.current = true;
       try {
+        if (isUpgrade) {
+          const intentId = data.intentId || upgradeIntentId;
+          if (!intentId) {
+            throw new Error(
+              "Paiement validé mais identifiant de transaction manquant."
+            );
+          }
+          if (auth.currentUser) {
+            await auth.currentUser.getIdToken(true);
+          }
+          const confirmUpgradePayment = httpsCallable(
+            functions,
+            "confirmUpgradePayment"
+          );
+          const res: any = await confirmUpgradePayment({
+            paymentIntentId: intentId,
+          });
+          const startLabel = formatDateLabel(
+            typeof res?.data?.switchAt === "number"
+              ? res.data.switchAt * 1000
+              : startAt
+          );
+          Alert.alert(
+            "Upgrade annuel confirmé",
+            startLabel
+              ? `Ton abonnement annuel démarrera le ${startLabel}.`
+              : "Ton abonnement annuel a bien été programmé.",
+            [
+              {
+                text: "OK",
+                onPress: () => {
+                  if (navigation?.canGoBack?.()) {
+                    navigation.pop(2);
+                  } else {
+                    navigation.navigate("SubscriptionSettings");
+                  }
+                },
+              },
+            ]
+          );
+          return;
+        }
+
+        if (config?.intentType === "setup") {
+          const paymentMethodId = data.paymentMethodId;
+          if (!paymentMethodId || !subscriptionId) {
+            throw new Error(
+              "Paiement validé mais identifiant de carte manquant."
+            );
+          }
+          const confirmSubscriptionPayment = httpsCallable(
+            functions,
+            "confirmSubscriptionPayment"
+          );
+          await confirmSubscriptionPayment({
+            paymentMethodId,
+            subscriptionId,
+          });
+        }
+
+        const getSubscriptionInfo = httpsCallable(
+          functions,
+          "getSubscriptionInfo"
+        );
+        const res: any = await getSubscriptionInfo({});
+        const status = res?.data?.subscription?.status as
+          | string
+          | null
+          | undefined;
+        if (status !== "active" && status !== "trialing") {
+          Alert.alert(
+            "Paiement en cours",
+            "Le paiement est en cours de confirmation. Ton abonnement sera activé dès validation (tu peux rafraîchir dans les paramètres d’abonnement).",
+            [
+              {
+                text: "OK",
+                onPress: () => {
+                  if (navigation?.canGoBack?.()) {
+                    navigation.goBack();
+                  } else {
+                    navigation.navigate("SubscriptionSettings");
+                  }
+                },
+              },
+            ]
+          );
+          return;
+        }
+
         const navType = await markPremium();
         Alert.alert(
           "Succès",
@@ -801,6 +997,30 @@ export default function StripeCheckout() {
           ]
         );
       } catch (err: any) {
+        const code = err?.code || "";
+        const message = err?.message || "";
+        if (isUpgrade && (code === "unauthenticated" || message === "unauthenticated")) {
+          const startLabel = formatDateLabel(startAt);
+          Alert.alert(
+            "Paiement reçu",
+            startLabel
+              ? `Ton paiement est confirmé. L'upgrade sera appliqué d'ici quelques instants (début le ${startLabel}).`
+              : "Ton paiement est confirmé. L'upgrade sera appliqué d'ici quelques instants.",
+            [
+              {
+                text: "OK",
+                onPress: () => {
+                  if (navigation?.canGoBack?.()) {
+                    navigation.pop(2);
+                  } else {
+                    navigation.navigate("SubscriptionSettings");
+                  }
+                },
+              },
+            ]
+          );
+          return;
+        }
         setError(err?.message || "Erreur lors de la mise à jour du compte.");
       }
     }

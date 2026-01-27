@@ -137,9 +137,22 @@ const EditProfileModal = forwardRef<ModalizeRef, Props>(
           modalStyle={{ backgroundColor: "#111" }}
         >
           <View className="p-6">
-            <Text className="text-white text-2xl font-bold mb-6">
-              Modifier mon profil
-            </Text>
+            <View className="flex-row items-center justify-between mb-6">
+              <Text className="text-white text-2xl font-bold">
+                Modifier mon profil
+              </Text>
+              <TouchableOpacity
+                onPress={async () => {
+                  await saveProfile();
+                  modalRef.current?.close();
+                }}
+                className="bg-orange-500/15 border border-orange-500/40 rounded-full px-3 py-2 flex-row items-center"
+              >
+                <Text className="text-white font-semibold text-sm">
+                  Enregistrer
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
               <EditProfileSections

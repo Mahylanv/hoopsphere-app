@@ -11,6 +11,7 @@ import { db } from "../../../../config/firebaseConfig";
 import PremiumWall from "../../../../shared/components/PremiumWall";
 import { usePremiumStatus } from "../../../../shared/hooks/usePremiumStatus";
 import PremiumBadge from "../../../../shared/components/PremiumBadge";
+import { PROFILE_PLACEHOLDER } from "../../../../constants/images";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "ClubVisitors">;
 
@@ -103,18 +104,24 @@ export default function ClubVisitorsScreen() {
           data={visitors}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 16 }}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 mb-3 flex-row items-center"
-              onPress={() => navigation.navigate("JoueurDetail", { uid: item.viewerUid })}
-            >
-              <View className="w-12 h-12 rounded-full overflow-hidden bg-gray-800 mr-3">
-                {item.avatar ? (
-                  <Image source={{ uri: item.avatar }} className="w-full h-full" />
-                ) : (
-                  <Ionicons name="person-circle-outline" size={42} color="#fff" />
-                )}
-              </View>
+          renderItem={({ item }) => {
+            const avatarUri =
+              typeof item.avatar === "string" ? item.avatar.trim() : "";
+            const avatarSource =
+              avatarUri && avatarUri !== "null" && avatarUri !== "undefined"
+                ? { uri: avatarUri }
+                : PROFILE_PLACEHOLDER;
+
+            return (
+              <TouchableOpacity
+                className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 mb-3 flex-row items-center"
+                onPress={() =>
+                  navigation.navigate("JoueurDetail", { uid: item.viewerUid })
+                }
+              >
+                <View className="w-12 h-12 rounded-full overflow-hidden bg-gray-800 mr-3">
+                  <Image source={avatarSource} className="w-full h-full" />
+                </View>
               <View className="flex-1">
                 <View className="flex-row items-center flex-wrap">
                   <Text className="text-white font-semibold" numberOfLines={1}>
@@ -135,9 +142,10 @@ export default function ClubVisitorsScreen() {
                   </Text>
                 )}
               </View>
-              <Ionicons name="chevron-forward" size={18} color="#F97316" />
-            </TouchableOpacity>
-          )}
+                <Ionicons name="chevron-forward" size={18} color="#F97316" />
+              </TouchableOpacity>
+            );
+          }}
         />
       )}
     </SafeAreaView>

@@ -412,7 +412,7 @@ export default function ProfilJoueur() {
                       {isActive && (
                         <View className="absolute top-3 right-3 bg-orange-500 px-2 py-1 rounded-full">
                           <Text className="text-white text-xs font-bold">
-                            Activee
+                            Activée
                           </Text>
                         </View>
                       )}
