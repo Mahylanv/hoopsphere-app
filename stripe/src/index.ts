@@ -374,7 +374,50 @@ const formatAmountLabel = (
   return `${(amount / 100).toFixed(2)} ${safeCurrency}`;
 };
 
+const resolveInvoicePaymentIntentId = (invoice: Stripe.Invoice) => {
+  const raw = (invoice as any).payment_intent;
+  if (!raw) return null;
+  return typeof raw === "string" ? raw : raw.id ?? null;
+};
+
+const resolveInvoiceEmailFromPaymentIntent = async (
+  stripe: Stripe,
+  invoice: Stripe.Invoice
+) => {
+  const paymentIntentId = resolveInvoicePaymentIntentId(invoice);
+  if (!paymentIntentId) return null;
+
+  try {
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const receiptEmail =
+      typeof paymentIntent.receipt_email === "string"
+        ? paymentIntent.receipt_email.trim()
+        : "";
+    if (receiptEmail) return receiptEmail;
+
+    const charges = await stripe.charges.list({
+      payment_intent: paymentIntentId,
+      limit: 1,
+    });
+    const chargeEmail = charges.data[0]?.billing_details?.email ?? "";
+    if (chargeEmail) return chargeEmail.trim();
+
+    const paymentMethodId =
+      typeof paymentIntent.payment_method === "string"
+        ? paymentIntent.payment_method
+        : paymentIntent.payment_method?.id ?? null;
+    if (!paymentMethodId) return null;
+    const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+    const paymentMethodEmail = paymentMethod.billing_details?.email ?? "";
+    return paymentMethodEmail ? paymentMethodEmail.trim() : null;
+  } catch (err) {
+    console.error("Impossible de récupérer l'email du payment_intent:", err);
+    return null;
+  }
+};
+
 const sendSubscriptionEmail = async (
+  stripe: Stripe,
   invoice: Stripe.Invoice,
   userDoc?: UserDocInfo | null
 ) => {
@@ -391,7 +434,12 @@ const sendSubscriptionEmail = async (
 
   const resolvedUserDoc =
     userDoc ?? (customerId ? await resolveUserByStripeCustomerId(customerId) : null);
+  const paymentIntentEmail = await resolveInvoiceEmailFromPaymentIntent(
+    stripe,
+    invoice
+  );
   const email =
+    paymentIntentEmail ||
     invoice.customer_email ||
     (resolvedUserDoc?.data?.email as string | undefined) ||
     null;
@@ -408,6 +456,8 @@ const sendSubscriptionEmail = async (
   const invoiceNumber = invoice.number || invoice.id;
   const pdfUrl = invoice.invoice_pdf || null;
   const hostedUrl = invoice.hosted_invoice_url || null;
+  const invoiceUrl = pdfUrl || hostedUrl;
+  const invoiceCtaLabel = pdfUrl ? "Télécharger la facture (PDF)" : "Voir la facture";
 
   const lines = [
     "Bonjour,",
@@ -415,12 +465,99 @@ const sendSubscriptionEmail = async (
     "Votre abonnement Hoopsphere est confirmé.",
     amountLabel ? `Montant : ${amountLabel}` : null,
     invoiceNumber ? `Facture : ${invoiceNumber}` : null,
-    pdfUrl ? `PDF : ${pdfUrl}` : hostedUrl ? `Facture en ligne : ${hostedUrl}` : null,
+    invoiceUrl ? `Facture : ${invoiceUrl}` : null,
     "",
     "Merci pour votre confiance.",
     "",
     "L'équipe Hoopsphere",
   ].filter(Boolean);
+
+  const html = `<!doctype html>
+  <html lang="fr">
+    <body style="margin:0;padding:0;background:#0b0b0b;color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#0b0b0b;padding:24px 12px;">
+        <tr>
+          <td align="center">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px;background:#111111;border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;">
+              <tr>
+                <td style="padding:28px 28px 8px 28px;">
+                  <div style="display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(249,115,22,0.16);color:#f97316;font-weight:600;font-size:12px;letter-spacing:0.3px;">
+                    HOOPSPHERE
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:4px 28px 0 28px;">
+                  <h1 style="margin:0 0 8px 0;font-size:22px;line-height:1.3;">Abonnement confirmé</h1>
+                  <p style="margin:0;color:#d1d5db;font-size:14px;line-height:1.7;">
+                    Bonjour, votre abonnement Hoopsphere est maintenant actif.
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:20px 28px 0 28px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#0b0b0b;border:1px solid rgba(255,255,255,0.06);border-radius:12px;">
+                    <tr>
+                      <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.4px;">Détail</td>
+                      <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.4px;" align="right">Valeur</td>
+                    </tr>
+                    ${
+                      amountLabel
+                        ? `<tr>
+                      <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);color:#e5e7eb;font-size:14px;">Montant</td>
+                      <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);color:#ffffff;font-weight:600;font-size:14px;" align="right">${amountLabel}</td>
+                    </tr>`
+                        : ""
+                    }
+                    ${
+                      invoiceNumber
+                        ? `<tr>
+                      <td style="padding:14px 16px;color:#e5e7eb;font-size:14px;">Facture</td>
+                      <td style="padding:14px 16px;color:#ffffff;font-weight:600;font-size:14px;" align="right">${invoiceNumber}</td>
+                    </tr>`
+                        : ""
+                    }
+                  </table>
+                </td>
+              </tr>
+              ${
+                invoiceUrl
+                  ? `<tr>
+                <td style="padding:22px 28px 0 28px;">
+                  <a href="${invoiceUrl}" style="display:inline-block;background:#f97316;color:#0b0b0b;text-decoration:none;font-weight:700;font-size:14px;padding:12px 16px;border-radius:10px;">
+                    ${invoiceCtaLabel}
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:10px 28px 0 28px;">
+                  <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.6;">
+                    Si le bouton ne fonctionne pas, copiez ce lien :
+                    <br />
+                    <a href="${invoiceUrl}" style="color:#f97316;word-break:break-all;">${invoiceUrl}</a>
+                  </p>
+                </td>
+              </tr>`
+                  : ""
+              }
+              <tr>
+                <td style="padding:22px 28px 28px 28px;">
+                  <p style="margin:0;color:#d1d5db;font-size:13px;line-height:1.8;">
+                    Merci pour votre confiance.
+                    <br />
+                    L'équipe Hoopsphere
+                  </p>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:12px 0 0 0;color:#6b7280;font-size:11px;">
+              Cet email a été envoyé automatiquement, merci de ne pas y répondre.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </body>
+  </html>`;
 
   const transporter = nodemailer.createTransport({
     host: smtp.host,
@@ -437,10 +574,14 @@ const sendSubscriptionEmail = async (
     to: email,
     subject: "Confirmation d'abonnement Hoopsphere",
     text: lines.join("\n"),
+    html,
   });
 };
 
-const sendSubscriptionEmailIfNeeded = async (invoice: Stripe.Invoice) => {
+const sendSubscriptionEmailIfNeeded = async (
+  stripe: Stripe,
+  invoice: Stripe.Invoice
+) => {
   const customerId =
     typeof invoice.customer === "string"
       ? invoice.customer
@@ -468,7 +609,7 @@ const sendSubscriptionEmailIfNeeded = async (invoice: Stripe.Invoice) => {
     return;
   }
 
-  await sendSubscriptionEmail(invoice, userDoc);
+  await sendSubscriptionEmail(stripe, invoice, userDoc);
 
   if (userDoc) {
     await userDoc.ref.set(
@@ -569,11 +710,6 @@ const handlePaymentIntentSucceeded = async (
       customer: customerId,
       limit: 5,
     });
-    const resolveInvoicePaymentIntentId = (invoice: Stripe.Invoice) => {
-      const raw = (invoice as any).payment_intent;
-      if (!raw) return null;
-      return typeof raw === "string" ? raw : raw.id ?? null;
-    };
     const invoice =
       invoices.data.find(
         (item) => resolveInvoicePaymentIntentId(item) === paymentIntent.id
@@ -587,7 +723,7 @@ const handlePaymentIntentSucceeded = async (
       status: invoice.status,
       customer_email: invoice.customer_email,
     });
-    await sendSubscriptionEmailIfNeeded(invoice);
+    await sendSubscriptionEmailIfNeeded(stripe, invoice);
   } catch (err) {
     console.error("Erreur facture via payment_intent:", err);
   }
@@ -912,6 +1048,8 @@ export const confirmSubscriptionPayment = functions
       const uid = context.auth.uid;
       const paymentMethodId = data?.paymentMethodId as string | undefined;
       const subscriptionIdOverride = data?.subscriptionId as string | undefined;
+      const billingEmail =
+        typeof data?.billingEmail === "string" ? data.billingEmail.trim() : "";
 
       if (!paymentMethodId) {
         throw new functions.https.HttpsError(
@@ -961,6 +1099,7 @@ export const confirmSubscriptionPayment = functions
 
       await stripe.customers.update(customerId, {
         invoice_settings: { default_payment_method: paymentMethodId },
+        ...(billingEmail ? { email: billingEmail } : {}),
       });
       await stripe.subscriptions.update(subscriptionId, {
         default_payment_method: paymentMethodId,
@@ -968,6 +1107,12 @@ export const confirmSubscriptionPayment = functions
 
       if (latestInvoiceId) {
         let invoice = await stripe.invoices.retrieve(latestInvoiceId);
+        const paymentIntentId = resolveInvoicePaymentIntentId(invoice);
+        if (billingEmail && paymentIntentId) {
+          await stripe.paymentIntents.update(paymentIntentId, {
+            receipt_email: billingEmail,
+          });
+        }
         if (invoice.status === "draft") {
           invoice = await stripe.invoices.finalizeInvoice(invoice.id);
         }
@@ -1589,6 +1734,8 @@ export const confirmUpgradePayment = functions
       const stripe = getStripeOrThrow();
 
       const paymentIntentId = data?.paymentIntentId as string | undefined;
+      const billingEmail =
+        typeof data?.billingEmail === "string" ? data.billingEmail.trim() : "";
       if (!paymentIntentId) {
         throw new functions.https.HttpsError(
           "invalid-argument",
@@ -1673,6 +1820,16 @@ export const confirmUpgradePayment = functions
           "permission-denied",
           "Paiement associé à un autre client."
         );
+      }
+      if (billingEmail) {
+        try {
+          await stripe.customers.update(customerId, { email: billingEmail });
+          await stripe.paymentIntents.update(paymentIntent.id, {
+            receipt_email: billingEmail,
+          });
+        } catch (err) {
+          console.error("Impossible de mettre à jour l'email de facturation:", err);
+        }
       }
 
       const pendingId = userDoc.data?.pendingUpgradePaymentIntentId as
@@ -1941,7 +2098,7 @@ export const stripeWebhook = functions
               status: invoice.status,
               customer_email: invoice.customer_email,
             });
-            await sendSubscriptionEmailIfNeeded(invoice);
+            await sendSubscriptionEmailIfNeeded(stripe, invoice);
           }
         }
         break;
@@ -1993,7 +2150,7 @@ export const stripeWebhook = functions
 
         if (shouldSendEmail) {
           try {
-            await sendSubscriptionEmailIfNeeded(invoice);
+            await sendSubscriptionEmailIfNeeded(stripe, invoice);
             console.log("email abonnement envoye");
           } catch (err) {
             console.error("Erreur envoi email abonnement:", err);

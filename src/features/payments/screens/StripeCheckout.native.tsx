@@ -38,7 +38,13 @@ type CheckoutConfig = {
 };
 
 type CheckoutMessage =
-  | { type: "payment_success"; intentId?: string; paymentMethodId?: string }
+  | {
+      type: "payment_success";
+      intentId?: string;
+      paymentMethodId?: string;
+      billingEmail?: string;
+      receiptOptIn?: boolean;
+    }
   | { type: "payment_error"; message?: string }
   | { type: "go_back" };
 
@@ -553,7 +559,9 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
           let result;
           try {
             if (config.intentType === "payment") {
-              const shouldSendReceipt = receiptInput.checked && emailValue;
+              // Always pass the billing email to Stripe when provided so
+              // receipts/invoices go to the email entered in the form.
+              const shouldSendReceipt = Boolean(emailValue);
               const confirmOptions = {
                 payment_method: {
                   card: cardNumber,
@@ -601,6 +609,8 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
                   type: "payment_success",
                   intentId,
                   paymentMethodId,
+                  billingEmail: emailValue || undefined,
+                  receiptOptIn: Boolean(receiptInput.checked),
                 })
               );
             }
@@ -889,6 +899,8 @@ export default function StripeCheckout() {
     if (data.type === "payment_success") {
       hasCompletedRef.current = true;
       try {
+        const billingEmail =
+          typeof data.billingEmail === "string" ? data.billingEmail.trim() : "";
         if (isUpgrade) {
           const intentId = data.intentId || upgradeIntentId;
           if (!intentId) {
@@ -905,6 +917,7 @@ export default function StripeCheckout() {
           );
           const res: any = await confirmUpgradePayment({
             paymentIntentId: intentId,
+            billingEmail: billingEmail || undefined,
           });
           const startLabel = formatDateLabel(
             typeof res?.data?.switchAt === "number"
@@ -946,6 +959,7 @@ export default function StripeCheckout() {
           await confirmSubscriptionPayment({
             paymentMethodId,
             subscriptionId,
+            billingEmail: billingEmail || undefined,
           });
         }
 
