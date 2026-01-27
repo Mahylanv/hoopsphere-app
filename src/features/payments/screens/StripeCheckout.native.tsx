@@ -384,7 +384,7 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
 
         <div class="checkbox-field">
           <input id="receipt" name="receipt" type="checkbox" />
-          <label for="receipt">Recevoir un recu par email</label>
+          <label for="receipt">Recevoir un reçu par email</label>
         </div>
 
         <div class="field">
@@ -706,6 +706,22 @@ export default function StripeCheckout() {
     }
   };
 
+  const formatAmountLabel = (
+    amount?: number | null,
+    currency?: string | null
+  ) => {
+    if (typeof amount !== "number") return null;
+    const safeCurrency = currency ? currency.toUpperCase() : "EUR";
+    return `${(amount / 100).toFixed(2)} ${safeCurrency}`;
+  };
+
+  const formatDateLabel = (value?: number | null) => {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleDateString("fr-FR");
+  };
+
   const startCheckout = async () => {
     if (!publishableKey) {
       setError("Cle Stripe manquante. Merci de verifier la configuration.");
@@ -827,8 +843,7 @@ export default function StripeCheckout() {
 
       const prefillName = await getPrefillName();
 
-      const prefillName = await getPrefillName();
-
+      setSubscriptionId(createdSubscriptionId);
       setConfig({
         clientSecret: clientSecret || setupIntentClientSecret,
         intentType: needsInvoicePayment ? "setup" : "payment",
