@@ -11,6 +11,7 @@ import {
   RefreshControl,
   DeviceEventEmitter,
   TouchableOpacity,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
@@ -23,7 +24,6 @@ import BioSection from "../components/BioSection";
 import GallerySection from "../components/GallerySection";
 import DeleteAccountSection from "../../../auth/components/DeleteAccountSection";
 import LogoutButton from "../components/LogoutButton";
-import FloatingShareButton from "../components/FloatingShareButton";
 import usePlayerProfile from "../hooks/usePlayerProfile";
 import EditProfileModal from "../modals/EditProfileModal/EditProfileModal";
 import { Modalize } from "react-native-modalize";
@@ -33,9 +33,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import Svg, { Path } from "react-native-svg";
+import { updateUserProfile } from "../../../auth/services/userService";
+import { CARD_NORMAL, CARD_PREMIUM } from "../../../../constants/images";
 
 const CARD_WIDTH = Dimensions.get("window").width * 0.9;
 const CARD_HEIGHT = CARD_WIDTH * 1.3;
+const CARD_PREVIEW_WIDTH = Dimensions.get("window").width * 0.42;
 
 export default function ProfilJoueur() {
   const {
@@ -106,6 +109,8 @@ export default function ProfilJoueur() {
   // ————————— Remontage forcé (si ton hook n'a pas refetch)
   const [focusKey, setFocusKey] = useState(0);
   const remount = useCallback(() => setFocusKey((k) => k + 1), []);
+  const [showCardChooser, setShowCardChooser] = useState(false);
+  const [cardStyle, setCardStyle] = useState<"normal" | "premium">("normal");
 
   // ————————— Rechargement à chaque FOCUS
   useFocusEffect(
@@ -135,6 +140,52 @@ export default function ProfilJoueur() {
     });
     return () => sub.remove();
   }, [refetch]);
+
+  useEffect(() => {
+    if (user?.cardStyle) {
+      setCardStyle(user.cardStyle);
+    }
+  }, [user?.cardStyle]);
+
+  const cardOptions: Array<{
+    id: "normal" | "premium";
+    label: string;
+    image: ReturnType<typeof require>;
+  }> = [
+    {
+      id: "normal",
+      label: "Carte normale",
+      image: CARD_NORMAL,
+    },
+    {
+      id: "premium",
+      label: "Carte premium",
+      image: CARD_PREMIUM,
+    },
+  ];
+
+  const updateCardStyle = async (nextStyle: "normal" | "premium") => {
+    try {
+      await updateUserProfile({ cardStyle: nextStyle });
+      setCardStyle(nextStyle);
+      Alert.alert(
+        "Carte mise a jour",
+        nextStyle === "premium"
+          ? "La carte premium sera affichee sur ton profil."
+          : "La carte normale sera affichee sur ton profil."
+      );
+    } catch {
+      Alert.alert("Erreur", "Impossible de mettre a jour la card.");
+    }
+  };
+
+  const handleCardCustomizerPress = () => {
+    if (!user?.premium) {
+      navigation.navigate("Payment");
+      return;
+    }
+    setShowCardChooser((current) => !current);
+  };
 
   // Refs / animations
   const cardRef = useRef<ViewShot>(null);
@@ -284,7 +335,109 @@ export default function ProfilJoueur() {
           </View>
         </Animated.View>
 
-        <FloatingShareButton cardRef={cardRef} />
+        <View className="w-full px-5 -mt-5 mb-4">
+          <View className="flex-row items-center justify-between">
+            <LinearGradient
+              colors={[brand.orange, brand.blue]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ borderRadius: 999, padding: 1 }}
+            >
+              <TouchableOpacity
+                onPress={handleCardCustomizerPress}
+                activeOpacity={0.9}
+                className="bg-[#0E0D0D] rounded-full px-4 py-2 flex-row items-center"
+              >
+                <Ionicons
+                  name={user?.premium ? "color-palette-outline" : "lock-closed-outline"}
+                  size={16}
+                  color={user?.premium ? "#FDBA74" : "#9ca3af"}
+                />
+                <Text className="text-white font-semibold ml-2">
+                  {user?.premium
+                    ? showCardChooser
+                      ? "Masquer le choix"
+                      : "Personnaliser"
+                    : "Personnaliser"}
+                </Text>
+              </TouchableOpacity>
+            </LinearGradient>
+
+            <TouchableOpacity
+              onPress={shareCard}
+              className="w-[56px] h-[56px] rounded-full bg-[#ff6600] justify-center items-center shadow-lg shadow-black/40"
+            >
+              <Ionicons name="share-social-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {showCardChooser && user?.premium && (
+          <View className="px-5 mb-6">
+            <Text className="text-gray-300 mb-4">
+              Slide et clique sur une carte pour l'appliquer.
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={CARD_PREVIEW_WIDTH + 16}
+              decelerationRate="fast"
+              contentContainerStyle={{ paddingRight: 16 }}
+            >
+              {cardOptions.map((option) => {
+                const isActive = cardStyle === option.id;
+
+                return (
+                  <TouchableOpacity
+                    key={option.id}
+                    onPress={() => updateCardStyle(option.id)}
+                    className="mr-4"
+                    activeOpacity={0.9}
+                  >
+                    <View
+                      className={`rounded-2xl overflow-hidden border bg-[#0b0b0b] shadow-lg shadow-black/40 ${
+                        isActive ? "border-orange-500" : "border-gray-800"
+                      }`}
+                      style={{
+                        width: CARD_PREVIEW_WIDTH,
+                        aspectRatio: 0.68,
+                        padding: 6,
+                      }}
+                    >
+                      <Image
+                        source={option.image}
+                        className="w-full h-full"
+                        resizeMode="contain"
+                      />
+                      {isActive && (
+                        <View className="absolute top-3 right-3 bg-orange-500 px-2 py-1 rounded-full">
+                          <Text className="text-white text-xs font-bold">
+                            Activée
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <View
+                      className={`mt-2 self-center px-3 py-1 rounded-full border ${
+                        isActive
+                          ? "bg-orange-500/15 border-orange-500/40"
+                          : "bg-white/5 border-white/10"
+                      }`}
+                    >
+                      <Text
+                        className={`text-xs font-semibold ${
+                          isActive ? "text-orange-200" : "text-gray-200"
+                        }`}
+                      >
+                        {option.label}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         <View className="mt-4 px-5">
           <View className="flex-row items-center mb-3">
@@ -338,7 +491,6 @@ export default function ProfilJoueur() {
         </View>
         {user?.premium ? (
           <View className="mt-2">
-            <StatsChartSection playerUid={user?.uid} />
             <View className="px-5 mt-4">
               <TouchableOpacity
                 onPress={() => navigation.navigate("SubscriptionSettings")}
@@ -350,16 +502,17 @@ export default function ProfilJoueur() {
                   </View>
                   <View>
                     <Text className="text-white font-semibold">
-                      Parametres abonnement
+                      Paramètres d'abonnement
                     </Text>
                     <Text className="text-gray-400 text-xs mt-1">
-                      Gerer ton premium
+                      Gère ton abonnement
                     </Text>
                   </View>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
               </TouchableOpacity>
             </View>
+            <StatsChartSection playerUid={user?.uid} />
           </View>
         ) : (
           <View className="mt-6 px-5">
@@ -408,6 +561,7 @@ export default function ProfilJoueur() {
             </View>
           </View>
         )}
+
         {/* <GallerySection
           media={gallery}
           onAddMedia={goToCreatePost}
@@ -424,7 +578,6 @@ export default function ProfilJoueur() {
                 Actions
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
           </View>
           <View className="flex-row flex-wrap gap-3 mt-3">
             {quickActions.map((action) => (

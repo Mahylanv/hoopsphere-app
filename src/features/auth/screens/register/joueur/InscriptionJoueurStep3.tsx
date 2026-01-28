@@ -7,12 +7,16 @@ import {
   TextInput,
   StatusBar,
   ScrollView,
+  Platform,
   TouchableOpacity,
   Pressable,
   Image,
   Alert,
   Modal,
   ImageBackground,
+  KeyboardAvoidingView,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -29,7 +33,13 @@ import { auth } from "../../../../../config/firebaseConfig";
 
 const tailles = Array.from({ length: 71 }, (_, i) => `${150 + i} cm`);
 const poidsOptions = Array.from({ length: 101 }, (_, i) => `${40 + i} kg`);
-const postes = ["Meneur", "Arrière", "Ailier", "Ailier fort", "Pivot"];
+const postes = [
+  { label: "Meneur", value: "MEN" },
+  { label: "Arrière", value: "ARR" },
+  { label: "Ailier", value: "AIL" },
+  { label: "Ailier fort", value: "AF" },
+  { label: "Pivot", value: "PIV" },
+];
 
 type Nav3Prop = NativeStackNavigationProp<
   RootStackParamList,
@@ -140,49 +150,57 @@ export default function InscriptionJoueurStep3() {
       >
         <View className="absolute inset-0 bg-black/55" />
         <SafeAreaView className="flex-1">
-          {/* -------------------------------- HEADER -------------------------------- */}
-          <View className="flex-row items-center px-6 mt-6">
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={28} color="white" />
-            </TouchableOpacity>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <KeyboardAvoidingView
+              className="flex-1"
+              behavior={Platform.OS === "ios" ? "padding" : undefined}
+              keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+            >
+              {/* -------------------------------- HEADER -------------------------------- */}
+              <View className="flex-row items-center px-6 mt-6">
+                <TouchableOpacity onPress={() => navigation.goBack()}>
+                  <Ionicons name="arrow-back" size={28} color="white" />
+                </TouchableOpacity>
 
-            <Text className="text-white text-xl ml-4">Inscription joueur</Text>
-          </View>
-
-          <View className="px-6 mt-6">
-            <Text className="text-white text-3xl font-bold text-center">
-              Finalise ton profil
-            </Text>
-            <Text className="text-gray-300 text-center mt-2">
-              Étape 3 — Informations sportives
-            </Text>
-          </View>
-
-          {/* -------------------------------- AVATAR -------------------------------- */}
-          <View className="items-center my-8">
-            <Pressable onPress={pickImage} className="relative">
-              <View className="rounded-full bg-zinc-700 w-28 h-28 items-center justify-center overflow-hidden">
-                {avatar ? (
-                  <Image
-                    source={{ uri: avatar }}
-                    className="w-28 h-28 rounded-full"
-                  />
-                ) : (
-                  <Feather name="user" size={56} color="#aaa" />
-                )}
+                <Text className="text-white text-xl ml-4">Inscription joueur</Text>
               </View>
+
+              <View className="px-6 mt-6">
+                <Text className="text-white text-3xl font-bold text-center">
+                  Finalise ton profil
+                </Text>
+                <Text className="text-gray-300 text-center mt-2">
+                  Étape 3 — Informations sportives
+                </Text>
+              </View>
+
+              {/* -------------------------------- AVATAR -------------------------------- */}
+              <View className="items-center my-8">
+                <Pressable onPress={pickImage} className="relative">
+                  <View className="rounded-full bg-zinc-700 w-28 h-28 items-center justify-center overflow-hidden">
+                    {avatar ? (
+                      <Image
+                        source={{ uri: avatar }}
+                        className="w-28 h-28 rounded-full"
+                      />
+                    ) : (
+                      <Feather name="user" size={56} color="#aaa" />
+                    )}
+                  </View>
 
               <View className="absolute bottom-0 right-0 bg-orange-500 p-2 rounded-full">
-                <Feather name="edit-2" size={16} color="white" />
+                <Feather name="plus" size={16} color="white" />
               </View>
-            </Pressable>
-          </View>
+                </Pressable>
+              </View>
 
-          {/* -------------------------------- FORM -------------------------------- */}
-          <ScrollView
-            className="px-6"
-            contentContainerStyle={{ paddingBottom: 120 }}
-          >
+              {/* -------------------------------- FORM -------------------------------- */}
+              <ScrollView
+                className="px-6"
+                contentContainerStyle={{ paddingBottom: 120 }}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+              >
         {/* TAILLE */}
         <TouchableOpacity
           onPress={() => setFocusedInput("taille")}
@@ -244,7 +262,9 @@ export default function InscriptionJoueurStep3() {
               poste ? "text-white" : "text-gray-400"
             )}
           >
-            {poste || "Sélectionne ton poste"}
+            {postes.find((p) => p.value === poste)?.label ||
+              poste ||
+              "Sélectionne ton poste"}
           </Text>
         </TouchableOpacity>
 
@@ -262,7 +282,8 @@ export default function InscriptionJoueurStep3() {
           onChangeText={setClub}
           placeholder="Nom de ton club"
           placeholderTextColor="#999"
-          className="rounded-lg h-14 px-4 text-white text-lg mt-5 bg-[#111] border-2 border-gray-600"
+          className="rounded-lg h-14 px-4 py-0 text-white text-lg mt-5 bg-[#111] border-2 border-gray-600"
+          style={{ textAlignVertical: "center", paddingVertical: 0 }}
         />
 
         {/* BOUTON FINAL */}
@@ -287,6 +308,8 @@ export default function InscriptionJoueurStep3() {
           <View className="w-2 h-2 rounded-full bg-orange-500" />
         </View>
           </ScrollView>
+            </KeyboardAvoidingView>
+          </TouchableWithoutFeedback>
 
       {/* -------------------------------- MODALES -------------------------------- */}
       {focusedInput === "taille" &&
@@ -319,9 +342,11 @@ export default function InscriptionJoueurStep3() {
 }
 
 /* --------------------------- MODALE SIMPLE (TAILLE / POIDS / POSTE) --------------------------- */
+type PickerItem = string | { label: string; value: string };
+
 function renderPickerModal(
   title: string,
-  list: string[],
+  list: PickerItem[],
   onSelect: (v: string) => void,
   close: (arg: any) => void
 ) {
@@ -331,18 +356,22 @@ function renderPickerModal(
         <View className="bg-zinc-900 rounded-xl w-[80%] max-h-[70%] p-5">
           <Text className="text-white text-lg font-bold mb-4">{title}</Text>
           <ScrollView className="mb-4">
-            {list.map((item) => (
+            {list.map((item) => {
+              const label = typeof item === "string" ? item : item.label;
+              const value = typeof item === "string" ? item : item.value;
+              return (
               <TouchableOpacity
-                key={item}
+                key={value}
                 onPress={() => {
-                  onSelect(item);
+                  onSelect(value);
                   close(null);
                 }}
                 className="py-3 border-b border-gray-700"
               >
-                <Text className="text-white">{item}</Text>
+                <Text className="text-white">{label}</Text>
               </TouchableOpacity>
-            ))}
+              );
+            })}
           </ScrollView>
 
           <TouchableOpacity

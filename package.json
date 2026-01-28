@@ -9,6 +9,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web"
   },
+  "engines": {
+    "node": ">=20 <21"
+  },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^1.24.0",
     "@react-native-community/datetimepicker": "8.4.4",
@@ -16,7 +19,7 @@
     "@react-native-picker/picker": "2.11.1",
     "@react-navigation/material-top-tabs": "^7.3.7",
     "@react-navigation/native": "^7.1.17",
-    "@stripe/stripe-react-native": "^0.43.0",
+    "@stripe/stripe-react-native": "^0.57.3",
     "clsx": "^2.1.1",
     "expo": "~54.0.9",
     "expo-av": "^16.0.7",
@@ -37,6 +40,7 @@
     "firebase-admin": "^13.6.0",
     "firebase-functions": "^7.0.2",
     "nativewind": "^4.2.1",
+    "nodemailer": "^7.0.12",
     "papaparse": "^5.5.3",
     "prettier-plugin-tailwindcss": "^0.5.11",
     "react": "19.1.0",
@@ -48,6 +52,7 @@
     "react-native-gesture-handler": "~2.28.0",
     "react-native-image-zoom-viewer": "^3.0.1",
     "react-native-modalize": "^2.1.1",
+    "react-native-pager-view": "^8.0.0",
     "react-native-picker-select": "^9.3.1",
     "react-native-popup-menu": "^0.19.0",
     "react-native-reanimated": "~4.1.1",
@@ -69,7 +74,7 @@
     "@types/react-native-tab-view": "^1.0.6",
     "autoprefixer": "^10.4.21",
     "babel-preset-expo": "^54.0.2",
-    "baseline-browser-mapping": "^2.8.31",
+    "baseline-browser-mapping": "^2.9.18",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.6",

@@ -137,6 +137,24 @@ function teamKindsLabel(item: FirestoreClub): string | null {
   return null;
 }
 
+function formatOfferDate(value?: string): string {
+  if (!value) return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const [y, m, d] = trimmed.split("-");
+    return `${d}-${m}-${y}`;
+  }
+  const parsed = new Date(trimmed);
+  if (!Number.isNaN(parsed.getTime())) {
+    const d = String(parsed.getDate()).padStart(2, "0");
+    const m = String(parsed.getMonth() + 1).padStart(2, "0");
+    const y = parsed.getFullYear();
+    return `${d}-${m}-${y}`;
+  }
+  return trimmed;
+}
+
 function ClubsTab({ isPremium, onUpgrade }: PremiumProps) {
   const navigation = useNavigation<SearchNavProp>();
 
@@ -988,7 +1006,7 @@ function OffersTab({ isPremium, onUpgrade }: PremiumProps) {
                   </Text>
                   {!!item.publishedAt && (
                     <Text className="text-gray-500 text-xs">
-                      {item.publishedAt}
+                      {formatOfferDate(item.publishedAt)}
                     </Text>
                   )}
                 </View>

@@ -9,11 +9,15 @@ import { formatPhone } from "../modals/EditProfileModal/ EditProfileHandlers";
 
 // Mapping codes → labels lisibles
 const POSITION_LABELS: Record<string, string> = {
-  MEN: "Meneur (MEN)",
-  ARR: "Arrière (ARR)",
-  AIL: "Ailier (AIL)",
-  AF: "Ailier fort (AF)",
-  PIV: "Pivot (PIV)",
+  MEN: "Meneur",
+  M: "Meneur",
+  ARR: "Arrière",
+  AR: "Arrière",
+  AIL: "Ailier",
+  AI: "Ailier",
+  AF: "Ailier fort",
+  PIV: "Pivot",
+  P: "Pivot",
 };
 
 export type BioSectionProps = {
@@ -89,6 +93,15 @@ export default function BioSection({
     border: "rgba(255,255,255,0.08)",
   };
 
+  const renderValue = (value?: string, suffix = "") => {
+    const trimmed = value?.toString().trim();
+    return (
+      <Text className={clsx("text-base mt-2", trimmed ? "text-white" : "text-gray-500")}>
+        {trimmed ? `${trimmed}${suffix}` : "—"}
+      </Text>
+    );
+  };
+
   const renderInput = (
     value: string,
     onChange: (v: string) => void,
@@ -98,7 +111,7 @@ export default function BioSection({
     <TextInput
       value={value}
       onChangeText={onChange}
-      className="text-lg text-white border-b border-white/20 pb-1"
+      className="text-base text-white border-b border-white/20 pb-1 mt-2"
       placeholder={placeholder}
       placeholderTextColor="#6B7280"
       {...props}
@@ -112,7 +125,7 @@ export default function BioSection({
   ) => (
     <TouchableOpacity
       onPress={onPress}
-      className="border border-white/30 rounded-lg h-12 px-4 justify-center bg-white/5"
+      className="border border-white/20 rounded-xl px-3 py-2 mt-2 bg-white/5"
     >
       <Text
         className={clsx(
@@ -123,6 +136,18 @@ export default function BioSection({
         {displayValue || placeholder}
       </Text>
     </TouchableOpacity>
+  );
+
+  const renderField = (label: string, content: React.ReactNode) => (
+    <View className="bg-[#0b0f18] border border-white/10 rounded-2xl px-3 py-3 overflow-hidden">
+      <View className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500/40" />
+      <View className="absolute left-2 right-2 top-2 h-[1px] bg-white/5" />
+      <View className="absolute -right-6 -top-6 w-14 h-14 rounded-full bg-orange-500/10" />
+      <Text className="text-[11px] uppercase tracking-[0.18em] text-gray-500">
+        {label}
+      </Text>
+      {content}
+    </View>
   );
 
   return (
@@ -140,9 +165,18 @@ export default function BioSection({
         <View className="rounded-[18px] bg-[#0E0D0D] p-5">
           <View className="flex-row justify-between items-center mb-4">
             <View>
-              <Text className="text-xl font-bold text-white">Biographie</Text>
+              <View className="flex-row items-center">
+                <Text className="text-xl font-bold text-white">
+                  Données personnelles
+                </Text>
+                <View className="ml-2 rounded-full border border-orange-500/40 bg-orange-500/10 px-2 py-0.5">
+                  <Text className="text-[10px] text-orange-200 uppercase tracking-widest">
+                    Profil
+                  </Text>
+                </View>
+              </View>
               <Text className="text-gray-400 text-xs mt-1">
-                Infos clés pour te présenter aux clubs
+                Les infos clés de ton profil joueur
               </Text>
             </View>
             <TouchableOpacity
@@ -160,114 +194,143 @@ export default function BioSection({
             </TouchableOpacity>
           </View>
 
-          <View className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-4">
-            <View className="flex-row justify-between gap-x-4">
-              <View className="w-1/2">
-                <Text className="text-sm text-gray-400">Année de naissance</Text>
-                {editMode
-                  ? renderInput(birthYear, setBirthYear, "2002", { keyboardType: "numeric" })
-                  : <Text className="text-lg text-white">{birthYear || "-"}</Text>}
+          <View className="bg-white/5 border border-white/10 rounded-2xl p-4">
+            <View className="flex-row flex-wrap -mx-2">
+              <View className="w-1/2 px-2 mb-4">
+                {renderField(
+                  "Année de naissance",
+                  editMode
+                    ? renderInput(birthYear, setBirthYear, "2002", { keyboardType: "numeric" })
+                    : renderValue(birthYear)
+                )}
               </View>
-              <View className="w-1/2">
-                <Text className="text-sm text-gray-400">Taille</Text>
-                {editMode
-                  ? renderSelect("Sélectionne ta taille", onSelectHeight, height ? `${height} cm` : "")
-                  : <Text className="text-lg text-white">{height ? `${height} cm` : "-"}</Text>}
+              <View className="w-1/2 px-2 mb-4">
+                {renderField(
+                  "Taille",
+                  editMode
+                    ? renderSelect("Sélectionne ta taille", onSelectHeight, height ? `${height} cm` : "")
+                    : renderValue(height, height ? " cm" : "")
+                )}
+              </View>
+              <View className="w-1/2 px-2 mb-4">
+                {renderField(
+                  "Poids",
+                  editMode
+                    ? renderSelect("Sélectionne ton poids", onSelectWeight, weight ? `${weight} Kg` : "")
+                    : renderValue(weight, weight ? " Kg" : "")
+                )}
+              </View>
+              <View className="w-1/2 px-2 mb-4">
+                {renderField(
+                  "Poste",
+                  editMode
+                    ? renderSelect("Sélectionne ton poste", onSelectPoste, position || "")
+                    : renderValue(
+                        position
+                          ? position
+                              .split(",")
+                              .map((p) => POSITION_LABELS[p.trim()] || p)
+                              .join(", ")
+                          : ""
+                      )
+                )}
+              </View>
+              <View className="w-1/2 px-2 mb-4">
+                {renderField(
+                  "Main forte",
+                  editMode
+                    ? renderInput(strongHand, setStrongHand, "Droite / Gauche")
+                    : renderValue(strongHand)
+                )}
+              </View>
+              <View className="w-1/2 px-2 mb-4">
+                {renderField(
+                  "Département",
+                  editMode
+                    ? renderSelect("Sélectionne ton département", onSelectDepartement, departement || "")
+                    : renderValue(departement)
+                )}
+              </View>
+              <View className="w-1/2 px-2 mb-4">
+                {renderField(
+                  "Club actuel",
+                  editMode
+                    ? renderSelect("Sélectionne ton club", onSelectClub, club || "")
+                    : renderValue(club)
+                )}
+              </View>
+              <View className="w-1/2 px-2 mb-4">
+                {renderField(
+                  "Email",
+                  editMode
+                    ? renderInput(email, setEmail, "email@exemple.com", { keyboardType: "email-address" })
+                    : renderValue(email)
+                )}
+              </View>
+              <View className="w-1/2 px-2 mb-4">
+                {renderField(
+                  "Téléphone",
+                  editMode
+                    ? renderInput(phone, (val) => setPhone(formatPhone(val)), "06 12 34 56 78", { keyboardType: "phone-pad" })
+                    : renderValue(phone)
+                )}
+              </View>
+              <View className="w-1/2 px-2 mb-4">
+                {renderField(
+                  "Niveau",
+                  editMode
+                    ? renderSelect("Sélectionne ton niveau", onSelectLevel, level || "")
+                    : renderValue(level)
+                )}
+              </View>
+              <View className="w-1/2 px-2 mb-4">
+                {renderField(
+                  "Expérience",
+                  editMode
+                    ? renderInput(experience, setExperience, "Ex: 5 ans en club")
+                    : renderValue(experience)
+                )}
               </View>
             </View>
+          </View>
 
-            <View className="flex-row justify-between gap-x-4">
-              <View className="w-1/2">
-                <Text className="text-sm text-gray-400">Poids</Text>
-                {editMode
-                  ? renderSelect("Sélectionne ton poids", onSelectWeight, weight ? `${weight} Kg` : "")
-                  : <Text className="text-lg text-white">{weight ? `${weight} Kg` : "-"}</Text>}
+          <View className="mt-6">
+            <View className="flex-row items-center">
+              <View className="w-9 h-9 rounded-full bg-orange-500/15 border border-orange-500/30 items-center justify-center mr-3">
+                <Feather name="edit-3" size={16} color="#FDBA74" />
               </View>
-              <View className="w-1/2">
-                <Text className="text-sm text-gray-400">Poste</Text>
-                {editMode
-                  ? renderSelect("Sélectionne ton poste", onSelectPoste, position || "")
-                  : (
-                    <Text className="text-lg text-white">
-                      {position
-                        ? position
-                            .split(",")
-                            .map((p) => POSITION_LABELS[p.trim()] || p)
-                            .join(", ")
-                        : "-"}
-                    </Text>
-                  )}
+              <View>
+                <Text className="text-white text-lg font-semibold">Biographie</Text>
+                <Text className="text-gray-400 text-xs mt-1">
+                  Mets en avant ton parcours et tes points forts
+                </Text>
               </View>
             </View>
-
-            <View className="flex-row justify-between gap-x-4">
-              <View className="w-1/2">
-                <Text className="text-sm text-gray-400">Main forte</Text>
-                {editMode
-                  ? renderInput(strongHand, setStrongHand, "Droite / Gauche")
-                  : <Text className="text-lg text-white">{strongHand || "-"}</Text>}
-              </View>
-              <View className="w-1/2">
-                <Text className="text-sm text-gray-400">Département</Text>
-                {editMode
-                  ? renderSelect("Sélectionne ton département", onSelectDepartement, departement || "")
-                  : <Text className="text-lg text-white">{departement || "-"}</Text>}
-              </View>
-            </View>
-
-            <View className="flex-row justify-between gap-x-4">
-              <View className="w-1/2">
-                <Text className="text-sm text-gray-400">Club actuel</Text>
-                {editMode
-                  ? renderSelect("Sélectionne ton club", onSelectClub, club || "")
-                  : <Text className="text-lg text-white">{club || "-"}</Text>}
-              </View>
-              <View className="w-1/2">
-                <Text className="text-sm text-gray-400">Email</Text>
-                {editMode
-                  ? renderInput(email, setEmail, "email@exemple.com", { keyboardType: "email-address" })
-                  : <Text className="text-lg text-white">{email || "-"}</Text>}
-              </View>
-            </View>
-
-            <View className="flex-row justify-between gap-x-4">
-              <View className="w-1/2">
-                <Text className="text-sm text-gray-400">Téléphone</Text>
-                {editMode
-                  ? renderInput(phone, (val) => setPhone(formatPhone(val)), "06 12 34 56 78", { keyboardType: "phone-pad" })
-                  : <Text className="text-lg text-white">{phone || "-"}</Text>}
-              </View>
-              <View className="w-1/2">
-                <Text className="text-sm text-gray-400">Niveau</Text>
-                {editMode
-                  ? renderSelect("Sélectionne ton niveau", onSelectLevel, level || "")
-                  : <Text className="text-lg text-white">{level || "-"}</Text>}
-              </View>
-            </View>
-
-            <View className="flex-row justify-between gap-x-4">
-              <View className="w-1/2">
-                <Text className="text-sm text-gray-400">Expérience</Text>
-                {editMode
-                  ? renderInput(experience, setExperience, "Ex: 5 ans en club")
-                  : <Text className="text-lg text-white">{experience || "-"}</Text>}
-              </View>
-              <View className="w-1/2">
-                <Text className="text-sm text-gray-400">Bio</Text>
+            <LinearGradient
+              colors={["#0b0f18", "#0f172a"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ borderRadius: 18, padding: 1, marginTop: 12 }}
+            >
+              <View className="bg-[#0b0f18] border border-white/10 rounded-2xl px-3 py-3">
                 {editMode ? (
                   <TextInput
                     value={bio}
                     onChangeText={setBio}
-                    className="text-lg text-white border border-white/20 rounded-lg px-3 py-2"
+                    className="text-base text-white"
                     placeholder="Parle de ton parcours, tes points forts..."
                     placeholderTextColor="#6B7280"
                     multiline
+                    textAlignVertical="top"
+                    style={{ minHeight: 120 }}
                   />
                 ) : (
-                  <Text className="text-lg text-white mt-2">{bio || "-"}</Text>
+                  <Text className={clsx("text-base leading-6", bio ? "text-white" : "text-gray-500")}>
+                    {bio || "Aucune biographie renseignée."}
+                  </Text>
                 )}
               </View>
-            </View>
+            </LinearGradient>
           </View>
         </View>
       </LinearGradient>

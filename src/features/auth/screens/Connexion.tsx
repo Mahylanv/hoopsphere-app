@@ -9,6 +9,8 @@ import {
   StatusBar,
   ActivityIndicator,
   ImageBackground,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -106,17 +108,19 @@ export default function Connexion() {
     }
   };
 
+
   return (
-    <View className="flex-1 bg-black">
-      <StatusBar barStyle="light-content" translucent />
-      <ImageBackground
-        source={backgroundImage}
-        resizeMode="cover"
-        className="flex-1"
-        imageStyle={{ opacity: 0.6 }}
-      >
-        <View className="absolute inset-0 bg-black/55" />
-        <View className="flex-1 px-6 justify-center space-y-6">
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View className="flex-1 bg-black">
+        <StatusBar barStyle="light-content" translucent />
+        <ImageBackground
+          source={backgroundImage}
+          resizeMode="cover"
+          className="flex-1"
+          imageStyle={{ opacity: 0.6 }}
+        >
+          <View className="absolute inset-0 bg-black/55" />
+          <View className="flex-1 px-6 justify-center space-y-6">
         <Text className="text-white text-3xl font-bold text-center mb-4">
           Connexion
         </Text>
@@ -184,6 +188,16 @@ export default function Connexion() {
           <Text className="text-red-400 text-sm -mt-1 mb-4 text-center">
             {passwordError}
           </Text>
+<<<<<<< HEAD
+        )}
+
+        {/* âš¡ Message d'erreur */}
+        {error && (
+          <View className="bg-red-500/10 border border-red-500/40 rounded-xl px-4 py-3 mb-4">
+            <Text className="text-red-300 text-center">{error}</Text>
+          </View>
+=======
+>>>>>>> c623296a8c1e8baf73aadbe8eede784a2997d05c
         )}
 
         {/* âš¡ Message d'erreur */}
@@ -192,6 +206,7 @@ export default function Connexion() {
             <Text className="text-red-300 text-center">{error}</Text>
           </View>
         )}
+
 
         <Pressable
           onPress={handleLogin}
@@ -226,8 +241,9 @@ export default function Connexion() {
           <Ionicons name="arrow-back" size={18} color="#fff" />
           <Text className="text-white underline">Retour</Text>
         </Pressable>
+          </View>
+        </ImageBackground>
       </View>
-      </ImageBackground>
-    </View>
+    </TouchableWithoutFeedback>
   );
 }

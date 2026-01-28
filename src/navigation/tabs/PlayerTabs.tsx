@@ -5,13 +5,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { DeviceEventEmitter } from "react-native";
 
 import HomeScreen from "../../features/home/screens/HomeScreen";
-import Chat from "../../legacy/Chat";
 import Search from "../../features/search/components/Search";
 import ProfilJoueur from "../../features/profile/player/screens/ProfilJoueur";
 import Match from "../../legacy/Match";
 
 import { MainTabParamListJoueur } from "../../types";
-import TestPrenium from "../../legacy/TestPrenium";
 
 const Tab = createBottomTabNavigator<MainTabParamListJoueur>();
 
@@ -41,9 +39,6 @@ export default function MainTabNavigatorJoueur() {
             case "Match":
               iconName = "basketball-outline";
               break;
-            case "TestPrenium":
-              iconName = "chatbubble-outline";
-              break;
             case "Search":
               iconName = "search-outline";
               break;
@@ -70,15 +65,6 @@ export default function MainTabNavigatorJoueur() {
         name="Match"
         component={Match}
         options={{ tabBarLabel: "Matchs" }}
-        listeners={({ route }) => ({
-          tabPress: () => DeviceEventEmitter.emit("tab-pressed", route.name),
-        })}
-      />
-
-      <Tab.Screen
-        name="TestPrenium"
-        component={TestPrenium}
-        options={{ tabBarLabel: "Messages" }}
         listeners={({ route }) => ({
           tabPress: () => DeviceEventEmitter.emit("tab-pressed", route.name),
         })}

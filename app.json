@@ -25,6 +25,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.hoopsphere.app",
+      "versionCode": 1,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
@@ -34,6 +35,11 @@
     },
     "experiments": {
       "reactNativeRuntime": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "2f05de6c-03e3-432a-aa0f-4dec570fb8f1"
+      }
     }
   }
 }
