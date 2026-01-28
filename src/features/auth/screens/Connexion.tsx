@@ -188,7 +188,6 @@ export default function Connexion() {
           <Text className="text-red-400 text-sm -mt-1 mb-4 text-center">
             {passwordError}
           </Text>
-<<<<<<< HEAD
         )}
 
         {/* âš¡ Message d'erreur */}
@@ -196,8 +195,6 @@ export default function Connexion() {
           <View className="bg-red-500/10 border border-red-500/40 rounded-xl px-4 py-3 mb-4">
             <Text className="text-red-300 text-center">{error}</Text>
           </View>
-=======
->>>>>>> c623296a8c1e8baf73aadbe8eede784a2997d05c
         )}
 
         {/* âš¡ Message d'erreur */}
