@@ -583,7 +583,6 @@ export default function JoueurDetail() {
                               url: p.mediaUrl,
                               cachedUrl: (p as any).cachedUrl ?? undefined,
                               mediaType: p.mediaType,
-                              mediaFit: (p as any).mediaFit ?? "cover",
                               playerUid: p.playerUid ?? uid,
                               likeCount: p.likeCount ?? 0,
                               isLikedByMe: false,
@@ -605,32 +604,16 @@ export default function JoueurDetail() {
                         }}
                       >
                         {item.mediaType === "image" || item.thumbnailUrl ? (
-                          <View style={{ width: "100%", height: "100%", backgroundColor: "#000" }}>
-                            <Image
-                              source={{
-                                uri:
-                                  item.mediaType === "image"
-                                    ? item.mediaUrl
-                                    : item.thumbnailUrl,
-                              }}
-                              style={{ width: "100%", height: "100%" }}
-                              resizeMode={
-                                item.mediaType !== "image" &&
-                                (item as any).mediaFit === "contain"
-                                  ? "contain"
-                                  : "cover"
-                              }
-                            />
-                          </View>
+                          <Image
+                            source={{ uri: item.mediaType === "image" ? item.mediaUrl : item.thumbnailUrl }}
+                            style={{ width: "100%", height: "100%" }}
+                            resizeMode="cover"
+                          />
                         ) : (
                           <Video
                             source={{ uri: item.mediaUrl }}
-                            style={{ width: "100%", height: "100%", backgroundColor: "#000" }}
-                            resizeMode={
-                              (item as any).mediaFit === "contain"
-                                ? ResizeMode.CONTAIN
-                                : ResizeMode.COVER
-                            }
+                            style={{ width: "100%", height: "100%" }}
+                            resizeMode={ResizeMode.COVER}
                             shouldPlay={false}
                             isMuted
                           />
