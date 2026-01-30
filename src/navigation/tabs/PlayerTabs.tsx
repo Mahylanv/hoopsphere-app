@@ -8,6 +8,7 @@ import HomeScreen from "../../features/home/screens/HomeScreen";
 import Search from "../../features/search/components/Search";
 import ProfilJoueur from "../../features/profile/player/screens/ProfilJoueur";
 import Match from "../../legacy/Match";
+import CreatePostScreen from "../../features/profile/player/screens/Post/CreatePostScreen";
 
 import { MainTabParamListJoueur } from "../../types";
 
@@ -39,6 +40,9 @@ export default function MainTabNavigatorJoueur() {
             case "Match":
               iconName = "basketball-outline";
               break;
+            case "Publish":
+              iconName = "add";
+              break;
             case "Search":
               iconName = "search-outline";
               break;
@@ -65,6 +69,15 @@ export default function MainTabNavigatorJoueur() {
         name="Match"
         component={Match}
         options={{ tabBarLabel: "Matchs" }}
+        listeners={({ route }) => ({
+          tabPress: () => DeviceEventEmitter.emit("tab-pressed", route.name),
+        })}
+      />
+
+      <Tab.Screen
+        name="Publish"
+        component={CreatePostScreen}
+        options={{ tabBarLabel: "Publier" }}
         listeners={({ route }) => ({
           tabPress: () => DeviceEventEmitter.emit("tab-pressed", route.name),
         })}

@@ -142,6 +142,7 @@ export type RootStackParamList = {
 export type MainTabParamListJoueur = {
   HomeScreen: undefined;
   Match: undefined;
+  Publish: undefined;
   // Chat: undefined;
   Search: undefined;
   Profil: undefined;
