@@ -1,5 +1,5 @@
 // src/Pages/Match.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { auth, db } from "../config/firebaseConfig";
 import { useNavigation } from "@react-navigation/native";
@@ -58,6 +59,10 @@ const rawApiUrl = (process.env.EXPO_PUBLIC_EMARQUE_URL || "http://localhost:8000
 const API_URL = rawApiUrl.endsWith("/parse-emarque")
   ? rawApiUrl
   : `${rawApiUrl.replace(/\/$/, "")}/parse-emarque`;
+const PARSE_DURATION_KEY = "emarque_parse_durations_ms";
+const DEFAULT_PARSE_MS = 45000;
+const MIN_PARSE_MS = 10000;
+const MAX_PARSE_MS = 120000;
 
 function normalize(s: string) {
   return s
@@ -97,9 +102,14 @@ export default function Match() {
   const [pdfName, setPdfName] = useState<string | null>(null);
   const [pdfUri, setPdfUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [etaSeconds, setEtaSeconds] = useState<number | null>(null);
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [matchNumber, setMatchNumber] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const progressStartRef = useRef<number | null>(null);
+  const estimateMsRef = useRef<number>(DEFAULT_PARSE_MS);
 
   // Récupère Prenom/Nom depuis joueurs/{uid}, en gérant les 2 casings
   useEffect(() => {
@@ -138,6 +148,27 @@ export default function Match() {
     run();
   }, []);
 
+  useEffect(() => {
+    const loadEstimates = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(PARSE_DURATION_KEY);
+        if (!raw) return;
+        const list = JSON.parse(raw) as number[];
+        if (!Array.isArray(list) || list.length === 0) return;
+        const valid = list.filter((v) => Number.isFinite(v) && v > 0);
+        if (valid.length === 0) return;
+        const avg = valid.reduce((sum, v) => sum + v, 0) / valid.length;
+        estimateMsRef.current = Math.min(
+          MAX_PARSE_MS,
+          Math.max(MIN_PARSE_MS, Math.round(avg))
+        );
+      } catch {
+        // ignore
+      }
+    };
+    loadEstimates();
+  }, []);
+
   const canParse = useMemo(
     () => !!pdfUri && !!fullName?.trim() && !profileLoading,
     [pdfUri, fullName, profileLoading]
@@ -170,6 +201,23 @@ export default function Match() {
       setLoading(true);
       setStats(null);
       setMatchNumber(null);
+      setProgress(0);
+      setEtaSeconds(null);
+
+      const progressEstimateMs = estimateMsRef.current || DEFAULT_PARSE_MS;
+      const start = Date.now();
+      progressStartRef.current = start;
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+      progressTimerRef.current = setInterval(() => {
+        const elapsed = Date.now() - start;
+        const ratio = Math.min(0.95, elapsed / progressEstimateMs);
+        const remaining = Math.max(
+          1,
+          Math.ceil((progressEstimateMs - elapsed) / 1000)
+        );
+        setProgress(ratio);
+        setEtaSeconds(remaining);
+      }, 500);
 
       const form = new FormData();
       form.append("fullname", fullName);
@@ -205,6 +253,35 @@ export default function Match() {
       console.error(e);
       Alert.alert("Erreur parsing", e?.message || "Impossible de lire le PDF.");
     } finally {
+      const startedAt = progressStartRef.current;
+      if (startedAt) {
+        const actualMs = Date.now() - startedAt;
+        const prev = estimateMsRef.current || DEFAULT_PARSE_MS;
+        const smoothed = Math.round(prev * 0.7 + actualMs * 0.3);
+        estimateMsRef.current = Math.min(
+          MAX_PARSE_MS,
+          Math.max(MIN_PARSE_MS, smoothed)
+        );
+        try {
+          const raw = await AsyncStorage.getItem(PARSE_DURATION_KEY);
+          const list = raw ? (JSON.parse(raw) as number[]) : [];
+          const next = Array.isArray(list) ? list : [];
+          next.push(actualMs);
+          while (next.length > 5) next.shift();
+          await AsyncStorage.setItem(
+            PARSE_DURATION_KEY,
+            JSON.stringify(next)
+          );
+        } catch {
+          // ignore
+        }
+      }
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
+      }
+      setProgress(1);
+      setEtaSeconds(null);
       setLoading(false);
     }
   };
@@ -366,6 +443,55 @@ export default function Match() {
           </TouchableOpacity>
         </View>
         {pdfName ? <Text style={{ color: "#9ca3af", marginBottom: 12 }}>{pdfName}</Text> : null}
+
+        {loading && (
+          <View
+            style={{
+              backgroundColor: "#0b111d",
+              borderRadius: 16,
+              padding: 14,
+              borderWidth: 1,
+              borderColor: "rgba(249,115,22,0.3)",
+              marginBottom: 12,
+            }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "700", marginBottom: 6 }}>
+              Analyse du PDF en cours…
+            </Text>
+            <View
+              style={{
+                height: 10,
+                backgroundColor: "#1f2937",
+                borderRadius: 999,
+                overflow: "hidden",
+              }}
+            >
+              <View
+                style={{
+                  height: "100%",
+                  width: `${Math.round(progress * 100)}%`,
+                  backgroundColor: "#f97316",
+                }}
+              />
+            </View>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginTop: 6,
+              }}
+            >
+              <Text style={{ color: "#9ca3af", fontSize: 12 }}>
+                {etaSeconds
+                  ? `Temps estimé restant : ~${etaSeconds}s`
+                  : "Temps estimé en cours…"}
+              </Text>
+              <Text style={{ color: "#f97316", fontSize: 12, fontWeight: "700" }}>
+                {Math.round(progress * 100)}%
+              </Text>
+            </View>
+          </View>
+        )}
 
         {matchNumber ? (
           <View
