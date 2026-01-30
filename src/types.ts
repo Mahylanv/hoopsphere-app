@@ -202,6 +202,7 @@ export type VideoItem = {
   url: string;
   cachedUrl?: string | null;
   mediaType?: "image" | "video";
+  mediaFit?: "cover" | "contain";
   avatar?: string | null;
   playerUid: string;
   likeCount: number;

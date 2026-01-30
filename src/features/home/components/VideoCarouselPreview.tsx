@@ -176,6 +176,7 @@ function VideoPreviewItem({
             location: v.location ?? null,
             createdAt: v.createdAt,
             skills: v.skills ?? [],
+            mediaFit: v.mediaFit ?? "cover",
           })),
         })
       }
@@ -185,8 +186,12 @@ function VideoPreviewItem({
          ==================================================== */}
       <Video
         source={{ uri: video.url }}
-        style={{ width: "100%", height: "100%" }}
-        resizeMode={ResizeMode.COVER}
+        style={{ width: "100%", height: "100%", backgroundColor: "#000" }}
+        resizeMode={
+          video.mediaFit === "contain"
+            ? ResizeMode.CONTAIN
+            : ResizeMode.COVER
+        }
         shouldPlay={false}
         isMuted
       />
