@@ -56,8 +56,6 @@ import EditPostScreen from "./src/features/profile/player/screens/Post/EditPostS
 import LikedPostsScreen from "./src/features/home/screens/LikedPostsScreen";
 import PostLikesScreen from "./src/features/home/screens/PostLikesScreen";
 import StripeWrapper from "./src/providers/StripeWrapper";
-import NotificationsListener from "./src/features/notifications/NotificationsListener";
-import { ToastProvider } from "./src/shared/components/ToastProvider";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -216,22 +214,19 @@ export default function App() {
     <StripeWrapper>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <AuthProvider>
-          <ToastProvider>
-            <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-              <StatusBar
-                translucent
-                backgroundColor="transparent"
-                barStyle="light-content"
-              />
+          <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+            <StatusBar
+              translucent
+              backgroundColor="transparent"
+              barStyle="light-content"
+            />
 
-              <MenuProvider skipInstanceCheck>
-                <PersistedNavContainer>
-                  <NotificationsListener />
-                  <RootNavigator />
-                </PersistedNavContainer>
-              </MenuProvider>
-            </SafeAreaProvider>
-          </ToastProvider>
+            <MenuProvider skipInstanceCheck>
+              <PersistedNavContainer>
+                <RootNavigator />
+              </PersistedNavContainer>
+            </MenuProvider>
+          </SafeAreaProvider>
         </AuthProvider>
       </GestureHandlerRootView>
     </StripeWrapper>
