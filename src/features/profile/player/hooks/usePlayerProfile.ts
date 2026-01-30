@@ -188,22 +188,22 @@ export default function usePlayerProfile() {
   /* ============================================================
        CHARGEMENT DES STATS
   ============================================================ */
+  const loadStats = async () => {
+    if (!user?.uid) return;
+
+    const snap = await getDocs(
+      collection(db, "joueurs", user.uid, "matches")
+    );
+    const matches = snap.docs.map((d) => d.data()) as any[];
+
+    const averages = computePlayerStats(matches);
+    setStats(averages);
+
+    const overall = computePlayerRating(averages, user.poste);
+    setRating(overall);
+  };
+
   useEffect(() => {
-    const loadStats = async () => {
-      if (!user?.uid) return;
-
-      const snap = await getDocs(
-        collection(db, "joueurs", user.uid, "matches")
-      );
-      const matches = snap.docs.map((d) => d.data()) as any[];
-
-      const averages = computePlayerStats(matches);
-      setStats(averages);
-
-      const overall = computePlayerRating(averages, user.poste);
-      setRating(overall);
-    };
-
     loadStats();
   }, [user]);
 
@@ -500,5 +500,8 @@ export default function usePlayerProfile() {
     tempNewEmail,
     setTempNewEmail,
     saveProfileView,
+    refetch: async () => {
+      await Promise.all([loadStats(), loadGallery()]);
+    },
   };
 }

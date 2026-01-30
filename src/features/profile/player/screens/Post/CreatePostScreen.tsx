@@ -318,7 +318,7 @@ export default function CreatePostScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
       >
-        <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
           {/* HEADER */}
           <View className="flex-row items-center justify-between px-4 py-3">
             <TouchableOpacity onPress={handleCancel} disabled={loading || compressing}>
@@ -460,6 +460,37 @@ export default function CreatePostScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Bouton Publier (fixé en bas) */}
+      <View
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          padding: 16,
+          paddingBottom: 24,
+          backgroundColor: "rgba(14,13,13,0.92)",
+          borderTopWidth: 1,
+          borderTopColor: "rgba(255,255,255,0.08)",
+        }}
+      >
+        <TouchableOpacity
+          onPress={handlePublish}
+          disabled={!media || loading || compressing}
+          className={`py-4 rounded-2xl items-center flex-row justify-center ${
+            media && !loading && !compressing ? "bg-orange-500" : "bg-gray-600"
+          }`}
+        >
+          <Text className="text-white text-lg font-semibold">
+            {compressing
+              ? "Compression..."
+              : loading
+                ? "Publication..."
+                : "Publier"}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
