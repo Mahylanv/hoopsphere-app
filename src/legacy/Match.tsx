@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { doc, serverTimestamp, getDoc, addDoc, collection } from "firebase/firestore";
 import { auth, db } from "../config/firebaseConfig";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
@@ -310,38 +310,34 @@ export default function Match() {
         turnovers: null as number | null,
       };
 
-      const ref = doc(db, "joueurs", user.uid, "matches", String(matchNumber));
-      await setDoc(
-        ref,
-        {
-          // Méta obligatoires pour tes règles
-          matchNumber: String(matchNumber),
-          playerUid: user.uid,
-          playerFullname: fullName.trim(),
+      const ref = collection(db, "joueurs", user.uid, "matches");
+      await addDoc(ref, {
+        // Méta obligatoires pour tes règles
+        matchNumber: String(matchNumber),
+        playerUid: user.uid,
+        playerFullname: fullName.trim(),
 
-          // Date du match (à défaut d’info dans le PDF, on timestamp)
-          matchDate: serverTimestamp(),
+        // Date du match (à défaut d’info dans le PDF, on timestamp)
+        matchDate: serverTimestamp(),
 
-          // Champs normalisés pour le graphique
-          ...normalized,
+        // Champs normalisés pour le graphique
+        ...normalized,
 
-          // Tes champs d’origine — conservés (utile pour l’écran détail)
-          jersey: stats.jersey ?? null,
-          starter: stats.starter ?? null,
-          play_time: stats.play_time ?? null,
-          shots_made: toNum(stats.shots_made),
-          threes: toNum(stats.threes),
-          two_int: toNum(stats.two_int),
-          two_ext: toNum(stats.two_ext),
-          ft_made: toNum(stats.ft_made),
-          fouls_committed: toNum(stats.fouls_committed),
+        // Tes champs d’origine — conservés (utile pour l’écran détail)
+        jersey: stats.jersey ?? null,
+        starter: stats.starter ?? null,
+        play_time: stats.play_time ?? null,
+        shots_made: toNum(stats.shots_made),
+        threes: toNum(stats.threes),
+        two_int: toNum(stats.two_int),
+        two_ext: toNum(stats.two_ext),
+        ft_made: toNum(stats.ft_made),
+        fouls_committed: toNum(stats.fouls_committed),
 
-          // Trace
-          sourcePdfName: pdfName ?? null,
-          parsedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+        // Trace
+        sourcePdfName: pdfName ?? null,
+        parsedAt: serverTimestamp(),
+      });
 
       // Rafraîchir le profil/graphique
       DeviceEventEmitter.emit("force-profile-reload");
