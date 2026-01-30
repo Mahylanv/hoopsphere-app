@@ -20,6 +20,7 @@ export type PostItem = {
   postType: "highlight" | "match" | "training";
   visibility: "public" | "private" | "clubs";
   skills?: string[];
+  mediaFit?: "cover" | "contain";
 };
 
 type Props = {
@@ -108,8 +109,12 @@ export default function PostGridSection({
                 <>
                   <Video
                     source={{ uri: item.mediaUrl }}
-                    style={{ width: "100%", height: "100%" }}
-                    resizeMode={ResizeMode.COVER}
+                    style={{ width: "100%", height: "100%", backgroundColor: "#000" }}
+                    resizeMode={
+                      item.mediaFit === "contain"
+                        ? ResizeMode.CONTAIN
+                        : ResizeMode.COVER
+                    }
                     shouldPlay={false}
                     isMuted
                   />
