@@ -63,6 +63,7 @@ export default function JoueurDetail() {
   const [rating, setRating] = useState<number | null>(null);
   const { isPremium } = usePremiumStatus();
   const { posts: playerPosts, loading: postsLoading } = usePlayerPosts(uid);
+  const [viewerIsClub, setViewerIsClub] = useState(false);
   const GRID_PADDING = 8;
   const GRID_PADDING_BOTTOM = 12;
   const [gridWidth, setGridWidth] = useState<number | null>(null);
@@ -170,6 +171,25 @@ export default function JoueurDetail() {
 
     loadPlayer();
   }, [uid]);
+
+  useEffect(() => {
+    const loadViewerType = async () => {
+      try {
+        const auth = getAuth();
+        const viewerUid = auth.currentUser?.uid;
+        if (!viewerUid) {
+          setViewerIsClub(false);
+          return;
+        }
+        const clubRef = doc(db, "clubs", viewerUid);
+        const clubSnap = await getDoc(clubRef);
+        setViewerIsClub(clubSnap.exists());
+      } catch {
+        setViewerIsClub(false);
+      }
+    };
+    loadViewerType();
+  }, []);
 
   /* -----------------------------------------------------
      🔥 REF POUR LA CAPTURE
@@ -612,24 +632,26 @@ export default function JoueurDetail() {
           </View>
         )}
 
-        {/* CONTACT */}
-        <View className="px-5 mt-2 mb-7">
-          <TouchableOpacity
-            onPress={openContactSheet}
-            activeOpacity={0.85}
-            className="bg-[#ff6600] py-4 rounded-2xl items-center shadow-lg shadow-[#ff6600]/40 flex-row justify-center"
-          >
-            <Ionicons
-              name="chatbubble-ellipses-outline"
-              size={22}
-              color="#fff"
-              style={{ marginRight: 8 }}
-            />
-            <Text className="text-white text-lg font-semibold">
-              Contacter le joueur
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* CONTACT (clubs only) */}
+        {viewerIsClub && (
+          <View className="px-5 mt-2 mb-7">
+            <TouchableOpacity
+              onPress={openContactSheet}
+              activeOpacity={0.85}
+              className="bg-[#ff6600] py-4 rounded-2xl items-center shadow-lg shadow-[#ff6600]/40 flex-row justify-center"
+            >
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={22}
+                color="#fff"
+                style={{ marginRight: 8 }}
+              />
+              <Text className="text-white text-lg font-semibold">
+                Contacter le joueur
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </Animated.ScrollView>
 
       {/* OVERLAY */}
@@ -671,112 +693,116 @@ export default function JoueurDetail() {
         <Option icon="star-outline" label="Favoris" onPress={addFavorite} />
       </Animated.View>
 
-      {isContactOpen && (
-        <TouchableOpacity
-          onPress={closeContactSheet}
-          activeOpacity={1}
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundColor: "rgba(0,0,0,0.5)",
-          }}
-        />
+      {viewerIsClub && (
+        <>
+          {isContactOpen && (
+            <TouchableOpacity
+              onPress={closeContactSheet}
+              activeOpacity={1}
+              style={{
+                position: "absolute",
+                inset: 0,
+                backgroundColor: "rgba(0,0,0,0.5)",
+              }}
+            />
+          )}
+
+          {/* BOTTOM SHEET CONTACT */}
+          <Animated.View
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 240,
+              padding: 20,
+              backgroundColor: "#111",
+              borderTopLeftRadius: 26,
+              borderTopRightRadius: 26,
+              transform: [{ translateY: contactSheetY }],
+            }}
+          >
+            <Text className="text-white text-xl font-bold mb-4">
+              Contacter le joueur
+            </Text>
+
+            {/* EMAIL */}
+            <Option
+              icon="mail-outline"
+              label="Envoyer un email"
+              onPress={async () => {
+                closeContactSheet();
+
+                if (!joueur.email || joueur.email === "-") {
+                  Alert.alert("Indisponible", "Email non renseigné");
+                  return;
+                }
+
+                const url = `mailto:${joueur.email}`;
+                const supported = await Linking.canOpenURL(url);
+
+                if (supported) {
+                  Linking.openURL(url);
+                } else {
+                  Alert.alert("Erreur", "Impossible d’ouvrir l’application mail");
+                }
+              }}
+            />
+
+            {/* TELEPHONE */}
+            <Option
+              icon="call-outline"
+              label="Contacter le joueur"
+              onPress={() => {
+                closeContactSheet();
+
+                if (!joueur.phone) {
+                  Alert.alert("Indisponible", "Téléphone non renseigné");
+                  return;
+                }
+
+                Alert.alert(
+                  "Contacter le joueur",
+                  "Choisissez une action",
+                  [
+                    {
+                      text: "Appeler",
+                      onPress: async () => {
+                        const url = `tel:${joueur.phone}`;
+                        const supported = await Linking.canOpenURL(url);
+
+                        if (supported) {
+                          Linking.openURL(url);
+                        } else {
+                          Alert.alert("Erreur", "Impossible d’ouvrir le téléphone");
+                        }
+                      },
+                    },
+                    {
+                      text: "Envoyer un message",
+                      onPress: async () => {
+                        const url = `sms:${joueur.phone}`;
+                        const supported = await Linking.canOpenURL(url);
+
+                        if (supported) {
+                          Linking.openURL(url);
+                        } else {
+                          Alert.alert("Erreur", "Impossible d’ouvrir les messages");
+                        }
+                      },
+                    },
+                    {
+                      text: "Annuler",
+                      style: "cancel",
+                    },
+                  ],
+                  { cancelable: true }
+                );
+              }}
+            />
+          </Animated.View>
+        </>
       )}
-
-      {/* BOTTOM SHEET CONTACT */}
-      <Animated.View
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: 240,
-          padding: 20,
-          backgroundColor: "#111",
-          borderTopLeftRadius: 26,
-          borderTopRightRadius: 26,
-          transform: [{ translateY: contactSheetY }],
-        }}
-      >
-        <Text className="text-white text-xl font-bold mb-4">
-          Contacter le joueur
-        </Text>
-
-        {/* EMAIL */}
-        <Option
-          icon="mail-outline"
-          label="Envoyer un email"
-          onPress={async () => {
-            closeContactSheet();
-
-            if (!joueur.email || joueur.email === "-") {
-              Alert.alert("Indisponible", "Email non renseigné");
-              return;
-            }
-
-            const url = `mailto:${joueur.email}`;
-            const supported = await Linking.canOpenURL(url);
-
-            if (supported) {
-              Linking.openURL(url);
-            } else {
-              Alert.alert("Erreur", "Impossible d’ouvrir l’application mail");
-            }
-          }}
-        />
-
-        {/* TELEPHONE */}
-        <Option
-          icon="call-outline"
-          label="Contacter le joueur"
-          onPress={() => {
-            closeContactSheet();
-
-            if (!joueur.phone) {
-              Alert.alert("Indisponible", "Téléphone non renseigné");
-              return;
-            }
-
-            Alert.alert(
-              "Contacter le joueur",
-              "Choisissez une action",
-              [
-                {
-                  text: "Appeler",
-                  onPress: async () => {
-                    const url = `tel:${joueur.phone}`;
-                    const supported = await Linking.canOpenURL(url);
-
-                    if (supported) {
-                      Linking.openURL(url);
-                    } else {
-                      Alert.alert("Erreur", "Impossible d’ouvrir le téléphone");
-                    }
-                  },
-                },
-                {
-                  text: "Envoyer un message",
-                  onPress: async () => {
-                    const url = `sms:${joueur.phone}`;
-                    const supported = await Linking.canOpenURL(url);
-
-                    if (supported) {
-                      Linking.openURL(url);
-                    } else {
-                      Alert.alert("Erreur", "Impossible d’ouvrir les messages");
-                    }
-                  },
-                },
-                {
-                  text: "Annuler",
-                  style: "cancel",
-                },
-              ],
-              { cancelable: true }
-            );
-          }}
-        />
-      </Animated.View>
     </SafeAreaView>
   );
 }

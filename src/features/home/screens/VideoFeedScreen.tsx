@@ -279,6 +279,7 @@ export default function VideoFeedScreen({ route }: Props) {
         })}
         renderItem={({ item, index }) => {
           const isImage = item.mediaType === "image";
+          const mediaFit = item.mediaFit ?? "cover";
           return (
           <View style={{ height, width }}>
             <TouchableWithoutFeedback onPress={() => handleVideoTap(index)}>
@@ -295,8 +296,12 @@ export default function VideoFeedScreen({ route }: Props) {
                       videoRefs.current[index] = ref;
                     }}
                     source={{ uri: item.cachedUrl || item.url }}
-                    style={{ width: "100%", height: "100%" }}
-                    resizeMode={ResizeMode.COVER}
+                    style={{ width: "100%", height: "100%", backgroundColor: "#000" }}
+                    resizeMode={
+                      mediaFit === "contain"
+                        ? ResizeMode.CONTAIN
+                        : ResizeMode.COVER
+                    }
                     isLooping
                     shouldPlay={index === activeIndex} // 🔥 AUTOPLAY
                     isMuted={false}

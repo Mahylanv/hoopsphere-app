@@ -72,3 +72,5 @@ scripts/serviceAccountKey.json
 
 
 stripe/firebase-debug.log
+firebase-debug.log
+firebase-debug.*.log

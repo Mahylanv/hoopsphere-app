@@ -204,6 +204,7 @@ export default function HomeScreen({ forClub = false }: Props) {
     location: post.location ?? undefined,
     createdAt: post.createdAt,
     skills: post.skills ?? [],
+    mediaFit: post.mediaFit ?? "cover",
   }));
 
   const brand = {

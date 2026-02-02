@@ -38,12 +38,12 @@ export default function CreateTeamModal({
   const [loading, setLoading] = useState(false);
   const [selectPosteIndex, setSelectPosteIndex] = useState<number | null>(null);
 
-  // ƒz Ajouter un champ joueur
+  // Ajouter un champ joueur
   const addInput = () => {
     setPlayers((prev) => [...prev, { prenom: "", nom: "", poste: "" }]);
   };
 
-  // ÐY"" Modifier le champ
+  // Modifier le champ
   const updateInput = (i: number, key: keyof Player, value: string) => {
     setPlayers((prev) => {
       const arr = [...prev];
@@ -52,7 +52,7 @@ export default function CreateTeamModal({
     });
   };
 
-  // ƒ?O Supprimer un champ joueur
+  // Supprimer un champ joueur
   const removeInput = (i: number) => {
     setPlayers((prev) => prev.filter((_, index) => index !== i));
   };
@@ -60,11 +60,11 @@ export default function CreateTeamModal({
   const closePosteSelect = () => setSelectPosteIndex(null);
 
   // ===================================
-  // ÐY"¾ CRÇ%ATION Ç%QUIPE
+  // CRÉATION ÉQUIPE
   // ===================================
   const createTeam = async () => {
     if (!teamName.trim()) {
-      alert("Le nom de lƒ?TÇ¸quipe est requis.");
+      alert("Le nom de l’équipe est requis.");
       return;
     }
 
@@ -74,7 +74,7 @@ export default function CreateTeamModal({
       const uid = auth.currentUser?.uid;
       if (!uid) return;
 
-      // 1‹÷?ƒŸœ crÇ¸ation Ç¸quipe
+      // 1. création équipe
       const teamData: Team = {
         label: teamName.trim(),
         createdAt: new Date().toISOString(),
@@ -83,7 +83,7 @@ export default function CreateTeamModal({
       const ref = collection(db, "clubs", uid, "equipes");
       const teamDoc = await addDoc(ref, teamData);
 
-      // 2‹÷?ƒŸœ joueurs valides
+      // 2. joueurs valides
       const validPlayers = players.filter(
         (p) => p.prenom.trim() && p.nom.trim()
       );
@@ -95,16 +95,16 @@ export default function CreateTeamModal({
         );
       }
 
-      // 3‹÷?ƒŸœ callback ƒÅ' parent
+      // 3. callback parent
       onCreated({ ...teamData, id: teamDoc.id }, validPlayers);
 
-      // 4‹÷?ƒŸœ reset + fermeture
+      // 4. reset + fermeture
       setTeamName("");
       setPlayers([{ prenom: "", nom: "", poste: "" }]);
       onClose();
     } catch (err) {
-      console.error("Erreur crÇ¸ation Ç¸quipe :", err);
-      alert("Impossible de crÇ¸er lƒ?TÇ¸quipe.");
+      console.error("Erreur création équipe :", err);
+      alert("Impossible de créer l’équipe.");
     } finally {
       setLoading(false);
     }
@@ -120,14 +120,14 @@ export default function CreateTeamModal({
         >
           {/* Title */}
           <Text className="text-white text-lg font-bold mb-4 text-center">
-            Nouvelle Ç¸quipe
+            Nouvelle équipe
           </Text>
 
           {/* Nom Ç¸quipe */}
           <TextInput
             value={teamName}
             onChangeText={setTeamName}
-            placeholder="Nom de lƒ?TÇ¸quipe (ex : U17 Masculin)"
+            placeholder="Nom de l’équipe (ex : U17 Masculin)"
             placeholderTextColor="#999"
             className="bg-gray-800 text-white rounded-lg px-4 py-3 mb-4"
           />
@@ -141,7 +141,7 @@ export default function CreateTeamModal({
                 <TextInput
                   value={p.prenom}
                   onChangeText={(v) => updateInput(i, "prenom", v)}
-                  placeholder="PrÇ¸nom"
+                  placeholder="Prénom"
                   placeholderTextColor="#888"
                   className="flex-1 bg-gray-800 text-white rounded-lg px-3 py-2 mr-2"
                 />
@@ -205,7 +205,7 @@ export default function CreateTeamModal({
               {loading ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text className="text-white font-semibold">CrÇ¸er</Text>
+                <Text className="text-white font-semibold">Créer</Text>
               )}
             </TouchableOpacity>
           </View>

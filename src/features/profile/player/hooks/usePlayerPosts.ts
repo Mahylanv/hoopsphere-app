@@ -31,6 +31,7 @@ export type PlayerPost = {
   postType: "highlight" | "match" | "training";
   skills: string[];
   visibility: "public" | "private" | "clubs";
+  mediaFit?: "cover" | "contain";
 
   createdAt: Timestamp;
   likeCount: number;
@@ -96,6 +97,7 @@ export default function usePlayerPosts(playerUid?: string) {
             postType: d.postType,
             skills: d.skills ?? [],
             visibility: d.visibility,
+            mediaFit: d.mediaFit ?? "cover",
 
             createdAt: d.createdAt,
             likeCount: d.likeCount ?? 0,

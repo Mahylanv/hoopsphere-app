@@ -29,6 +29,7 @@ export type CreatePostPayload = {
   postType: "highlight" | "match" | "training";
   skills: string[];
   visibility: "public" | "private" | "clubs";
+  mediaFit?: "cover" | "contain";
 };
 
 export type UpdatePostPayload = {
@@ -37,6 +38,7 @@ export type UpdatePostPayload = {
   postType: "highlight" | "match" | "training";
   skills: string[];
   visibility: "public" | "private" | "clubs";
+  mediaFit?: "cover" | "contain";
 };
 
 /* ============================================================
@@ -102,6 +104,7 @@ export const createPost = async (payload: CreatePostPayload) => {
       postType: payload.postType,
       skills: payload.skills,
       visibility: payload.visibility,
+      mediaFit: payload.mediaFit ?? "cover",
 
       likeCount: 0,
       commentsCount: 0,
@@ -147,6 +150,7 @@ export const updatePost = async (
       postType: updates.postType,
       skills: updates.skills,
       visibility: updates.visibility,
+      ...(updates.mediaFit ? { mediaFit: updates.mediaFit } : {}),
       updatedAt: serverTimestamp(),
     };
 

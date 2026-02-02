@@ -17,6 +17,7 @@ export type VideoItem = {
   description?: string;
   location?: string | null;
   createdAt?: any;
+  mediaFit?: "cover" | "contain";
 };
 
 /* ============================================================

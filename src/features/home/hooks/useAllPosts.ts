@@ -31,6 +31,7 @@ export interface HomePost {
   description?: string | null;
   location?: string | null;
   skills?: string[] | null;
+  mediaFit?: "cover" | "contain";
 }
 
 /* ============================================================
@@ -141,6 +142,7 @@ export default function useAllPosts({ includeClubVisibility = false }: { include
               description: data.description ?? null,
               location: data.location ?? null,
               skills: data.skills ?? [],
+              mediaFit: data.mediaFit ?? "cover",
             };
           })
         );
