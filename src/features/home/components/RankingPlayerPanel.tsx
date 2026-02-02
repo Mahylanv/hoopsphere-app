@@ -3,6 +3,8 @@
 import React, { useEffect } from "react";
 import {
   Dimensions,
+  Modal,
+  Platform,
   Text,
   TouchableOpacity,
   Pressable,
@@ -29,10 +31,12 @@ import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
 const { height, width } = Dimensions.get("window");
+const isAndroid =
+  (Platform as unknown as { OS: string }).OS === "android";
 
 // ⭐ CONFIG MODIFIABLES PAR TOI
-const PANEL_HEIGHT = 0.75; // environ 3/4 de l'écran
-const PANEL_TOP = height * 0.15; // ouverture plus basse pour laisser voir le fond
+const PANEL_HEIGHT = isAndroid ? 0.9 : 0.75; // Android: plus haut
+const PANEL_TOP = isAndroid ? height * 0.1 : height * 0.005; // Android: 10% du haut
 const CLOSE_THRESHOLD = height * 0.22; // Distance pour fermer le panel en glissant
 
 // Carte responsive (plus compacte)
@@ -166,6 +170,87 @@ export default function RankingPlayerPanel({
       player.cardStyle ?? (player.premium ? "premium" : "normal"),
   };
 
+  if (isAndroid) {
+    return (
+      <Modal
+        visible={visible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={onClose}
+      >
+        <View className="flex-1 bg-black">
+          <View className="px-4 py-3 border-b border-white/10 flex-row items-center">
+            <Pressable onPress={onClose} className="p-2">
+              <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+            </Pressable>
+            <Text className="text-white text-base font-semibold ml-2">
+              Profil du Joueur
+            </Text>
+          </View>
+
+          <Animated.ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingBottom: 24,
+              alignItems: "center",
+            }}
+          >
+            <View
+              style={{
+                transform: [{ scale: CARD_SCALE }],
+                alignItems: "center",
+                marginTop: 16,
+              }}
+            >
+              <AvatarSection
+                user={{
+                  avatar: joueurFull.avatar ?? null,
+                  prenom: joueurFull.prenom ?? "",
+                  nom: joueurFull.nom ?? "",
+                  dob: joueurFull.dob,
+                  taille: joueurFull.taille,
+                  poids: joueurFull.poids,
+                  poste: joueurFull.poste,
+                  main: joueurFull.main,
+                  departement: joueurFull.departement,
+                  club: joueurFull.club,
+                  premium: joueurFull.premium,
+                  cardStyle: joueurFull.cardStyle,
+                }}
+                onEditAvatar={async () => {}}
+                avatarLoading={false}
+                stats={player.stats}
+                rating={player.rating}
+                editable={false}
+              />
+            </View>
+
+            <TouchableOpacity
+              onPress={() => {
+                onClose();
+                if (navigation?.navigate) {
+                  setTimeout(() => {
+                    navigation.navigate("JoueurDetail", {
+                      uid: player.uid,
+                    });
+                  }, 200);
+                }
+              }}
+              className="mt-6 px-5 py-3 rounded-full bg-orange-500/90 flex-row items-center justify-center shadow-lg shadow-orange-500/30"
+              activeOpacity={0.9}
+            >
+              <Ionicons name="person" size={18} color="#fff" />
+              <Text className="text-white font-semibold text-lg ml-2">
+                Voir profil complet
+              </Text>
+            </TouchableOpacity>
+          </Animated.ScrollView>
+        </View>
+      </Modal>
+    );
+  }
+
   return (
     <GestureHandlerRootView className="absolute inset-0 z-[9999]">
       {/* -------------------------------------------------- */}
@@ -173,7 +258,11 @@ export default function RankingPlayerPanel({
       {/* -------------------------------------------------- */}
       <Pressable className="absolute inset-0" onPress={onClose}>
         <Animated.View style={backdropStyle} className="absolute inset-0">
-          <BlurView intensity={30} tint="dark" className="absolute inset-0" />
+          {isAndroid ? (
+            <View className="absolute inset-0 bg-black/70" />
+          ) : (
+            <BlurView intensity={30} tint="dark" className="absolute inset-0" />
+          )}
         </Animated.View>
       </Pressable>
 
@@ -182,8 +271,14 @@ export default function RankingPlayerPanel({
       {/* -------------------------------------------------- */}
       <PanGestureHandler onGestureEvent={onGesture} onEnded={onGestureEnd}>
         <Animated.View
-          style={[panelStyle, { maxHeight: height * PANEL_HEIGHT }]}
-          className="absolute left-0 right-0 rounded-t-3xl shadow-2xl shadow-black/70 p-4"
+          style={[
+            panelStyle,
+            { height: height * PANEL_HEIGHT },
+            isAndroid
+              ? { backgroundColor: "rgba(8, 8, 8, 0.96)" }
+              : null,
+          ]}
+          className="absolute left-0 right-0 rounded-t-3xl shadow-2xl shadow-black/70 p-4 overflow-hidden"
         >
           {/* ⭐ BARRE DE DRAG */}
           <TouchableOpacity

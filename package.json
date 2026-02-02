@@ -5,8 +5,8 @@
   "scripts": {
     "dev:parser": "bash ./scripts/dev-with-parser.sh",
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "engines": {
@@ -74,7 +74,7 @@
     "@types/react-native-tab-view": "^1.0.6",
     "autoprefixer": "^10.4.21",
     "babel-preset-expo": "^54.0.2",
-    "baseline-browser-mapping": "^2.9.18",
+    "baseline-browser-mapping": "^2.9.19",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.6",
