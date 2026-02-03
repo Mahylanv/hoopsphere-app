@@ -42,6 +42,12 @@ try {
 const CardField = StripeNative?.CardField ?? null;
 const confirmPaymentFn = StripeNative?.confirmPayment ?? null;
 const confirmSetupIntentFn = StripeNative?.confirmSetupIntent ?? null;
+
+const LockIcon = () => (
+  <View className="w-16 h-16 rounded-full bg-orange-500/20 items-center justify-center mb-3">
+    <Ionicons name="lock-closed" size={26} color="#F97316" />
+  </View>
+);
 import { RootStackParamList } from "../../../types";
 import { auth, db } from "../../../config/firebaseConfig";
 
@@ -489,6 +495,40 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
     <script>
       (function () {
         const config = ${JSON.stringify(htmlConfig)};
+        window.onerror = function (message, source, lineno, colno, error) {
+          try {
+            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+              window.ReactNativeWebView.postMessage(
+                JSON.stringify({
+                  type: "payment_error",
+                  message:
+                    "WebView error: " +
+                    String(message) +
+                    " @" +
+                    String(lineno) +
+                    ":" +
+                    String(colno),
+                })
+              );
+            }
+          } catch {}
+          return false;
+        };
+
+        window.addEventListener("unhandledrejection", function (event) {
+          try {
+            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+              window.ReactNativeWebView.postMessage(
+                JSON.stringify({
+                  type: "payment_error",
+                  message:
+                    "Unhandled promise: " +
+                    String(event && event.reason ? event.reason : "unknown"),
+                })
+              );
+            }
+          } catch {}
+        });
         const stripe = Stripe(config.publishableKey);
         const isAndroid = config.platform === "android";
         const appearance = {
@@ -498,7 +538,7 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
             colorIcon: "#ffffff",
             colorPrimary: "#f97316",
             colorDanger: "#fca5a5",
-            colorBackground: "transparent",
+            colorBackground: "#00000000",
             fontFamily: isAndroid ? "sans-serif" : "Space Grotesk, sans-serif",
           },
           rules: {
@@ -518,8 +558,7 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
             fontFamily: "Space Grotesk, sans-serif",
             fontSize: "16px",
             iconColor: "#FFFFFF",
-            backgroundColor: "transparent",
-            textShadow: "0 0 0 #FFFFFF",
+            backgroundColor: "#00000000",
 
             // 🔥 FIX ANDROID WEBVIEW
             WebkitTextFillColor: "#FFFFFF",
@@ -1276,8 +1315,10 @@ export default function StripeCheckout() {
 
     if (data.type === "payment_error") {
       setError(data.message || "Une erreur est survenue.");
+      Alert.alert("Erreur paiement", data.message || "Une erreur est survenue.");
       return;
     }
+
 
     if (data.type === "payment_success") {
       await finalizePayment({
@@ -1321,7 +1362,7 @@ export default function StripeCheckout() {
           <View className="flex-1 items-center justify-center px-6">
             <ActivityIndicator size="large" color="#F97316" />
             <Text className="text-white mt-4 text-base">
-              Chargement du paiement sécurisé...
+              Chargement du Paiement sécurisé...
             </Text>
           </View>
         )}
@@ -1361,6 +1402,21 @@ export default function StripeCheckout() {
                     Retour
                   </Text>
                 </Pressable>
+              </View>
+
+              <View className="items-center mb-4">
+                <LockIcon />
+                <Text className="text-white text-xl font-bold">
+                  Paiement sécurisé
+                </Text>
+                <Text className="text-gray-400 text-sm mt-1 text-center">
+                  Finalise ton abonnement Premium en quelques secondes.
+                </Text>
+                <View className="mt-3 px-4 py-1.5 rounded-full border border-white/10 bg-white/5">
+                  <Text className="text-white font-semibold text-sm">
+                    {config.priceLabel}
+                  </Text>
+                </View>
               </View>
 
               <View className="bg-[#111111] border border-white/10 rounded-2xl p-4 mb-4">
@@ -1422,7 +1478,7 @@ export default function StripeCheckout() {
                     )}
                   </View>
                   <Text className="text-gray-300">
-                    Recevoir un reéu par email
+                    Recevoir un reçu par email
                   </Text>
                 </Pressable>
 
@@ -1432,14 +1488,14 @@ export default function StripeCheckout() {
                 <View className="border border-white/20 rounded-xl px-2 py-2 mb-4">
                   <CardField
                     postalCodeEnabled={false}
-                    onCardChange={(card: { complete: boolean }) =>setNativeCardComplete(card.complete)                 }
+                    onCardChange={(card: { complete: boolean }) => setNativeCardComplete(card.complete)}
                     style={{ width: "100%", height: 48 }}
                     cardStyle={{
                       textColor: "#ffffff",
                       placeholderColor: "#6b7280",
                       cursorColor: "#ffffff",
                       textErrorColor: "#fca5a5",
-                      backgroundColor: "transparent",
+                      backgroundColor: "#00000000",
                       fontSize: 16,
                     }}
                   />
@@ -1523,5 +1579,11 @@ export default function StripeCheckout() {
     </SafeAreaView>
   );
 }
+
+
+
+
+
+
 
 
