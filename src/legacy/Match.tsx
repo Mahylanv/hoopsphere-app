@@ -111,6 +111,7 @@ export default function Match() {
   const [saving, setSaving] = useState(false);
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const progressStartRef = useRef<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const estimateMsRef = useRef<number>(DEFAULT_PARSE_MS);
 
   // Récupère Prenom/Nom depuis joueurs/{uid}, en gérant les 2 casings
@@ -222,6 +223,9 @@ export default function Match() {
       setProgress(0);
       setEtaSeconds(null);
 
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       const progressEstimateMs = estimateMsRef.current || DEFAULT_PARSE_MS;
       const start = Date.now();
       progressStartRef.current = start;
@@ -241,7 +245,11 @@ export default function Match() {
       form.append("fullname", fullName);
       form.append("file", { name: pdfName || "feuille.pdf", type: "application/pdf", uri: pdfUri } as any);
 
-      const resp = await fetch(API_URL, { method: "POST", body: form });
+      const resp = await fetch(API_URL, {
+        method: "POST",
+        body: form,
+        signal: controller.signal,
+      });
       const json = (await resp.json()) as any;
       if (!resp.ok || json?.ok === false) {
         const errMsg =
@@ -268,6 +276,9 @@ export default function Match() {
       }
       setStats(found);
     } catch (e: any) {
+      if (e?.name === "AbortError") {
+        return;
+      }
       console.error(e);
       Alert.alert("Erreur parsing", e?.message || "Impossible de lire le PDF.");
     } finally {
@@ -298,10 +309,25 @@ export default function Match() {
         clearInterval(progressTimerRef.current);
         progressTimerRef.current = null;
       }
+      abortRef.current = null;
       setProgress(1);
       setEtaSeconds(null);
       setLoading(false);
     }
+  };
+
+  const handleCancelParse = () => {
+    if (!loading) return;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    if (progressTimerRef.current) {
+      clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+    }
+    progressStartRef.current = null;
+    setProgress(0);
+    setEtaSeconds(null);
+    setLoading(false);
   };
 
   const handleSave = async () => {
@@ -504,6 +530,19 @@ export default function Match() {
                 {Math.round(progress * 100)}%
               </Text>
             </View>
+
+            <TouchableOpacity
+              onPress={handleCancelParse}
+              style={{
+                marginTop: 12,
+                backgroundColor: "#374151",
+                paddingVertical: 10,
+                borderRadius: 10,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "700" }}>Annuler</Text>
+            </TouchableOpacity>
           </View>
         )}
 
