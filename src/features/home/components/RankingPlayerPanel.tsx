@@ -35,8 +35,11 @@ const isAndroid =
   (Platform as unknown as { OS: string }).OS === "android";
 
 // ⭐ CONFIG MODIFIABLES PAR TOI
-const PANEL_HEIGHT = isAndroid ? 0.9 : 0.75; // Android: plus haut
-const PANEL_TOP = isAndroid ? height * 0.1 : height * 0.005; // Android: 10% du haut
+const IOS_PANEL_HEIGHT_RATIO = 0.75;
+const PANEL_HEIGHT = isAndroid ? 0.9 : IOS_PANEL_HEIGHT_RATIO; // Android: plus haut
+const PANEL_TOP = isAndroid
+  ? height * 0.1
+  : height * (1 - IOS_PANEL_HEIGHT_RATIO); // iOS: ouvre à 75% max (panel démarre à 25%)
 const CLOSE_THRESHOLD = height * 0.22; // Distance pour fermer le panel en glissant
 
 // Carte responsive (plus compacte)
@@ -273,7 +276,12 @@ export default function RankingPlayerPanel({
         <Animated.View
           style={[
             panelStyle,
-            { height: height * PANEL_HEIGHT },
+            {
+              height: height * PANEL_HEIGHT,
+              ...(isAndroid
+                ? {}
+                : { maxHeight: height * IOS_PANEL_HEIGHT_RATIO }),
+            },
             isAndroid
               ? { backgroundColor: "rgba(8, 8, 8, 0.96)" }
               : null,

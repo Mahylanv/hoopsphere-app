@@ -30,6 +30,9 @@ const canUseStripeNative =
   Platform.OS === "android"
     ? Boolean(NativeModules?.OnrampSdk && NativeModules?.StripeSdk)
     : true;
+
+const ANDROID_WEBVIEW_USER_AGENT =
+  "Mozilla/5.0 (Linux; Android 16; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36";
 let StripeNative: any = null;
 try {
   if (canUseStripeNative) {
@@ -338,6 +341,17 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
         height: 100% !important;
       }
 
+      body.ios .stripe-field {
+        padding: 12px 14px;
+        display: block;
+        min-height: 0;
+      }
+
+      body.ios .stripe-field .StripeElement,
+      body.ios .stripe-field .StripeElement iframe {
+        height: auto !important;
+      }
+
       .stripe-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -550,43 +564,43 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
             },
           },
         };
-        const elements = stripe.elements({ locale: "fr", appearance });
+        const elements = isAndroid
+          ? stripe.elements({ locale: "fr", appearance })
+          : stripe.elements({ locale: "fr" });
 
-        const style = {
+        const iosStyle = {
           base: {
             color: "#FFFFFF",
             fontFamily: "Space Grotesk, sans-serif",
             fontSize: "16px",
+            "::placeholder": { color: "#6b7280" },
+          },
+          invalid: {
+            color: "#FCA5A5",
+          },
+        };
+
+        const androidStyle = {
+          base: {
+            ...iosStyle.base,
             iconColor: "#FFFFFF",
             backgroundColor: "#00000000",
-
+            fontFamily: "sans-serif",
             // 🔥 FIX ANDROID WEBVIEW
             WebkitTextFillColor: "#FFFFFF",
             caretColor: "#FFFFFF",
-
             "::placeholder": {
               color: "#9CA3AF",
               WebkitTextFillColor: "#9CA3AF",
             },
           },
           invalid: {
-            color: "#FCA5A5",
+            ...iosStyle.invalid,
             WebkitTextFillColor: "#FCA5A5",
           },
         };
 
-        const elementStyle = isAndroid
-          ? {
-              ...style,
-              base: {
-                ...style.base,
-                color: "#ffffff",
-                iconColor: "#ffffff",
-                caretColor: "#ffffff",
-                fontFamily: "sans-serif",
-              },
-            }
-          : style;
+        const elementStyle = isAndroid ? androidStyle : iosStyle;
 
         const cardNumber = elements.create("cardNumber", {
           style: elementStyle,
@@ -1548,7 +1562,6 @@ export default function StripeCheckout() {
                 originWhitelist={["https://*", "http://*"]}
                 source={{ html, baseUrl: "https://stripe.local" }}
                 onMessage={handleMessage}
-                userAgent="Mozilla/5.0 (Linux; Android 16; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36"
                 javaScriptEnabled
                 domStorageEnabled
                 startInLoadingState
@@ -1558,10 +1571,19 @@ export default function StripeCheckout() {
                 sharedCookiesEnabled
                 javaScriptCanOpenWindowsAutomatically
                 setSupportMultipleWindows={false}
-                forceDarkOn={false}
-                androidLayerType="software"
-                renderToHardwareTextureAndroid={false}
-                textZoom={100}
+                userAgent={
+                  Platform.OS === "android"
+                    ? ANDROID_WEBVIEW_USER_AGENT
+                    : undefined
+                }
+                forceDarkOn={Platform.OS === "android" ? false : undefined}
+                androidLayerType={
+                  Platform.OS === "android" ? "software" : undefined
+                }
+                renderToHardwareTextureAndroid={
+                  Platform.OS === "android" ? false : undefined
+                }
+                textZoom={Platform.OS === "android" ? 100 : undefined}
                 style={{ flex: 1, backgroundColor: "#0E0D0D" }}
               />
               {Platform.OS === "android" && !CardField && (
@@ -1579,11 +1601,5 @@ export default function StripeCheckout() {
     </SafeAreaView>
   );
 }
-
-
-
-
-
-
 
 
