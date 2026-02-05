@@ -10,6 +10,9 @@ import {
   StatusBar,
   DeviceEventEmitter,
   ScrollView,
+  Modal,
+  Image,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
@@ -109,6 +112,7 @@ export default function Match() {
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [matchNumber, setMatchNumber] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showExample, setShowExample] = useState(false);
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const progressStartRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -400,6 +404,34 @@ export default function Match() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0E0D0D" }}>
       <StatusBar barStyle="light-content" />
+      <Modal
+        visible={showExample}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowExample(false)}
+      >
+        <Pressable
+          onPress={() => setShowExample(false)}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.8)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 16,
+          }}
+        >
+          <Image
+            source={require("../../assets/feuille.png")}
+            style={{
+              width: "100%",
+              height: "85%",
+              borderRadius: 12,
+              backgroundColor: "#111827",
+            }}
+            resizeMode="contain"
+          />
+        </Pressable>
+      </Modal>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 16, paddingBottom: 28 }}
@@ -429,6 +461,20 @@ export default function Match() {
               PDF officiel uniquement (e‑Marque V2)
             </Text>
           </View>
+          <TouchableOpacity
+            onPress={() => setShowExample(true)}
+            style={{ marginTop: 6 }}
+          >
+            <Text
+              style={{
+                color: "#93c5fd",
+                textDecorationLine: "underline",
+                fontWeight: "600",
+              }}
+            >
+              Exemple de pdf accepté
+            </Text>
+          </TouchableOpacity>
         </LinearGradient>
 
         <View
