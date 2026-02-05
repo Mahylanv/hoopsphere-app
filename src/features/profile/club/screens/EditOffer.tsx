@@ -69,11 +69,11 @@ export default function EditOffer() {
         location,
       });
 
-      Alert.alert("✅ Succès", "L’offre a bien été mise à jour.");
+      Alert.alert("Succès", "L’offre a bien été mise à jour.");
       navigation.goBack();
     } catch (err) {
       console.error("Erreur lors de la mise à jour :", err);
-      Alert.alert("❌ Erreur", "Impossible de modifier l’offre.");
+      Alert.alert("Erreur", "Impossible de modifier l’offre.");
     } finally {
       setSaving(false);
     }
@@ -217,67 +217,77 @@ export default function EditOffer() {
           </Text>
         </TouchableOpacity>
         {/* ===== MODAL POSTES ===== */}
-        <Modal visible={showPosteSelect} transparent animationType="fade">
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => setShowPosteSelect(false)}
-        className="flex-1 bg-black/60 justify-center px-6"
-          >
-            <View className="bg-[#1b1f2a] rounded-3xl p-6">
-              <Text className="text-white text-xl font-bold mb-4">Postes</Text>
+        {showPosteSelect && (
+          <Modal visible transparent animationType="fade">
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={() => setShowPosteSelect(false)}
+              className="flex-1 bg-black/60 justify-center px-6"
+            >
+              <View className="bg-[#1b1f2a] rounded-3xl p-6">
+                <Text className="text-white text-xl font-bold mb-4">Postes</Text>
+                <Text className="text-gray-400 text-sm mb-4">
+                  Tu peux selectionner plusieurs postes.
+                </Text>
 
-              {POSTES.map((poste) => {
-                const selected = positions.includes(poste);
-                return (
-                  <TouchableOpacity
-                    key={poste}
-                    onPress={() => togglePoste(poste)}
-                    className={`py-3 px-4 rounded-xl mb-2 ${
-                      selected ? "bg-orange-600" : "bg-[#0e1320]"
-                    }`}
-                  >
-                    <Text className="text-white">{poste}</Text>
-                  </TouchableOpacity>
-                );
-              })}
+                {POSTES.map((poste) => {
+                  const selected = positions.includes(poste);
+                  return (
+                    <TouchableOpacity
+                      key={poste}
+                      onPress={() => togglePoste(poste)}
+                      className={`py-3 px-4 rounded-xl mb-2 ${
+                        selected ? "bg-orange-600" : "bg-[#0e1320]"
+                      }`}
+                    >
+                      <Text className="text-white">{poste}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
 
-              <TouchableOpacity
-                onPress={() => setShowPosteSelect(false)}
-                className="mt-4 py-3 bg-gray-700 rounded-xl items-center"
-              >
-                <Text className="text-white font-semibold">Valider</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </Modal>
-
-        {/* ===== MODAL GENRES ===== */}
-        <Modal visible={showGenreSelect} transparent animationType="fade">
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => setShowGenreSelect(false)}
-            className="flex-1 bg-black/60 justify-center px-6"
-          >
-            <View className="bg-[#1b1f2a] rounded-3xl p-6">
-              <Text className="text-white text-xl font-bold mb-4">Genres</Text>
-
-              {GENRES.map((g) => (
                 <TouchableOpacity
-                  key={g}
-                  onPress={() => {
-                    setGender(g);
-                    setShowGenreSelect(false);
-                  }}
-                  className={`py-3 px-4 rounded-xl mb-2 ${
-                    gender === g ? "bg-orange-600" : "bg-[#0e1320]"
+                  disabled={positions.length === 0}
+                  onPress={() => setShowPosteSelect(false)}
+                  className={`mt-4 py-3 rounded-xl items-center ${
+                    positions.length > 0 ? "bg-orange-600" : "bg-gray-700"
                   }`}
                 >
-                  <Text className="text-white">{g}</Text>
+                  <Text className="text-white font-semibold">Valider</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-          </TouchableOpacity>
-        </Modal>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+        )}
+
+        {/* ===== MODAL GENRES ===== */}
+        {showGenreSelect && (
+          <Modal visible transparent animationType="fade">
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={() => setShowGenreSelect(false)}
+              className="flex-1 bg-black/60 justify-center px-6"
+            >
+              <View className="bg-[#1b1f2a] rounded-3xl p-6">
+                <Text className="text-white text-xl font-bold mb-4">Genres</Text>
+
+                {GENRES.map((g) => (
+                  <TouchableOpacity
+                    key={g}
+                    onPress={() => {
+                      setGender(g);
+                      setShowGenreSelect(false);
+                    }}
+                    className={`py-3 px-4 rounded-xl mb-2 ${
+                      gender === g ? "bg-orange-600" : "bg-[#0e1320]"
+                    }`}
+                  >
+                    <Text className="text-white">{g}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </TouchableOpacity>
+          </Modal>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

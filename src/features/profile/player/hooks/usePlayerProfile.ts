@@ -362,7 +362,7 @@ export default function usePlayerProfile() {
       await reauthenticateWithCredential(current, cred);
       return true;
     } catch (e) {
-      // console.log("❌ ERREUR RE-AUTH :", e);
+      // console.log(" ERREUR RE-AUTH :", e);
       return false;
     }
   };
@@ -386,9 +386,9 @@ export default function usePlayerProfile() {
         seen: false, // ou true selon ton besoin
       });
 
-      // console.log("✅ Visite enregistrée !");
+      // console.log(" Visite enregistrée !");
     } catch (e) {
-      // console.log("❌ ERREUR saveProfileView :", e);
+      // console.log(" ERREUR saveProfileView :", e);
     }
   };
 
@@ -428,7 +428,7 @@ export default function usePlayerProfile() {
       if (emailChanged) {
         const ok = await reauthenticate(passwordForReauth);
         if (!ok) {
-          alert("❌ Mot de passe incorrect.");
+          alert("Mot de passe incorrect.");
           return;
         }
 

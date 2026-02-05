@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { auth, db } from "../../../../config/firebaseConfig";
 import { addDoc, collection } from "firebase/firestore";
 
-type Player = { prenom: string; nom: string; poste?: string };
+type Player = { id?: string; prenom: string; nom: string; poste?: string };
 type Team = { id?: string; label: string; createdAt: string };
 
 type Props = {
@@ -88,15 +88,17 @@ export default function CreateTeamModal({
         (p) => p.prenom.trim() && p.nom.trim()
       );
 
+      const createdPlayers: Player[] = [];
       for (const p of validPlayers) {
-        await addDoc(
+        const created = await addDoc(
           collection(db, "clubs", uid, "equipes", teamDoc.id, "joueurs"),
           p
         );
+        createdPlayers.push({ ...p, id: created.id });
       }
 
       // 3. callback parent
-      onCreated({ ...teamData, id: teamDoc.id }, validPlayers);
+      onCreated({ ...teamData, id: teamDoc.id }, createdPlayers);
 
       // 4. reset + fermeture
       setTeamName("");
@@ -273,3 +275,4 @@ export default function CreateTeamModal({
     </Modal>
   );
 }
+

@@ -24,7 +24,7 @@ export default function FloatingShareButton({ cardRef }: Props) {
 
       await Sharing.shareAsync(uri);
     } catch (e) {
-      console.log("❌ Erreur partage :", e);
+      console.log("Erreur partage :", e);
       Alert.alert("Erreur", "Impossible de partager la carte.");
     }
   };

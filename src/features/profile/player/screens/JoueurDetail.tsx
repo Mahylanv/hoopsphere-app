@@ -141,7 +141,7 @@ export default function JoueurDetail() {
         //       });
         //     }
         //   } catch (e) {
-        //     // console.log("❌ ERREUR GLOBALE ENREGISTREMENT VISITE :", e);
+        //     // console.log(" ERREUR GLOBALE ENREGISTREMENT VISITE :", e);
         //   }
         // }
 
@@ -167,7 +167,7 @@ export default function JoueurDetail() {
         const finalRating = computePlayerRating(averages, raw.poste);
         setRating(finalRating);
       } catch (e) {
-        // console.log("❌ Erreur fetch joueur :", e);
+        // console.log(" Erreur fetch joueur :", e);
       } finally {
         setLoading(false);
       }
@@ -277,7 +277,7 @@ export default function JoueurDetail() {
       const uri = await cardRef.current?.capture?.();
       return uri ?? null;
     } catch (e) {
-      // console.log("❌ Erreur capture :", e);
+      // console.log(" Erreur capture :", e);
       return null;
     }
   };

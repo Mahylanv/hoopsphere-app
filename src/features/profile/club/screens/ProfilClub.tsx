@@ -116,7 +116,7 @@ export default function ProfilClub() {
           },
           { merge: true }
         );
-        // console.log("✅ Vue club enregistrée en BDD", { clubId, viewerUid, viewDocId });
+        // console.log("Vue club enregistrée en BDD", { clubId, viewerUid, viewDocId });
         hasRecordedView.current = true;
       } catch (e) {
         // console.log("⚠️ Impossible d'enregistrer la vue club :", e);
@@ -172,7 +172,7 @@ export default function ProfilClub() {
       await updateDoc(doc(db, "clubs", uid), { logo: downloadUrl });
       setClub((prev: any) => ({ ...prev, logo: downloadUrl }));
 
-      Alert.alert("Succès ✅", "Logo mis à jour avec succès !");
+      Alert.alert("Succès", "Logo mis à jour avec succès !");
     } catch (err) {
       console.error("Erreur upload logo :", err);
       Alert.alert("Erreur", "Impossible de mettre à jour le logo.");

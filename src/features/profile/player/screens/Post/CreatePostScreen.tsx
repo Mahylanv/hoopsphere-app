@@ -304,7 +304,7 @@ export default function CreatePostScreen() {
 
       navigation.goBack();
     } catch (e) {
-      console.error("❌ Publication échouée :", e);
+      console.error(" Publication échouée :", e);
       Alert.alert(
         "Erreur",
         "Impossible de publier la vidéo pour le moment."

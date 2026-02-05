@@ -233,7 +233,7 @@ export default function ProfilJoueur() {
       const uri = await cardRef.current?.capture?.();
       return uri ?? null;
     } catch (e) {
-      // console.log("❌ Erreur capture:", e);
+      // console.log(" Erreur capture:", e);
       return null;
     }
   };

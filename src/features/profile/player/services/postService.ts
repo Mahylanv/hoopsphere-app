@@ -125,7 +125,7 @@ export const createPost = async (payload: CreatePostPayload) => {
     // console.log("✅ POST CRÉÉ :", postRef.id);
     return postRef.id;
   } catch (e) {
-    console.error("❌ createPost error:", e);
+    console.error(" createPost error:", e);
     throw e;
   }
 };
@@ -170,7 +170,7 @@ export const updatePost = async (
 
     // console.log("✅ POST MIS À JOUR :", postId);
   } catch (e) {
-    console.error("❌ updatePost error:", e);
+    console.error(" updatePost error:", e);
     throw e;
   }
 };
@@ -211,7 +211,7 @@ export const deletePost = async (
 
     // console.log("✅ POST SUPPRIMÉ PARTOUT :", postId);
   } catch (e) {
-    console.error("❌ deletePost error:", e);
+    console.error(" deletePost error:", e);
     throw e;
   }
 };

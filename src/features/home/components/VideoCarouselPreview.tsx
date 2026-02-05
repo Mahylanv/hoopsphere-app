@@ -169,7 +169,7 @@ function VideoPreviewItem({
             id: v.id,
             url: v.url,
             playerUid: v.playerUid,
-            avatar: v.avatar ?? null, // ✅ PROPAGATION EXPLICITE
+            avatar: v.avatar ?? null, //  PROPAGATION EXPLICITE
             likeCount: v.likeCount ?? 0,
             isLikedByMe: v.isLikedByMe ?? false,
             description: v.description ?? null,

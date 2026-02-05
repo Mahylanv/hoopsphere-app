@@ -77,7 +77,7 @@ export default function EditClubProfile() {
         categories,
       });
 
-      Alert.alert("Succès 🎉", "Informations mises à jour !");
+      Alert.alert("Succès", "Informations mises à jour !");
       navigation.navigate("ProfilClub" as never);
     } catch (err) {
       console.error(err);
@@ -158,6 +158,8 @@ export default function EditClubProfile() {
         <ScrollView
           contentContainerStyle={{ padding: 20, paddingBottom: 60 }}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          nestedScrollEnabled
         >
           <BlurView intensity={40} tint="dark" className="rounded-3xl p-5 mb-4">
             <Text className="text-white text-lg font-semibold mb-4">
@@ -208,6 +210,8 @@ export default function EditClubProfile() {
                 placeholderTextColor="#6b7280"
                 className="bg-[#0F141E] text-white rounded-xl px-4 py-3 border border-gray-700 min-h-[120px]"
                 multiline
+                textAlignVertical="top"
+                scrollEnabled={false}
               />
             </View>
 
@@ -305,3 +309,4 @@ export default function EditClubProfile() {
     </SafeAreaView>
   );
 }
+
