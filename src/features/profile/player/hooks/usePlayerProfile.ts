@@ -1,6 +1,6 @@
 // src/Profil/Joueurs/hooks/usePlayerProfile.ts
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   // getAuth,
   updateProfile,
@@ -52,6 +52,7 @@ export type MediaItem = {
 ============================================================ */
 export default function usePlayerProfile() {
   const currentUser = auth.currentUser;
+  const currentUid = currentUser?.uid ?? null;
   /* ---------------------------------------------------------
         STATES
   --------------------------------------------------------- */
@@ -144,7 +145,7 @@ export default function usePlayerProfile() {
           main: data.main || "",
           departement: data.departement || "",
           club: data.club || "",
-          email: currentUser.email || "",
+          email: currentUser?.email || "",
           phone: data.phone || "",
           level: data.level || "",
           experience: data.experience || "",
@@ -155,7 +156,7 @@ export default function usePlayerProfile() {
         };
 
         setUser({
-          uid: currentUser.uid,
+          uid: currentUid,
           ...loaded,
           stripeCustomerId: data.stripeCustomerId || null,
           stripeSubscriptionId: data.stripeSubscriptionId || null,
@@ -188,7 +189,7 @@ export default function usePlayerProfile() {
   /* ============================================================
        CHARGEMENT DES STATS
   ============================================================ */
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     if (!user?.uid) return;
 
     const snap = await getDocs(
@@ -201,21 +202,21 @@ export default function usePlayerProfile() {
 
     const overall = computePlayerRating(averages, user.poste);
     setRating(overall);
-  };
+  }, [user?.uid, user?.poste]);
 
   useEffect(() => {
     loadStats();
-  }, [user]);
+  }, [loadStats]);
 
   /* ============================================================
        GALERIE
   ============================================================ */
-  const loadGallery = async () => {
-    if (!currentUser) return;
+  const loadGallery = useCallback(async () => {
+    if (!currentUid) return;
     setGalleryLoading(true);
 
     try {
-      const fsRef = collection(db, "joueurs", currentUser.uid, "gallery");
+      const fsRef = collection(db, "joueurs", currentUid, "gallery");
       const snaps = await getDocs(fsRef);
 
       const list = snaps.docs
@@ -228,7 +229,7 @@ export default function usePlayerProfile() {
     }
 
     setGalleryLoading(false);
-  };
+  }, [currentUid]);
 
   /* ============================================================
        AJOUT MEDIA
@@ -500,8 +501,11 @@ export default function usePlayerProfile() {
     tempNewEmail,
     setTempNewEmail,
     saveProfileView,
-    refetch: async () => {
+    refetch: useCallback(async () => {
       await Promise.all([loadStats(), loadGallery()]);
-    },
+    }, [loadStats, loadGallery]),
   };
 }
+
+
+

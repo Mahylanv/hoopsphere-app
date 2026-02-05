@@ -1,7 +1,7 @@
 // src/Profil/Joueur/components/BioSection.tsx
 
 import React from "react";
-import { View, Text, TextInput, TouchableOpacity } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Dimensions } from "react-native";
 import clsx from "clsx";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -92,6 +92,9 @@ export default function BioSection({
     surface: "#0E0D0D",
     border: "rgba(255,255,255,0.08)",
   };
+
+  const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
+  const isSmallPhone = screenWidth <= 360 || screenHeight <= 700;
 
   const renderValue = (value?: string, suffix = "") => {
     const trimmed = value?.toString().trim();
@@ -198,7 +201,7 @@ export default function BioSection({
             <View className="flex-row flex-wrap -mx-2">
               <View className="w-1/2 px-2 mb-4">
                 {renderField(
-                  "Année de naissance",
+                  isSmallPhone ? "Né(e) le" : "Année de naissance",
                   editMode
                     ? renderInput(birthYear, setBirthYear, "2002", { keyboardType: "numeric" })
                     : renderValue(birthYear)
@@ -260,20 +263,34 @@ export default function BioSection({
                 )}
               </View>
               <View className="w-1/2 px-2 mb-4">
-                {renderField(
-                  "Email",
-                  editMode
-                    ? renderInput(email, setEmail, "email@exemple.com", { keyboardType: "email-address" })
-                    : renderValue(email)
-                )}
+                {isSmallPhone
+                  ? renderField(
+                      "Téléphone",
+                      editMode
+                        ? renderInput(phone, (val) => setPhone(formatPhone(val)), "06 12 34 56 78", { keyboardType: "phone-pad" })
+                        : renderValue(phone)
+                    )
+                  : renderField(
+                      "Email",
+                      editMode
+                        ? renderInput(email, setEmail, "email@exemple.com", { keyboardType: "email-address" })
+                        : renderValue(email)
+                    )}
               </View>
-              <View className="w-1/2 px-2 mb-4">
-                {renderField(
-                  "Téléphone",
-                  editMode
-                    ? renderInput(phone, (val) => setPhone(formatPhone(val)), "06 12 34 56 78", { keyboardType: "phone-pad" })
-                    : renderValue(phone)
-                )}
+              <View className={clsx("px-2 mb-4", isSmallPhone ? "w-full" : "w-1/2")}>
+                {isSmallPhone
+                  ? renderField(
+                      "Email",
+                      editMode
+                        ? renderInput(email, setEmail, "email@exemple.com", { keyboardType: "email-address" })
+                        : renderValue(email)
+                    )
+                  : renderField(
+                      "Téléphone",
+                      editMode
+                        ? renderInput(phone, (val) => setPhone(formatPhone(val)), "06 12 34 56 78", { keyboardType: "phone-pad" })
+                        : renderValue(phone)
+                    )}
               </View>
               <View className="w-1/2 px-2 mb-4">
                 {renderField(
@@ -336,3 +353,8 @@ export default function BioSection({
       </LinearGradient>
   );
 }
+
+
+
+
+

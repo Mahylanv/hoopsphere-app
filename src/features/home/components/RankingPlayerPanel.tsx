@@ -34,6 +34,8 @@ const { height, width } = Dimensions.get("window");
 const isAndroid =
   (Platform as unknown as { OS: string }).OS === "android";
 
+const IS_SMALL_PHONE = width <= 360 || height <= 700;
+
 // ⭐ CONFIG MODIFIABLES PAR TOI
 const IOS_PANEL_HEIGHT_RATIO = 0.75;
 const PANEL_HEIGHT = isAndroid ? 0.9 : IOS_PANEL_HEIGHT_RATIO; // Android: plus haut
@@ -45,8 +47,17 @@ const CLOSE_THRESHOLD = height * 0.22; // Distance pour fermer le panel en gliss
 // Carte responsive (plus compacte)
 const CARD_WIDTH = width * 0.8;
 const CARD_HEIGHT = CARD_WIDTH * 0.75;
-const CARD_SCALE = Math.min(1, (width * 0.75) / 420); // réduit un peu plus sur petits écrans
+const CARD_SCALE = Math.min(1, (width * 0.75) / 420); // reduit un peu plus sur petits ecrans
+const SMALL_PHONE_CARD_SCALE = Math.min(0.74, (width - 20) / 460);
 
+const ANDROID_SMALL_CARD_SCALE = IS_SMALL_PHONE
+  ? SMALL_PHONE_CARD_SCALE
+  : CARD_SCALE;
+const AVATAR_LAYOUT_HEIGHT = 632;
+const SMALL_PHONE_CARD_OFFSET_TOP = -86;
+const SMALL_PHONE_CARD_MARGIN_BOTTOM = -Math.round(
+  AVATAR_LAYOUT_HEIGHT * (1 - ANDROID_SMALL_CARD_SCALE)
+);
 export default function RankingPlayerPanel({
   visible,
   player,
@@ -192,18 +203,22 @@ export default function RankingPlayerPanel({
           </View>
 
           <Animated.ScrollView
+            scrollEnabled={!IS_SMALL_PHONE}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
               paddingHorizontal: 16,
-              paddingBottom: 24,
+              paddingTop: IS_SMALL_PHONE ? 8 : 0,
+              paddingBottom: IS_SMALL_PHONE ? 16 : 24,
               alignItems: "center",
+              flexGrow: IS_SMALL_PHONE ? 1 : 0,
             }}
           >
             <View
               style={{
-                transform: [{ scale: CARD_SCALE }],
+                transform: [{ scale: ANDROID_SMALL_CARD_SCALE }],
                 alignItems: "center",
-                marginTop: 16,
+                marginTop: IS_SMALL_PHONE ? SMALL_PHONE_CARD_OFFSET_TOP : 16,
+                marginBottom: IS_SMALL_PHONE ? SMALL_PHONE_CARD_MARGIN_BOTTOM : 0,
               }}
             >
               <AvatarSection
@@ -240,7 +255,10 @@ export default function RankingPlayerPanel({
                   }, 200);
                 }
               }}
-              className="mt-6 px-5 py-3 rounded-full bg-orange-500/90 flex-row items-center justify-center shadow-lg shadow-orange-500/30"
+              className="px-5 py-3 rounded-full bg-orange-500/90 flex-row items-center justify-center shadow-lg shadow-orange-500/30"
+              style={{
+                marginTop: IS_SMALL_PHONE ? 75 : 24,
+              }}
               activeOpacity={0.9}
             >
               <Ionicons name="person" size={18} color="#fff" />
@@ -371,3 +389,10 @@ export default function RankingPlayerPanel({
     </GestureHandlerRootView>
   );
 }
+
+
+
+
+
+
+
