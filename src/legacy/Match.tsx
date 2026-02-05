@@ -10,6 +10,9 @@ import {
   StatusBar,
   DeviceEventEmitter,
   ScrollView,
+  Modal,
+  Image,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
@@ -109,8 +112,10 @@ export default function Match() {
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [matchNumber, setMatchNumber] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showExample, setShowExample] = useState(false);
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const progressStartRef = useRef<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const estimateMsRef = useRef<number>(DEFAULT_PARSE_MS);
 
   // Récupère Prenom/Nom depuis joueurs/{uid}, en gérant les 2 casings
@@ -222,6 +227,9 @@ export default function Match() {
       setProgress(0);
       setEtaSeconds(null);
 
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       const progressEstimateMs = estimateMsRef.current || DEFAULT_PARSE_MS;
       const start = Date.now();
       progressStartRef.current = start;
@@ -241,7 +249,11 @@ export default function Match() {
       form.append("fullname", fullName);
       form.append("file", { name: pdfName || "feuille.pdf", type: "application/pdf", uri: pdfUri } as any);
 
-      const resp = await fetch(API_URL, { method: "POST", body: form });
+      const resp = await fetch(API_URL, {
+        method: "POST",
+        body: form,
+        signal: controller.signal,
+      });
       const json = (await resp.json()) as any;
       if (!resp.ok || json?.ok === false) {
         const errMsg =
@@ -268,6 +280,9 @@ export default function Match() {
       }
       setStats(found);
     } catch (e: any) {
+      if (e?.name === "AbortError") {
+        return;
+      }
       console.error(e);
       Alert.alert("Erreur parsing", e?.message || "Impossible de lire le PDF.");
     } finally {
@@ -298,10 +313,25 @@ export default function Match() {
         clearInterval(progressTimerRef.current);
         progressTimerRef.current = null;
       }
+      abortRef.current = null;
       setProgress(1);
       setEtaSeconds(null);
       setLoading(false);
     }
+  };
+
+  const handleCancelParse = () => {
+    if (!loading) return;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    if (progressTimerRef.current) {
+      clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+    }
+    progressStartRef.current = null;
+    setProgress(0);
+    setEtaSeconds(null);
+    setLoading(false);
   };
 
   const handleSave = async () => {
@@ -374,6 +404,34 @@ export default function Match() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0E0D0D" }}>
       <StatusBar barStyle="light-content" />
+      <Modal
+        visible={showExample}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowExample(false)}
+      >
+        <Pressable
+          onPress={() => setShowExample(false)}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.8)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 16,
+          }}
+        >
+          <Image
+            source={require("../../assets/feuille.png")}
+            style={{
+              width: "100%",
+              height: "85%",
+              borderRadius: 12,
+              backgroundColor: "#111827",
+            }}
+            resizeMode="contain"
+          />
+        </Pressable>
+      </Modal>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 16, paddingBottom: 28 }}
@@ -403,6 +461,20 @@ export default function Match() {
               PDF officiel uniquement (e‑Marque V2)
             </Text>
           </View>
+          <TouchableOpacity
+            onPress={() => setShowExample(true)}
+            style={{ marginTop: 6 }}
+          >
+            <Text
+              style={{
+                color: "#93c5fd",
+                textDecorationLine: "underline",
+                fontWeight: "600",
+              }}
+            >
+              Exemple de pdf accepté
+            </Text>
+          </TouchableOpacity>
         </LinearGradient>
 
         <View
@@ -504,6 +576,19 @@ export default function Match() {
                 {Math.round(progress * 100)}%
               </Text>
             </View>
+
+            <TouchableOpacity
+              onPress={handleCancelParse}
+              style={{
+                marginTop: 12,
+                backgroundColor: "#374151",
+                paddingVertical: 10,
+                borderRadius: 10,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "700" }}>Annuler</Text>
+            </TouchableOpacity>
           </View>
         )}
 
