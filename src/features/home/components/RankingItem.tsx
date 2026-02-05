@@ -7,6 +7,7 @@ import {
   Image,
   TouchableOpacity,
   useWindowDimensions,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -37,6 +38,7 @@ export default function RankingItem({
 }: RankingItemProps) {
   const { width } = useWindowDimensions();
   const isSmallDevice = width <= 360;
+  const isIOS = Platform.OS === "ios";
 
   const brand = {
     orange: "#F97316",
@@ -68,7 +70,7 @@ export default function RankingItem({
   const getStatText = () => {
     switch (filter) {
       case "rating":
-        return `Rating : ${player.rating}/100`;
+        return isIOS ? "" : `${player.rating}/100`;
       case "points":
         return `PTS : ${player.average}`;
       case "threes":
@@ -94,7 +96,7 @@ export default function RankingItem({
         end={{ x: 1, y: 1 }}
         style={{
           borderRadius: 18,
-          padding: 1.5,
+          padding: isIOS ? 0.8 : 1.5,
           marginBottom: isSmallDevice ? 10 : 12,
         }}
       >
@@ -103,6 +105,7 @@ export default function RankingItem({
           style={{
             paddingHorizontal: isSmallDevice ? 10 : 16,
             paddingVertical: isSmallDevice ? 8 : 12,
+            borderWidth: isIOS ? 0.5 : 1,
           }}
         >
           <View
@@ -111,15 +114,15 @@ export default function RankingItem({
           >
             <View
               style={{
-                width: isSmallDevice ? 32 : 40,
-                height: isSmallDevice ? 32 : 40,
+                width: isSmallDevice ? 24 : 30,
+                height: isSmallDevice ? 24 : 30,
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
               <Text
                 className="text-orange-500 font-bold"
-                style={{ fontSize: isSmallDevice ? 16 : 20 }}
+                style={{ fontSize: isSmallDevice ? 12 : 16 }}
               >
                 {player.rank}
               </Text>
@@ -130,8 +133,8 @@ export default function RankingItem({
             source={avatarUri ? { uri: avatarUri } : PROFILE_PLACEHOLDER}
             className="rounded-full mr-3 bg-gray-700"
             style={{
-              width: isSmallDevice ? 40 : 48,
-              height: isSmallDevice ? 40 : 48,
+              width: isSmallDevice ? 36 : 44,
+              height: isSmallDevice ? 36 : 44,
             }}
             resizeMode="cover"
           />
@@ -159,13 +162,13 @@ export default function RankingItem({
               >
                 {getStatText()}
               </Text>
-              <View
-                className="flex-row items-center px-2 py-1 rounded-full"
-                style={{
-                  backgroundColor: "rgba(37,99,235,0.18)",
-                  marginLeft: isSmallDevice ? 6 : 12,
-                }}
-              >
+                <View
+                  className="flex-row items-center px-2 py-1 rounded-full"
+                  style={{
+                    backgroundColor: "rgba(37,99,235,0.18)",
+                    marginLeft: 0,
+                  }}
+                >
                 <Ionicons
                   name="star"
                   size={isSmallDevice ? 10 : 12}

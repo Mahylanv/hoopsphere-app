@@ -1,12 +1,13 @@
 // src/Home/components/WeeklyRanking.tsx
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
   useWindowDimensions,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,6 +16,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from "react-native-reanimated";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import RankingItem from "./RankingItem";
 import RankingFilterModal from "./RankingFilterModal";
@@ -36,6 +38,7 @@ export default function WeeklyRanking({
 }: WeeklyRankingProps) {
   const { width } = useWindowDimensions();
   const isSmallDevice = width <= 360;
+  const isIOS = Platform.OS === "ios";
 
   const accent = {
     orange: "#F97316",
@@ -45,6 +48,13 @@ export default function WeeklyRanking({
 
   const [filter, setFilter] = useState<RankingFilter>("rating");
   const [modalVisible, setModalVisible] = useState(false);
+  const [trendByUid, setTrendByUid] = useState<
+    Record<string, "up" | "down" | "same">
+  >({});
+  const [visibleCount, setVisibleCount] = useState(5);
+
+  const TREND_KEY = "weekly_ranking_prev_ranks_v1";
+  const MAX_VISIBLE = 10;
 
   // Animation bouton filtrer
   const scale = useSharedValue(1);
@@ -54,7 +64,59 @@ export default function WeeklyRanking({
   }));
 
   // Tri dynamique → Top 5
-  const sortedPlayers = sortPlayers(players, filter).slice(0, 5);
+  const sortedPlayers = useMemo(
+    () => sortPlayers(players, filter),
+    [players, filter]
+  );
+  const visiblePlayers = useMemo(
+    () => sortedPlayers.slice(0, Math.min(visibleCount, MAX_VISIBLE)),
+    [sortedPlayers, visibleCount]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const syncTrends = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(TREND_KEY);
+        const prevRanks = raw ? (JSON.parse(raw) as Record<string, number>) : {};
+
+        const nextRanks: Record<string, number> = {};
+        const nextTrends: Record<string, "up" | "down" | "same"> = {};
+
+        sortedPlayers.forEach((player, index) => {
+          const rank = index + 1;
+          nextRanks[player.uid] = rank;
+          const prev = prevRanks[player.uid];
+          if (typeof prev === "number") {
+            if (rank < prev) nextTrends[player.uid] = "up";
+            else if (rank > prev) nextTrends[player.uid] = "down";
+            else nextTrends[player.uid] = "same";
+          } else {
+            nextTrends[player.uid] = "same";
+          }
+        });
+
+        if (!cancelled) {
+          setTrendByUid(nextTrends);
+        }
+
+        await AsyncStorage.setItem(TREND_KEY, JSON.stringify(nextRanks));
+      } catch {
+        if (!cancelled) {
+          setTrendByUid({});
+        }
+      }
+    };
+
+    if (visiblePlayers.length > 0) {
+      syncTrends();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visiblePlayers.map((p) => p.uid).join("|")]);
 
   return (
     <View className="w-full mt-6 px-5">
@@ -92,11 +154,11 @@ export default function WeeklyRanking({
               <Text
                 className="text-white font-bold"
                 style={{
-                  fontSize: isSmallDevice ? 20 : 24,
+                  fontSize: isSmallDevice ? 20 : isIOS ? 22 : 24,
                   flexShrink: 1,
                   marginRight: 10,
                 }}
-                numberOfLines={1}
+                numberOfLines={isIOS ? 2 : 1}
               >
                 Classement de la semaine
               </Text>
@@ -145,10 +207,10 @@ export default function WeeklyRanking({
 
           {/* LISTE */}
           <FlatList
-            data={sortedPlayers}
+            data={visiblePlayers}
             keyExtractor={(item) => item.uid}
             scrollEnabled={false}
-            ItemSeparatorComponent={() => <View className="h-2" />}
+            ItemSeparatorComponent={() => <View className="h-0.5" />}
             renderItem={({ item, index }) => (
               <RankingItem
                 player={{
@@ -158,7 +220,7 @@ export default function WeeklyRanking({
                   avatar: item.avatar,
                   average: item.stats.pts,
                   rating: item.rating,
-                  trend: "same",
+                  trend: trendByUid[item.uid] ?? "same",
                   stats: item.stats,
                   premium: item.premium,
                 }}
@@ -170,6 +232,16 @@ export default function WeeklyRanking({
               />
             )}
           />
+          {sortedPlayers.length > 5 && visibleCount < MAX_VISIBLE && (
+            <TouchableOpacity
+              onPress={() => setVisibleCount(10)}
+              className="mt-3 items-center"
+            >
+              <Text className="text-orange-400 font-semibold">
+                Charger plus
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </LinearGradient>
 

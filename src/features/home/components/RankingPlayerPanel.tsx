@@ -37,7 +37,7 @@ const isAndroid =
 const IS_SMALL_PHONE = width <= 360 || height <= 700;
 
 // ⭐ CONFIG MODIFIABLES PAR TOI
-const IOS_PANEL_HEIGHT_RATIO = 0.75;
+const IOS_PANEL_HEIGHT_RATIO = 0.85;
 const PANEL_HEIGHT = isAndroid ? 0.9 : IOS_PANEL_HEIGHT_RATIO; // Android: plus haut
 const PANEL_TOP = isAndroid
   ? height * 0.1
@@ -389,8 +389,6 @@ export default function RankingPlayerPanel({
     </GestureHandlerRootView>
   );
 }
-
-
 
 
 
