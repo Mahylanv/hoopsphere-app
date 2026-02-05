@@ -44,8 +44,12 @@ import PostGridSection from "../components/PostGridSection";
 import { Video, ResizeMode } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 
-const CARD_WIDTH = Dimensions.get("window").width * 0.9;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const IS_SMALL_PHONE = SCREEN_WIDTH <= 360 || SCREEN_HEIGHT <= 700;
+
+const CARD_WIDTH = SCREEN_WIDTH * 0.9;
 const CARD_HEIGHT = CARD_WIDTH * 1.3;
+const SMALL_PHONE_CARD_SCALE = IS_SMALL_PHONE ? 0.8 : 1;
 
 type RouteProps = RouteProp<RootStackParamList, "JoueurDetail">;
 type NavProps = NativeStackNavigationProp<RootStackParamList, "JoueurDetail">;
@@ -137,7 +141,7 @@ export default function JoueurDetail() {
         //       });
         //     }
         //   } catch (e) {
-        //     // console.log("❌ ERREUR GLOBALE ENREGISTREMENT VISITE :", e);
+        //     // console.log(" ERREUR GLOBALE ENREGISTREMENT VISITE :", e);
         //   }
         // }
 
@@ -163,7 +167,7 @@ export default function JoueurDetail() {
         const finalRating = computePlayerRating(averages, raw.poste);
         setRating(finalRating);
       } catch (e) {
-        // console.log("❌ Erreur fetch joueur :", e);
+        // console.log(" Erreur fetch joueur :", e);
       } finally {
         setLoading(false);
       }
@@ -218,6 +222,7 @@ export default function JoueurDetail() {
     outputRange: [0, CARD_HEIGHT * 0.55],
     extrapolate: "clamp",
   });
+  const cardScale = Animated.multiply(scale, SMALL_PHONE_CARD_SCALE);
 
   /* -----------------------------------------------------
      🔥 BOTTOM SHEET
@@ -272,7 +277,7 @@ export default function JoueurDetail() {
       const uri = await cardRef.current?.capture?.();
       return uri ?? null;
     } catch (e) {
-      // console.log("❌ Erreur capture :", e);
+      // console.log(" Erreur capture :", e);
       return null;
     }
   };
@@ -366,12 +371,12 @@ export default function JoueurDetail() {
         <Animated.View
           style={{
             position: "absolute",
-            top: 0,
+            top: IS_SMALL_PHONE ? -28 : 0,
             left: 0,
             right: 0,
             alignItems: "center",
             transform: [
-              { scale },
+              { scale: cardScale },
               { translateY: Animated.add(translateY, adjustedTranslate) },
             ],
           }}

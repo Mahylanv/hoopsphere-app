@@ -167,7 +167,7 @@ export default function useAllPosts({ includeClubVisibility = false }: { include
         setLoading(false);
       },
       (error) => {
-        console.error("❌ Erreur listener posts HOME :", error);
+        console.error("Erreur listener posts HOME :", error);
         setLoading(false);
       }
     );

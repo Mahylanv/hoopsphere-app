@@ -1,6 +1,7 @@
 // src/Pages/Match.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Platform,
   View,
   Text,
   TouchableOpacity,
@@ -12,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { doc, serverTimestamp, getDoc, addDoc, collection } from "firebase/firestore";
 import { auth, db } from "../config/firebaseConfig";
@@ -183,7 +185,23 @@ export default function Match() {
     if (res?.assets && res.assets.length > 0) {
       const f = res.assets[0];
       setPdfName(f.name || "feuille.pdf");
-      setPdfUri(f.uri);
+      // Android: ensure we upload a real local file path
+      if (Platform.OS === "android") {
+        const safeName = (f.name || "feuille.pdf").replace(/[^\w.-]+/g, "_");
+        const fsAny = FileSystem as any;
+        const baseDir =
+          fsAny.cacheDirectory || fsAny.documentDirectory || "";
+        const dest = `${baseDir}emarque_${Date.now()}_${safeName}`;
+        const sourceUri = (f as any).fileCopyUri || f.uri;
+        try {
+          await FileSystem.copyAsync({ from: sourceUri, to: dest });
+          setPdfUri(dest);
+        } catch {
+          setPdfUri(sourceUri);
+        }
+      } else {
+        setPdfUri(f.uri);
+      }
     }
   };
 

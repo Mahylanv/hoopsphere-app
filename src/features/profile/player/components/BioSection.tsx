@@ -198,7 +198,7 @@ export default function BioSection({
             <View className="flex-row flex-wrap -mx-2">
               <View className="w-1/2 px-2 mb-4">
                 {renderField(
-                  "Année de naissance",
+                  "Né(e) le",
                   editMode
                     ? renderInput(birthYear, setBirthYear, "2002", { keyboardType: "numeric" })
                     : renderValue(birthYear)
@@ -261,18 +261,18 @@ export default function BioSection({
               </View>
               <View className="w-1/2 px-2 mb-4">
                 {renderField(
-                  "Email",
-                  editMode
-                    ? renderInput(email, setEmail, "email@exemple.com", { keyboardType: "email-address" })
-                    : renderValue(email)
-                )}
-              </View>
-              <View className="w-1/2 px-2 mb-4">
-                {renderField(
                   "Téléphone",
                   editMode
                     ? renderInput(phone, (val) => setPhone(formatPhone(val)), "06 12 34 56 78", { keyboardType: "phone-pad" })
                     : renderValue(phone)
+                )}
+              </View>
+              <View className="w-full px-2 mb-4">
+                {renderField(
+                  "Email",
+                  editMode
+                    ? renderInput(email, setEmail, "email@exemple.com", { keyboardType: "email-address" })
+                    : renderValue(email)
                 )}
               </View>
               <View className="w-1/2 px-2 mb-4">
@@ -336,3 +336,11 @@ export default function BioSection({
       </LinearGradient>
   );
 }
+
+
+
+
+
+
+
+

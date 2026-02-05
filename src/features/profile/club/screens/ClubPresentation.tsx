@@ -10,6 +10,8 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -72,7 +74,7 @@ export default function ClubPresentation() {
       if (!displayedUid) return;
       await updateDoc(doc(db, "clubs", displayedUid), { [field]: value });
       setClub((prev: any) => ({ ...prev, [field]: value }));
-      Alert.alert("✅ Succès", "Informations mises à jour !");
+      Alert.alert("Succès", "Informations mises à jour !");
     } catch (err) {
       console.error("Erreur update club :", err);
       Alert.alert("Erreur", "Impossible de mettre à jour les informations.");
@@ -224,48 +226,64 @@ export default function ClubPresentation() {
       {/* === MODAL D'ÉDITION (seulement propriétaire) === */}
       {isOwner && (
         <Modal visible={modalVisible} transparent animationType="fade">
-          <View className="flex-1 bg-black/70 justify-center items-center px-6">
-            <View className="bg-[#0E0D0D] p-6 rounded-xl w-full max-w-md border border-gray-700">
-              <Text className="text-lg text-white font-semibold mb-3">
-                {fieldToEdit === "description" && "Ajouter une description"}
-                {fieldToEdit === "categories" && "Ajouter des catégories (séparées par des virgules)"}
-              </Text>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+          >
+            <ScrollView
+              className="flex-1 bg-black/70"
+              contentContainerStyle={{
+                flexGrow: 1,
+                justifyContent: "center",
+                alignItems: "center",
+                paddingHorizontal: 24,
+              }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View className="bg-[#0E0D0D] p-6 rounded-xl w-full max-w-md border border-gray-700">
+                <Text className="text-lg text-white font-semibold mb-3">
+                  {fieldToEdit === "description" && "Ajouter une description"}
+                  {fieldToEdit === "categories" && "Ajouter des categories (separees par des virgules)"}
+                </Text>
 
-              <TextInput
-                value={inputValue}
-                onChangeText={setInputValue}
-                placeholder="Saisir ici..."
-                placeholderTextColor="#999"
-                className="bg-gray-800 text-white rounded-lg px-4 py-3 mb-4"
-                multiline={fieldToEdit === "description"}
-              />
+                <TextInput
+                  value={inputValue}
+                  onChangeText={setInputValue}
+                  placeholder="Saisir ici..."
+                  placeholderTextColor="#999"
+                  className="bg-gray-800 text-white rounded-lg px-4 py-3 mb-4"
+                  multiline={fieldToEdit === "description"}
+                  textAlignVertical={fieldToEdit === "description" ? "top" : "center"}
+                  style={fieldToEdit === "description" ? { minHeight: 160 } : undefined}
+                />
 
-              <View className="flex-row justify-end">
-                <TouchableOpacity
-                  onPress={() => setModalVisible(false)}
-                  className="px-4 py-2 bg-gray-700 rounded-lg mr-2"
-                >
-                  <Text className="text-white">Annuler</Text>
-                </TouchableOpacity>
+                <View className="flex-row justify-end">
+                  <TouchableOpacity
+                    onPress={() => setModalVisible(false)}
+                    className="px-4 py-2 bg-gray-700 rounded-lg mr-2"
+                  >
+                    <Text className="text-white">Annuler</Text>
+                  </TouchableOpacity>
 
-                <TouchableOpacity
-                  disabled={!inputValue || saving}
-                  onPress={() => {
-                    let val: any = inputValue.trim();
-                    if (fieldToEdit === "categories") {
-                      val = val.split(",").map((v: string) => v.trim()).filter(Boolean);
-                    }
-                    updateClubField(fieldToEdit!, val);
-                  }}
-                  className="px-4 py-2 bg-orange-600 rounded-lg"
-                >
-                  <Text className="text-white font-semibold">
-                    {saving ? "Enregistrement..." : "Enregistrer"}
-                  </Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    disabled={!inputValue || saving}
+                    onPress={() => {
+                      let val: any = inputValue.trim();
+                      if (fieldToEdit === "categories") {
+                        val = val.split(",").map((v: string) => v.trim()).filter(Boolean);
+                      }
+                      updateClubField(fieldToEdit!, val);
+                    }}
+                    className="px-4 py-2 bg-orange-600 rounded-lg"
+                  >
+                    <Text className="text-white font-semibold">
+                      {saving ? "Enregistrement..." : "Enregistrer"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
         </Modal>
       )}
     </ScrollView>

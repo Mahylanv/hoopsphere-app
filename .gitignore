@@ -74,3 +74,6 @@ scripts/serviceAccountKey.json
 stripe/firebase-debug.log
 firebase-debug.log
 firebase-debug.*.log
+
+
+emarque-parser/debug_cells/

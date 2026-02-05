@@ -197,6 +197,13 @@ export default function Connexion() {
           </View>
         )}
 
+        {/* âš¡ Message d'erreur */}
+        {error && (
+          <View className="bg-red-500/10 border border-red-500/40 rounded-xl px-4 py-3 mb-4">
+            <Text className="text-red-300 text-center">{error}</Text>
+          </View>
+        )}
+
 
         <Pressable
           onPress={handleLogin}

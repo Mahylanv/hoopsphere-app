@@ -160,7 +160,7 @@ export default function EditPostScreen() {
 
       navigation.goBack();
     } catch (e) {
-      // console.log("❌ Erreur sauvegarde :", e);
+      // console.log(" Erreur sauvegarde :", e);
     } finally {
       setIsSaving(false);
     }
@@ -186,7 +186,7 @@ export default function EditPostScreen() {
 
               navigation.goBack();
             } catch (e) {
-              // console.log("❌ Erreur suppression :", e);
+              // console.log(" Erreur suppression :", e);
             } finally {
               setIsSaving(false);
             }

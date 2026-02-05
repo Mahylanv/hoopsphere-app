@@ -257,6 +257,8 @@ def reconcile_stats(row):
     if exact_best is not None:
         t,i,e,f = exact_best[1]
     else:
+        if approx_best is None:
+            return
         t,i,e,f = approx_best[1]
 
     row["threes"]  = t
@@ -635,6 +637,20 @@ def grid_ocr_full(
 
                 if key == "name":
                     t = ocr_text(cell_txt)
+                    if not t.strip():
+                        try:
+                            t = pytesseract.image_to_string(
+                                cell_txt, config="--oem 1 --psm 6 -l fra+eng", timeout=8
+                            ).strip()
+                        except pytesseract.TesseractError:
+                            t = ""
+                    if not t.strip():
+                        try:
+                            t = pytesseract.image_to_string(
+                                cell_bin, config="--oem 1 --psm 6 -l fra+eng", timeout=8
+                            ).strip()
+                        except pytesseract.TesseractError:
+                            t = ""
                     row["name"] = t
                     seen |= bool(t.strip())
                     n = norm_txt(t)
@@ -644,7 +660,7 @@ def grid_ocr_full(
 
                 elif key == "jersey":
                     v = ocr_digit_vote(cell_bin)
-                    row["jersey"] = v if (v > 0 and v <= 99) else None
+                    row["jersey"] = v if (v is not None and 0 <= v <= 99) else None
                     seen |= bool(v)
 
                 elif key == "starter":
@@ -726,7 +742,7 @@ def clean_players(players):
         if jersey is not None:
             try:
                 jersey = int(jersey)
-                if not (0 < jersey <= 99):
+                if not (0 <= jersey <= 99):
                     jersey = None
             except:
                 jersey = None
@@ -774,7 +790,7 @@ async def parse_emarque(
         ensure(file.filename.lower().endswith(".pdf"), 400, "Le champ 'file' doit être un PDF")
         data = await file.read()
         ensure(data, 400, "Fichier vide")
-        ensure(is_emarque_v2(data, scale=scale), 400, "Le PDF ne semble pas être une feuille e-Marque V2 (FFBB).")
+        header_ok = is_emarque_v2(data, scale=scale)
 
         teamA, teamB = grid_ocr_full(
             data,
@@ -788,11 +804,18 @@ async def parse_emarque(
         teamA = clean_players(teamA)
         teamB = clean_players(teamB)
 
+        if not header_ok and len(teamA) + len(teamB) == 0:
+            raise HTTPException(
+                400,
+                "Le PDF ne semble pas etre une feuille e-Marque V2 (FFBB).",
+            )
+
         match_number, header_debug = extract_match_number(data, scale=scale)
         match_number = match_number or None
 
         return {
             "ok": True,
+            "warning": (None if header_ok else "Header non reconnu, OCR force"),
             "match": {"number": match_number},
             "teams": [
                 {"name": "Locaux",   "players": teamA},
@@ -804,4 +827,8 @@ async def parse_emarque(
     except HTTPException as he:
         return JSONResponse({"ok": False, "error": he.detail}, status_code=he.status_code)
     except Exception as e:
+        import traceback
+        print(traceback.format_exc())
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+

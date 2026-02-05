@@ -19,7 +19,7 @@ export type PlayerPost = {
 
   mediaUrl: string;
   mediaType: "image" | "video";
-  thumbnailUrl?: string | null; // ✅ MINIATURE VIDÉO
+  thumbnailUrl?: string | null; //  MINIATURE VIDÉO
 
   // cache local éventuel (préfet chage vidéo)
   cachedUrl?: string | null;
@@ -89,7 +89,7 @@ export default function usePlayerPosts(playerUid?: string) {
 
             mediaUrl: d.mediaUrl,
             mediaType: d.mediaType,
-            thumbnailUrl: d.thumbnailUrl ?? null, // ✅ IMPORTANT
+            thumbnailUrl: d.thumbnailUrl ?? null, //  IMPORTANT
 
             description: d.description ?? null,
             location: d.location ?? null,
@@ -109,7 +109,7 @@ export default function usePlayerPosts(playerUid?: string) {
         setLoading(false);
       },
       (error) => {
-        console.error("❌ Erreur récupération posts profil :", error);
+        console.error("Erreur récupération posts profil :", error);
         setLoading(false);
       }
     );
