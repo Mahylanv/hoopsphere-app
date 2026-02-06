@@ -58,7 +58,7 @@ export default function RankingItem({
       ? "arrow-up"
       : player.trend === "down"
         ? "arrow-down"
-        : "remove";
+        : "remove-outline";
   const avatarUri =
     typeof player.avatar === "string" &&
     player.avatar.trim() !== "" &&
@@ -70,7 +70,7 @@ export default function RankingItem({
   const getStatText = () => {
     switch (filter) {
       case "rating":
-        return isIOS ? "" : `${player.rating}/100`;
+        return "";
       case "points":
         return `PTS : ${player.average}`;
       case "threes":
@@ -87,6 +87,8 @@ export default function RankingItem({
         return `PTS : ${player.average}`;
     }
   };
+
+  const statText = getStatText();
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
@@ -155,20 +157,22 @@ export default function RankingItem({
               )}
             </View>
             <View className="flex-row items-center mt-1 flex-wrap">
-              <Text
-                className="text-gray-300"
-                style={{ fontSize: isSmallDevice ? 12 : 14 }}
-                numberOfLines={1}
-              >
-                {getStatText()}
-              </Text>
-                <View
-                  className="flex-row items-center px-2 py-1 rounded-full"
-                  style={{
-                    backgroundColor: "rgba(37,99,235,0.18)",
-                    marginLeft: 0,
-                  }}
+              {statText ? (
+                <Text
+                  className="text-gray-300"
+                  style={{ fontSize: isSmallDevice ? 12 : 14 }}
+                  numberOfLines={1}
                 >
+                  {statText}
+                </Text>
+              ) : null}
+              <View
+                className="flex-row items-center px-2 py-1 rounded-full"
+                style={{
+                  backgroundColor: "rgba(37,99,235,0.18)",
+                  marginLeft: 0,
+                }}
+              >
                 <Ionicons
                   name="star"
                   size={isSmallDevice ? 10 : 12}
