@@ -102,7 +102,7 @@ export type RootStackParamList = {
 
   EditClubProfile: undefined;
 
-  Payment: undefined;
+  Payment: { userType?: "joueur" | "club" } | undefined;
   SubscriptionSettings: undefined;
   AnnualUpgrade: undefined;
   StripeCheckout: {

@@ -31,8 +31,8 @@ export default function MainTabNavigatorClub() {
   const tabBarStyle = hasBottomNavButtons
     ? {
         ...baseTabBarStyle,
-        height: 70 + insets.bottom,
-        paddingBottom: 8 + insets.bottom,
+        height: 35 + insets.bottom,
+        paddingBottom: 1 + insets.bottom,
       }
     : baseTabBarStyle;
 

@@ -26,6 +26,8 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 // Component
 import DepartmentSelect from "../../../../../shared/components/DepartmentSelect";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAuth } from "../../../context/AuthContext";
 
 type NavProps = NativeStackNavigationProp<
   RootStackParamList,
@@ -36,6 +38,7 @@ type RouteProps = RouteProp<RootStackParamList, "InscriptionClubStep2">;
 export default function InscriptionClubStep2() {
   const navigation = useNavigation<NavProps>();
   const { params } = useRoute<RouteProps>();
+  const { setUserType } = useAuth();
 
   const uid = params.uid;
   const emailFromAuth = params.email;
@@ -79,6 +82,11 @@ export default function InscriptionClubStep2() {
         },
         { merge: true }
       );
+
+      try {
+        await AsyncStorage.setItem("userType", "club");
+        setUserType("club");
+      } catch {}
 
       navigation.reset({
         index: 0,

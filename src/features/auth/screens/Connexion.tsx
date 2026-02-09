@@ -19,6 +19,7 @@ import { Asset } from "expo-asset";
 
 import { RootStackParamList } from "../../../types";
 import clsx from "clsx";
+import { useAuth } from "../context/AuthContext";
 
 import { auth, db } from "../../../config/firebaseConfig";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -34,6 +35,7 @@ const backgroundImage = require("../../../../assets/connexion-basket.jpeg");
 
 export default function Connexion() {
   const navigation = useNavigation<ConnexionNavProp>();
+  const { setUserType } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -73,6 +75,7 @@ export default function Connexion() {
       const joueurDoc = await getDoc(doc(db, "joueurs", uid));
       if (joueurDoc.exists()) {
         await AsyncStorage.setItem("userType", "joueur");
+        setUserType("joueur");
         navigation.reset({
           index: 0,
           routes: [{ name: "MainTabs" }],
@@ -84,6 +87,7 @@ export default function Connexion() {
       const clubDoc = await getDoc(doc(db, "clubs", uid));
       if (clubDoc.exists()) {
         await AsyncStorage.setItem("userType", "club");
+        setUserType("club");
         navigation.reset({
           index: 0,
           routes: [{ name: "MainTabsClub" }],
