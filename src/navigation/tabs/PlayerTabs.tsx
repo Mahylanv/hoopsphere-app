@@ -2,7 +2,8 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
-import { DeviceEventEmitter } from "react-native";
+import { DeviceEventEmitter, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import HomeScreen from "../../features/home/screens/HomeScreen";
 import Search from "../../features/search/components/Search";
@@ -15,16 +16,28 @@ import { MainTabParamListJoueur } from "../../types";
 const Tab = createBottomTabNavigator<MainTabParamListJoueur>();
 
 export default function MainTabNavigatorJoueur() {
+  const insets = useSafeAreaInsets();
+  const hasBottomNavButtons =
+    Platform.OS === "android" && insets.bottom >= 20;
+  const baseTabBarStyle = {
+    backgroundColor: "#0E0D0D",
+    borderTopColor: "#0E0D0D",
+    height: 70,
+    paddingBottom: 8,
+  };
+  const tabBarStyle = hasBottomNavButtons
+    ? {
+        ...baseTabBarStyle,
+        height: 35 + insets.bottom,
+        paddingBottom: 1 + insets.bottom,
+      }
+    : baseTabBarStyle;
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: "#0E0D0D",
-          borderTopColor: "#0E0D0D",
-          height: 70,
-          paddingBottom: 8,
-        },
+        tabBarStyle,
         tabBarActiveTintColor: "#ffffff",
         tabBarInactiveTintColor: "#9ca3af",
         tabBarLabelStyle: {

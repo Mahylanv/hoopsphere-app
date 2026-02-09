@@ -29,7 +29,8 @@ import VideoDescription from "../components/VideoDescription";
 import { VideoItem } from "../../../types";
 
 
-const { height, width } = Dimensions.get("window");
+const { height: WINDOW_HEIGHT, width: WINDOW_WIDTH } = Dimensions.get("window");
+const IS_SMALL_PHONE = WINDOW_WIDTH <= 360 || WINDOW_HEIGHT <= 700;
 
 /* ============================================================
    TYPES
@@ -54,6 +55,7 @@ export default function VideoFeedScreen({ route }: Props) {
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
+  const [containerHeight, setContainerHeight] = useState(WINDOW_HEIGHT);
 
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -256,11 +258,22 @@ export default function VideoFeedScreen({ route }: Props) {
     } catch {}
   };
 
+  const itemHeight = IS_SMALL_PHONE ? containerHeight : WINDOW_HEIGHT;
+
   /* ============================================================
      RENDER
   ============================================================ */
   return (
-    <View style={{ flex: 1, backgroundColor: "black" }}>
+    <View
+      style={{ flex: 1, backgroundColor: "black" }}
+      onLayout={(event) => {
+        if (!IS_SMALL_PHONE) return;
+        const nextHeight = Math.round(event.nativeEvent.layout.height);
+        if (nextHeight > 0 && nextHeight !== containerHeight) {
+          setContainerHeight(nextHeight);
+        }
+      }}
+    >
       <FlatList
         ref={flatListRef}
         data={videos}
@@ -273,15 +286,16 @@ export default function VideoFeedScreen({ route }: Props) {
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         getItemLayout={(_, index) => ({
-          length: height,
-          offset: height * index,
+          length: itemHeight,
+          offset: itemHeight * index,
           index,
         })}
+        snapToInterval={IS_SMALL_PHONE ? itemHeight : undefined}
         renderItem={({ item, index }) => {
           const isImage = item.mediaType === "image";
           const mediaFit = item.mediaFit ?? "cover";
           return (
-          <View style={{ height, width }}>
+          <View style={{ height: itemHeight, width: WINDOW_WIDTH }}>
             <TouchableWithoutFeedback onPress={() => handleVideoTap(index)}>
               <View style={{ width: "100%", height: "100%" }}>
                 {isImage ? (

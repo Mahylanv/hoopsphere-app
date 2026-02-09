@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   StyleSheet,
+  Platform,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
@@ -52,6 +53,10 @@ export default function ProfilClub() {
   );
   const [ownerMenuVisible, setOwnerMenuVisible] = useState(false);
   const insets = useSafeAreaInsets();
+  const safeTopInset = Math.max(
+    insets.top,
+    Platform.OS === "android" ? StatusBar.currentHeight ?? 0 : 0
+  );
 
   const resetToLegacyHome = () => {
     const parentNav = (navigation as any)?.getParent?.();
@@ -270,6 +275,7 @@ export default function ProfilClub() {
           visible={ownerMenuVisible}
           transparent
           animationType="fade"
+          statusBarTranslucent
           onRequestClose={closeOwnerMenu}
         >
           <View className="flex-1">
@@ -280,7 +286,7 @@ export default function ProfilClub() {
             <View
               style={{
                 position: "absolute",
-                top: insets.top + 12,
+                top: safeTopInset + 12,
                 right: 12,
               }}
             >
