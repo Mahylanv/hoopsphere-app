@@ -28,7 +28,7 @@ export default function MainTabNavigatorJoueur() {
   const tabBarStyle = hasBottomNavButtons
     ? {
         ...baseTabBarStyle,
-        height: 35 + insets.bottom,
+        height: 48 + insets.bottom,
         paddingBottom: 1 + insets.bottom,
       }
     : baseTabBarStyle;

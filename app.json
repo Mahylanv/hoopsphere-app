@@ -38,6 +38,14 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
+    "androidStatusBar": {
+      "backgroundColor": "#0E0D0D",
+      "barStyle": "light-content"
+    },
+    "androidNavigationBar": {
+      "backgroundColor": "#0E0D0D",
+      "barStyle": "light-content"
+    },
 
     "web": {
       "favicon": "./assets/favicon-16x16.png",

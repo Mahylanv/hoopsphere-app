@@ -1,4 +1,4 @@
-﻿// src/Components/Connexion.tsx
+// src/Components/Connexion.tsx
 
 import React, { useEffect, useState } from "react";
 import {
@@ -194,14 +194,7 @@ export default function Connexion() {
           </Text>
         )}
 
-        {/* âš¡ Message d'erreur */}
-        {error && (
-          <View className="bg-red-500/10 border border-red-500/40 rounded-xl px-4 py-3 mb-4">
-            <Text className="text-red-300 text-center">{error}</Text>
-          </View>
-        )}
-
-        {/* âš¡ Message d'erreur */}
+        {/* ⚡ Message d'erreur */}
         {error && (
           <View className="bg-red-500/10 border border-red-500/40 rounded-xl px-4 py-3 mb-4">
             <Text className="text-red-300 text-center">{error}</Text>
@@ -234,7 +227,7 @@ export default function Connexion() {
           </Text>
         </Pressable>
 
-        {/* âš¡ Message d'erreur */}
+        {/* ⚡ Message d'erreur */}
         <Pressable
           className="items-center mt-2 flex-row justify-center gap-2"
           onPress={() => navigation.goBack()}
