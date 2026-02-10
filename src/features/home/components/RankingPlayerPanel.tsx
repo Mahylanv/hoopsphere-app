@@ -38,6 +38,8 @@ const IS_SMALL_PHONE = width <= 360 || height <= 700;
 
 // ⭐ CONFIG MODIFIABLES PAR TOI
 const IOS_PANEL_HEIGHT_RATIO = 0.85;
+const ANDROID_PANEL_HEIGHT_RATIO = 0.88;
+const ANDROID_PANEL_TOP = height * (1 - ANDROID_PANEL_HEIGHT_RATIO);
 const PANEL_HEIGHT = isAndroid ? 0.9 : IOS_PANEL_HEIGHT_RATIO; // Android: plus haut
 const PANEL_TOP = isAndroid
   ? height * 0.1
@@ -192,81 +194,93 @@ export default function RankingPlayerPanel({
         transparent={false}
         onRequestClose={onClose}
       >
-        <View className="flex-1 bg-black">
-          <View className="px-4 py-3 border-b border-white/10 flex-row items-center">
-            <Pressable onPress={onClose} className="p-2">
-              <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
-            </Pressable>
-            <Text className="text-white text-base font-semibold ml-2">
-              Profil du Joueur
-            </Text>
-          </View>
+        <View
+          className="flex-1 bg-black"
+          style={{ paddingTop: ANDROID_PANEL_TOP }}
+        >
+          <View className="flex-1 bg-black rounded-t-3xl overflow-hidden">
+            <View className="px-4 py-3 border-b border-white/10 flex-row items-center">
+              <Pressable onPress={onClose} className="p-2">
+                <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+              </Pressable>
+              <Text className="text-white text-base font-semibold ml-2">
+                Profil du Joueur
+              </Text>
+            </View>
 
-          <Animated.ScrollView
-            scrollEnabled={!IS_SMALL_PHONE}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingHorizontal: 16,
-              paddingTop: IS_SMALL_PHONE ? 8 : 0,
-              paddingBottom: IS_SMALL_PHONE ? 16 : 24,
-              alignItems: "center",
-              flexGrow: IS_SMALL_PHONE ? 1 : 0,
-            }}
-          >
+            <Animated.ScrollView
+              scrollEnabled={!IS_SMALL_PHONE}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingHorizontal: 16,
+                paddingTop: IS_SMALL_PHONE ? 8 : 0,
+                paddingBottom: IS_SMALL_PHONE ? 16 : 24,
+                alignItems: "center",
+                flexGrow: IS_SMALL_PHONE ? 1 : 0,
+              }}
+            >
             <View
               style={{
-                transform: [{ scale: ANDROID_SMALL_CARD_SCALE }],
+                transform: [
+                  {
+                    scale: Math.min(
+                      1,
+                      ANDROID_SMALL_CARD_SCALE + (IS_SMALL_PHONE ? 0.04 : 0.06)
+                    ),
+                  },
+                ],
                 alignItems: "center",
-                marginTop: IS_SMALL_PHONE ? SMALL_PHONE_CARD_OFFSET_TOP : 16,
+                marginTop: IS_SMALL_PHONE ? SMALL_PHONE_CARD_OFFSET_TOP : 8,
                 marginBottom: IS_SMALL_PHONE ? SMALL_PHONE_CARD_MARGIN_BOTTOM : 0,
               }}
             >
-              <AvatarSection
-                user={{
-                  avatar: joueurFull.avatar ?? null,
-                  prenom: joueurFull.prenom ?? "",
-                  nom: joueurFull.nom ?? "",
-                  dob: joueurFull.dob,
-                  taille: joueurFull.taille,
-                  poids: joueurFull.poids,
-                  poste: joueurFull.poste,
-                  main: joueurFull.main,
-                  departement: joueurFull.departement,
-                  club: joueurFull.club,
-                  premium: joueurFull.premium,
-                  cardStyle: joueurFull.cardStyle,
-                }}
-                onEditAvatar={async () => {}}
-                avatarLoading={false}
-                stats={player.stats}
-                rating={player.rating}
-                editable={false}
-              />
-            </View>
+                <AvatarSection
+                  user={{
+                    avatar: joueurFull.avatar ?? null,
+                    prenom: joueurFull.prenom ?? "",
+                    nom: joueurFull.nom ?? "",
+                    dob: joueurFull.dob,
+                    taille: joueurFull.taille,
+                    poids: joueurFull.poids,
+                    poste: joueurFull.poste,
+                    main: joueurFull.main,
+                    departement: joueurFull.departement,
+                    club: joueurFull.club,
+                    premium: joueurFull.premium,
+                    cardStyle: joueurFull.cardStyle,
+                  }}
+                  onEditAvatar={async () => {}}
+                  avatarLoading={false}
+                  stats={player.stats}
+                  rating={player.rating}
+                  editable={false}
+                />
+              </View>
 
-            <TouchableOpacity
-              onPress={() => {
-                onClose();
-                if (navigation?.navigate) {
-                  setTimeout(() => {
-                    navigation.navigate("JoueurDetail", {
-                      uid: player.uid,
-                    });
-                  }, 200);
-                }
-              }}
-              className="px-5 py-3 rounded-full bg-orange-500/90 flex-row items-center justify-center shadow-lg shadow-orange-500/30"
+              <TouchableOpacity
+                onPress={() => {
+                  onClose();
+                  if (navigation?.navigate) {
+                    setTimeout(() => {
+                      navigation.navigate("JoueurDetail", {
+                        uid: player.uid,
+                      });
+                    }, 200);
+                  }
+                }}
+                className="px-5 py-3 rounded-full bg-orange-500/90 flex-row items-center justify-center shadow-lg shadow-orange-500/30"
               style={{
-                marginTop: IS_SMALL_PHONE ? 75 : 24,
+                marginTop: IS_SMALL_PHONE ? 60 : 16,
               }}
-              activeOpacity={0.9}
-            >
-              <Ionicons name="person" size={18} color="#fff" />
-              <Text className="text-white font-semibold text-lg ml-2">
-                Voir profil complet
-              </Text>
-            </TouchableOpacity>
-          </Animated.ScrollView>
+                activeOpacity={0.9}
+              >
+                <Ionicons name="person" size={18} color="#fff" />
+                <Text className="text-white font-semibold text-lg ml-2">
+                  Voir profil complet
+                </Text>
+              </TouchableOpacity>
+            </Animated.ScrollView>
+          </View>
         </View>
       </Modal>
     );
