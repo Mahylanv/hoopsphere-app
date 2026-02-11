@@ -39,8 +39,11 @@ except Exception:
     OCR_LANGS = set()
 
 OCR_LANG = "fra+eng" if "fra" in OCR_LANGS else "eng"
+TESS_OK = False
+TESS_VERSION = None
 try:
-    TESS_VERSION = pytesseract.get_tesseract_version()
+    TESS_VERSION = str(pytesseract.get_tesseract_version())
+    TESS_OK = True
     logger.info("Tesseract=%s OCR_LANG=%s", TESS_VERSION, OCR_LANG)
 except Exception as e:
     logger.warning("Tesseract non detecte (%s). OCR_LANG=%s", e, OCR_LANG)
@@ -804,7 +807,13 @@ def clean_players(players):
 # ---------------- API ----------------
 @app.get("/__health")
 def health():
-    return {"ok": True}
+    return {
+        "ok": True,
+        "tesseract": TESS_VERSION,
+        "ocr_lang": OCR_LANG,
+        "ocr_available": TESS_OK,
+        "ocr_langs": sorted(OCR_LANGS),
+    }
 
 @app.post("/parse-emarque")
 async def parse_emarque(
@@ -820,6 +829,20 @@ async def parse_emarque(
         ensure(file.filename.lower().endswith(".pdf"), 400, "Le champ 'file' doit être un PDF")
         data = await file.read()
         ensure(data, 400, "Fichier vide")
+        if not TESS_OK:
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "error": "OCR indisponible sur le serveur (Tesseract non détecté).",
+                    "details": {
+                        "ocr_available": TESS_OK,
+                        "tesseract": TESS_VERSION,
+                        "ocr_lang": OCR_LANG,
+                        "hint": "Installe tesseract-ocr et tesseract-ocr-fra ou utilise le Dockerfile.",
+                    },
+                },
+                status_code=503,
+            )
         logger.info(
             "parse_emarque file=%s size=%s scale=%s frac=%.3f force_order=%s OCR_LANG=%s",
             file.filename,
@@ -896,6 +919,8 @@ async def parse_emarque(
                     "details": {
                         "header_ok": header_ok,
                         "players": len(teamA) + len(teamB),
+                        "ocr_available": TESS_OK,
+                        "tesseract": TESS_VERSION,
                         "ocr_lang": OCR_LANG,
                         "fallback_used": fallback_used,
                         "pdf_text_preview": pdf_txt_preview,
@@ -927,6 +952,5 @@ async def parse_emarque(
         import traceback
         print(traceback.format_exc())
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
-
 
 
