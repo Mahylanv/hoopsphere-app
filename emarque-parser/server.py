@@ -2,7 +2,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import io, re, os
+import io, re, os, asyncio
 import logging
 import numpy as np
 import cv2
@@ -843,77 +843,78 @@ async def parse_emarque(
                 },
                 status_code=503,
             )
-        logger.info(
-            "parse_emarque file=%s size=%s scale=%s frac=%.3f force_order=%s OCR_LANG=%s",
-            file.filename,
-            len(data),
-            scale,
-            frac,
-            force_order,
-            OCR_LANG,
-        )
-        header_ok = is_emarque_v2(data, scale=scale)
 
-        teamA, teamB = grid_ocr_full(
-            data,
-            debug=bool(debug),
-            scale=scale,
-            peak_frac=frac,
-            save_cells=bool(save),
-            force_order=bool(force_order),
-        )
-        teamA = clean_players(teamA)
-        teamB = clean_players(teamB)
-        fallback_used = None
-        logger.info(
-            "parse_emarque header_ok=%s players=%s",
-            header_ok,
-            len(teamA) + len(teamB),
-        )
-
-        if len(teamA) + len(teamB) == 0:
-            def clamp_int(v, lo, hi):
-                return max(lo, min(hi, int(v)))
-            fallback_params = [
-                {"scale": clamp_int(scale + 1, 2, 10), "peak_frac": max(0.10, frac - 0.04), "force_order": bool(force_order)},
-                {"scale": clamp_int(scale, 2, 10), "peak_frac": max(0.08, frac - 0.08), "force_order": False},
-                {"scale": clamp_int(scale + 2, 2, 10), "peak_frac": max(0.06, frac - 0.10), "force_order": False},
-                {"scale": clamp_int(scale + 2, 2, 10), "peak_frac": min(0.30, frac + 0.06), "force_order": False},
-            ]
-            for params in fallback_params:
-                logger.info(
-                    "fallback try scale=%s frac=%.3f force_order=%s",
-                    params["scale"],
-                    params["peak_frac"],
-                    params["force_order"],
-                )
-                teamA, teamB = grid_ocr_full(
-                    data,
-                    debug=bool(debug),
-                    scale=params["scale"],
-                    peak_frac=params["peak_frac"],
-                    save_cells=bool(save),
-                    force_order=bool(params["force_order"]),
-                )
-                teamA = clean_players(teamA)
-                teamB = clean_players(teamB)
-                if len(teamA) + len(teamB) > 0:
-                    fallback_used = params
-                    break
+        def _parse_sync():
             logger.info(
-                "fallback result players=%s used=%s",
+                "parse_emarque file=%s size=%s scale=%s frac=%.3f force_order=%s OCR_LANG=%s",
+                file.filename,
+                len(data),
+                scale,
+                frac,
+                force_order,
+                OCR_LANG,
+            )
+            header_ok = is_emarque_v2(data, scale=scale)
+
+            teamA, teamB = grid_ocr_full(
+                data,
+                debug=bool(debug),
+                scale=scale,
+                peak_frac=frac,
+                save_cells=bool(save),
+                force_order=bool(force_order),
+            )
+            teamA = clean_players(teamA)
+            teamB = clean_players(teamB)
+            fallback_used = None
+            logger.info(
+                "parse_emarque header_ok=%s players=%s",
+                header_ok,
                 len(teamA) + len(teamB),
-                fallback_used,
             )
-        if not header_ok and len(teamA) + len(teamB) == 0:
-            pdf_txt = _pdf_text_first_pages(data, max_pages=1)
-            pdf_txt_preview = norm_txt(pdf_txt)[:200] if pdf_txt else ""
-            logger.warning(
-                "emarque not detected. pdf_text_preview='%s'",
-                pdf_txt_preview,
-            )
-            return JSONResponse(
-                {
+
+            if len(teamA) + len(teamB) == 0:
+                def clamp_int(v, lo, hi):
+                    return max(lo, min(hi, int(v)))
+                fallback_params = [
+                    {"scale": clamp_int(scale + 1, 2, 10), "peak_frac": max(0.10, frac - 0.04), "force_order": bool(force_order)},
+                    {"scale": clamp_int(scale, 2, 10), "peak_frac": max(0.08, frac - 0.08), "force_order": False},
+                    {"scale": clamp_int(scale + 2, 2, 10), "peak_frac": max(0.06, frac - 0.10), "force_order": False},
+                    {"scale": clamp_int(scale + 2, 2, 10), "peak_frac": min(0.30, frac + 0.06), "force_order": False},
+                ]
+                for params in fallback_params:
+                    logger.info(
+                        "fallback try scale=%s frac=%.3f force_order=%s",
+                        params["scale"],
+                        params["peak_frac"],
+                        params["force_order"],
+                    )
+                    teamA, teamB = grid_ocr_full(
+                        data,
+                        debug=bool(debug),
+                        scale=params["scale"],
+                        peak_frac=params["peak_frac"],
+                        save_cells=bool(save),
+                        force_order=bool(params["force_order"]),
+                    )
+                    teamA = clean_players(teamA)
+                    teamB = clean_players(teamB)
+                    if len(teamA) + len(teamB) > 0:
+                        fallback_used = params
+                        break
+                logger.info(
+                    "fallback result players=%s used=%s",
+                    len(teamA) + len(teamB),
+                    fallback_used,
+                )
+            if not header_ok and len(teamA) + len(teamB) == 0:
+                pdf_txt = _pdf_text_first_pages(data, max_pages=1)
+                pdf_txt_preview = norm_txt(pdf_txt)[:200] if pdf_txt else ""
+                logger.warning(
+                    "emarque not detected. pdf_text_preview='%s'",
+                    pdf_txt_preview,
+                )
+                return 400, {
                     "ok": False,
                     "error": "Le PDF ne semble pas etre une feuille e-Marque V2 (FFBB).",
                     "details": {
@@ -925,32 +926,34 @@ async def parse_emarque(
                         "fallback_used": fallback_used,
                         "pdf_text_preview": pdf_txt_preview,
                     },
-                },
-                status_code=400,
-            )
-        match_number, header_debug = extract_match_number(data, scale=scale)
-        match_number = match_number or None
+                }
+            match_number, header_debug = extract_match_number(data, scale=scale)
+            match_number = match_number or None
 
-        return {
-            "ok": True,
-            "warning": (
-                None
-                if header_ok and not fallback_used
-                else "Header non reconnu, OCR force"
-            ),
-            "match": {"number": match_number},
-            "teams": [
-                {"name": "Locaux",   "players": teamA},
-                {"name": "Visiteurs","players": teamB}
-            ],
-            "debug_overlay": ("saved to debug_overlay.png" if debug else None),
-            "header_text": (header_debug if debug else None),
-        }
+            return 200, {
+                "ok": True,
+                "warning": (
+                    None
+                    if header_ok and not fallback_used
+                    else "Header non reconnu, OCR force"
+                ),
+                "match": {"number": match_number},
+                "teams": [
+                    {"name": "Locaux",   "players": teamA},
+                    {"name": "Visiteurs","players": teamB}
+                ],
+                "debug_overlay": ("saved to debug_overlay.png" if debug else None),
+                "header_text": (header_debug if debug else None),
+            }
+
+        status, payload = await asyncio.to_thread(_parse_sync)
+        if status != 200:
+            return JSONResponse(payload, status_code=status)
+        return payload
     except HTTPException as he:
         return JSONResponse({"ok": False, "error": he.detail}, status_code=he.status_code)
     except Exception as e:
         import traceback
         print(traceback.format_exc())
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
-
 
