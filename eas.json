@@ -9,11 +9,17 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_EMARQUE_URL": "https://hoopsphere-parser.onrender.com"
+      }
     },
     "production": {
       "autoIncrement": true,
-      "node": "20.19.4"
+      "node": "20.19.4",
+      "env": {
+        "EXPO_PUBLIC_EMARQUE_URL": "https://hoopsphere-parser.onrender.com"
+      }
     }
   },
   "submit": {
