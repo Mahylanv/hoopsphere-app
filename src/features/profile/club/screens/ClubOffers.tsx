@@ -37,7 +37,7 @@ type Offer = {
   id?: string;
   title: string;
   description: string;
-  position: string[]; // ✅ multi-postes
+  position: string[]; //  multi-postes
   team: string;
   publishedAt: string;
   gender: "Homme" | "Femme" | "Mixte";
@@ -545,6 +545,9 @@ export default function ClubOffers() {
                 <Text className="text-white text-xl font-bold mb-4">
                   Postes recherchés
                 </Text>
+                <Text className="text-gray-400 text-sm mb-4">
+                  Tu peux sélectionner plusieurs postes.
+                </Text>
 
                 {POSTES.map((poste) => {
                   const selected = positions.includes(poste);
@@ -562,8 +565,11 @@ export default function ClubOffers() {
                 })}
 
                 <Pressable
+                  disabled={positions.length === 0}
                   onPress={() => setShowPosteSelect(false)}
-                  className="mt-4 py-3 bg-gray-700 rounded-xl items-center"
+                  className={`mt-4 py-3 rounded-xl items-center ${
+                    positions.length > 0 ? "bg-orange-600" : "bg-gray-700"
+                  }`}
                 >
                   <Text className="text-white font-semibold">Valider</Text>
                 </Pressable>
@@ -602,3 +608,4 @@ export default function ClubOffers() {
     </View>
   );
 }
+

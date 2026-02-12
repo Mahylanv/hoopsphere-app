@@ -47,6 +47,7 @@ type PostItem = {
   postType: "highlight" | "match" | "training";
   skills: string[];
   visibility: "public" | "private" | "clubs";
+  mediaFit?: "cover" | "contain";
 };
 
 const POST_TYPES: PostItem["postType"][] = ["highlight", "match", "training"];
@@ -73,6 +74,9 @@ export default function EditPostScreen() {
   const [postType, setPostType] = useState(post.postType);
   const [visibility, setVisibility] = useState(post.visibility);
   const [skills, setSkills] = useState<string[]>(post.skills || []);
+  const [mediaFit, setMediaFit] = useState<"cover" | "contain">(
+    post.mediaFit ?? "cover"
+  );
   const [newSkill, setNewSkill] = useState("");
 
   const [fullscreen, setFullscreen] = useState(false);
@@ -142,6 +146,7 @@ export default function EditPostScreen() {
         postType,
         skills,
         visibility,
+        mediaFit,
       };
 
       if (updatedMediaUrl) {
@@ -155,7 +160,7 @@ export default function EditPostScreen() {
 
       navigation.goBack();
     } catch (e) {
-      // console.log("❌ Erreur sauvegarde :", e);
+      // console.log(" Erreur sauvegarde :", e);
     } finally {
       setIsSaving(false);
     }
@@ -181,7 +186,7 @@ export default function EditPostScreen() {
 
               navigation.goBack();
             } catch (e) {
-              // console.log("❌ Erreur suppression :", e);
+              // console.log(" Erreur suppression :", e);
             } finally {
               setIsSaving(false);
             }
@@ -283,8 +288,12 @@ export default function EditPostScreen() {
             <>
               <Video
                 source={{ uri: newMediaUri ?? post.mediaUrl }}
-                style={{ width: "100%", height: "100%" }}
-                resizeMode={ResizeMode.COVER}
+                style={{ width: "100%", height: "100%", backgroundColor: "#000" }}
+                resizeMode={
+                  mediaFit === "contain"
+                    ? ResizeMode.CONTAIN
+                    : ResizeMode.COVER
+                }
                 shouldPlay={false}
                 isMuted
               />
@@ -317,6 +326,40 @@ export default function EditPostScreen() {
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
+
+        {/* FORMAT VIDEO */}
+        {post.mediaType === "video" && (
+          <View className="mt-4 px-4">
+            <Text className="text-white mb-2 font-semibold">
+              Format d'affichage
+            </Text>
+            <View className="flex-row gap-2">
+              <TouchableOpacity
+                onPress={() => setMediaFit("cover")}
+                className={`flex-1 py-3 rounded-xl items-center ${
+                  mediaFit === "cover" ? "bg-orange-500" : "bg-[#1A1A1A]"
+                }`}
+              >
+                <Text className="text-white font-semibold">
+                  Portrait (rogné)
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setMediaFit("contain")}
+                className={`flex-1 py-3 rounded-xl items-center ${
+                  mediaFit === "contain" ? "bg-orange-500" : "bg-[#1A1A1A]"
+                }`}
+              >
+                <Text className="text-white font-semibold">
+                  Paysage (marges)
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <Text className="text-gray-400 text-xs mt-2">
+              Le mode "Paysage" affiche la vidéo entière avec des marges.
+            </Text>
+          </View>
+        )}
 
         <View className="mt-6 px-4">
           {/* POST TYPE */}

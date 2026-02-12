@@ -19,7 +19,8 @@ const Tab = createMaterialTopTabNavigator();
 export default function SearchJoueurTabs() {
   const { isPremium } = usePremiumStatus();
   const navigation = useNavigation();
-  const goToPremium = () => (navigation as any).navigate("Payment");
+  const goToPremium = () =>
+    (navigation as any).navigate("Payment", { userType: "club" });
 
   return (
     <SafeAreaView

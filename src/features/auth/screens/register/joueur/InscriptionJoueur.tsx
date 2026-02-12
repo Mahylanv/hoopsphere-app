@@ -36,7 +36,7 @@ export default function InscriptionJoueur() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ✅ Vérifications basiques
+  //  Vérifications basiques
   const isValidEmail = (email: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -77,7 +77,7 @@ export default function InscriptionJoueur() {
         createdAt: new Date(),
       });
 
-      Alert.alert("Succès", "Compte créé avec succès ✅");
+      Alert.alert("Succès", "Compte créé avec succès");
 
       // 3️⃣ Redirection → MainTabs
       navigation.reset({

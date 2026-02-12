@@ -62,37 +62,13 @@ const EditProfileModal = forwardRef<ModalizeRef, Props>(
     const [openDobPicker, setOpenDobPicker] = useState(false);
     const [openTaille, setOpenTaille] = useState(false);
     const [openPoids, setOpenPoids] = useState(false);
-    const [openClubModal, setOpenClubModal] = useState(false);
     const [openLevelModal, setOpenLevelModal] = useState(false);
-
-    const [clubs, setClubs] = useState<string[]>([]);
-    const [clubSearch, setClubSearch] = useState("");
 
     const [emailError, setEmailError] = useState("");
     const [phoneError, setPhoneError] = useState("");
     const [showPassword, setShowPassword] = useState(false);
 
     const modalRef = ref as React.RefObject<Modalize>;
-
-    // ---------------- LOAD CLUBS ----------------
-    useEffect(() => {
-      import("firebase/firestore").then(async ({ collection, getDocs }) => {
-        const refClubs = collection(
-          require("../../../../../config/firebaseConfig").db,
-          "clubs"
-        );
-        const snap = await getDocs(refClubs);
-        const list = snap.docs
-          .map((d) => d.data()?.nom)
-          .filter((c) => typeof c === "string");
-
-        setClubs(list);
-      });
-    }, []);
-
-    const filteredClubs = clubs.filter((c) =>
-      c.toLowerCase().includes(clubSearch.toLowerCase())
-    );
 
     // ---------------- AVATAR ----------------
     const pickAvatar = async () => {
@@ -172,11 +148,6 @@ const EditProfileModal = forwardRef<ModalizeRef, Props>(
                 setOpenTaille={setOpenTaille}
                 openPoids={openPoids}
                 setOpenPoids={setOpenPoids}
-                openClubModal={openClubModal}
-                setOpenClubModal={setOpenClubModal}
-                clubs={clubs}
-                filteredClubs={filteredClubs}
-                setClubSearch={setClubSearch}
                 emailError={emailError}
                 phoneError={phoneError}
                 TAILLES={TAILLES}

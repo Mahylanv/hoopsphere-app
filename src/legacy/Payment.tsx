@@ -1,10 +1,20 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ScrollView, View, Text, StatusBar, Pressable } from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  StatusBar,
+  Pressable,
+  ActivityIndicator,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { auth, db } from "../config/firebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
+import { useAuth } from "../features/auth/context/AuthContext";
 
 type PaymentNavProp = NativeStackNavigationProp<RootStackParamList, "Payment">;
 
@@ -35,27 +45,114 @@ const CLUB_ONLY_FEATURES = new Set<string>(["referral_boost"]);
 
 export default function Payment() {
   const navigation = useNavigation<PaymentNavProp>();
+  const route = useRoute<any>();
+  const paramUserType = route?.params?.userType;
   const [interval, setInterval] = useState<"month" | "year">("year");
-  const [userType, setUserType] = useState<"joueur" | "club" | null>(null);
+  const {
+    user,
+    loading: authLoading,
+    userType: contextUserType,
+    setUserType: setContextUserType,
+  } = useAuth();
+  const [resolvedUserType, setResolvedUserType] = useState<
+    "joueur" | "club" | null
+  >(contextUserType === "joueur" || contextUserType === "club" ? contextUserType : null);
+  const [resolvingType, setResolvingType] = useState(true);
 
   useEffect(() => {
-    AsyncStorage.getItem("userType")
-      .then((value) => {
-        if (value === "joueur" || value === "club") setUserType(value);
-      })
-      .catch(() => null);
-  }, []);
+    let alive = true;
+
+    const resolveUserType = async () => {
+      if (authLoading) return;
+
+      const paramType =
+        paramUserType === "club" || paramUserType === "joueur"
+          ? paramUserType
+          : null;
+
+      if (paramType) {
+        if (!alive) return;
+        setResolvedUserType(paramType);
+        setContextUserType(paramType);
+        setResolvingType(false);
+        try {
+          await AsyncStorage.setItem("userType", paramType);
+        } catch {}
+        return;
+      }
+
+      if (contextUserType === "joueur" || contextUserType === "club") {
+        if (!alive) return;
+        setResolvedUserType(contextUserType);
+        setResolvingType(false);
+        return;
+      }
+
+      setResolvingType(true);
+
+      try {
+        const savedType = await AsyncStorage.getItem("userType");
+        if (savedType === "joueur" || savedType === "club") {
+          if (!alive) return;
+          setResolvedUserType(savedType);
+          setContextUserType(savedType);
+          setResolvingType(false);
+          return;
+        }
+      } catch {}
+
+      const uid = user?.uid;
+      if (!uid) {
+        if (alive) setResolvingType(false);
+        return;
+      }
+
+      try {
+        const [clubSnap, joueurSnap] = await Promise.all([
+          getDoc(doc(db, "clubs", uid)),
+          getDoc(doc(db, "joueurs", uid)),
+        ]);
+        const detected =
+          clubSnap.exists() ? "club" : joueurSnap.exists() ? "joueur" : null;
+        if (!alive || !detected) {
+          if (alive) setResolvingType(false);
+          return;
+        }
+        setResolvedUserType(detected);
+        setContextUserType(detected);
+        await AsyncStorage.setItem("userType", detected);
+      } catch {
+        // ignore
+      } finally {
+        if (alive) setResolvingType(false);
+      }
+    };
+
+    resolveUserType();
+    return () => {
+      alive = false;
+    };
+  }, [authLoading, contextUserType, paramUserType, setContextUserType, user?.uid]);
 
   const visibleFeatures = useMemo(() => {
-    if (userType === "club") {
+    if (resolvedUserType === "club") {
       return FEATURES.filter((feat) => !CLUB_HIDDEN_FEATURES.has(feat.id));
     }
     return FEATURES.filter((feat) => !CLUB_ONLY_FEATURES.has(feat.id));
-  }, [userType]);
+  }, [resolvedUserType]);
 
   const handleSubscribe = () => {
     navigation.navigate("StripeCheckout", { interval });
   };
+
+  if (authLoading || (resolvingType && user)) {
+    return (
+      <View className="flex-1 bg-black items-center justify-center">
+        <ActivityIndicator size="large" color="#F97316" />
+        <Text className="text-white mt-3">Chargement des offres...</Text>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 pt-5 bg-black">
@@ -74,7 +171,7 @@ export default function Payment() {
             Pass Pro
           </Text>
           <Text className="text-gray-300 mt-2 text-center">
-            Boostez votre visibilite et vos performances.
+            Boostez votre visibilité et vos performances.
           </Text>
           <View className="mt-3 px-4 py-1 rounded-full bg-white/10 border border-white/10">
             <Text className="text-white font-semibold">

@@ -93,7 +93,9 @@ export default function ClubVisitorsScreen() {
       ) : !isPremium ? (
         <PremiumWall
           message="Les consultations de profil sont réservées aux clubs Premium."
-          onPressUpgrade={() => navigation.navigate("Payment")}
+          onPressUpgrade={() =>
+            navigation.navigate("Payment", { userType: "club" })
+          }
         />
       ) : visitors.length === 0 ? (
         <View className="flex-1 items-center justify-center px-6">

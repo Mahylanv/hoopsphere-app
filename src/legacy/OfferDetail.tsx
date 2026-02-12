@@ -204,7 +204,7 @@ export default function OfferDetail() {
                         offerLocation: offer.location || "",
                     }
                 );
-                Alert.alert("Candidature envoyée ✅", "Ton email a bien été envoyé au club.");
+                Alert.alert("Candidature envoyée", "Ton email a bien été envoyé au club.");
                 navigation.goBack();
                 return;
             }

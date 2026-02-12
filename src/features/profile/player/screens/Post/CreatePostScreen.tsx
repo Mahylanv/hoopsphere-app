@@ -50,6 +50,7 @@ export default function CreatePostScreen() {
   const [postType, setPostType] = useState<PostType>("highlight");
   const [skills, setSkills] = useState<string[]>([]);
   const [visibility, setVisibility] = useState<Visibility>("public");
+  const [mediaFit, setMediaFit] = useState<"cover" | "contain">("cover");
   const [loading, setLoading] = useState(false);
   const [compressing, setCompressing] = useState(false);
 
@@ -189,6 +190,7 @@ export default function CreatePostScreen() {
           type: "video",
           thumbnailUri: thumbUri,
         });
+        setMediaFit("cover");
       } catch (e) {
         console.warn("⚠️ Miniature vidéo impossible", e);
         setMedia({
@@ -196,6 +198,7 @@ export default function CreatePostScreen() {
           type: "video",
           thumbnailUri: null,
         });
+        setMediaFit("cover");
       }
       setCompressing(false);
     } else {
@@ -204,6 +207,7 @@ export default function CreatePostScreen() {
         uri: asset.uri,
         type: "image",
       });
+      setMediaFit("cover");
     }
   };
 
@@ -291,6 +295,7 @@ export default function CreatePostScreen() {
         postType,
         skills,
         visibility,
+        mediaFit: media.type === "video" ? mediaFit : "cover",
       });
 
       await Haptics.notificationAsync(
@@ -299,7 +304,7 @@ export default function CreatePostScreen() {
 
       navigation.goBack();
     } catch (e) {
-      console.error("❌ Publication échouée :", e);
+      console.error(" Publication échouée :", e);
       Alert.alert(
         "Erreur",
         "Impossible de publier la vidéo pour le moment."
@@ -318,7 +323,7 @@ export default function CreatePostScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
       >
-        <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
           {/* HEADER */}
           <View className="flex-row items-center justify-between px-4 py-3">
             <TouchableOpacity onPress={handleCancel} disabled={loading || compressing}>
@@ -384,21 +389,27 @@ export default function CreatePostScreen() {
               ) : (
                 <>
                   {/* 🎬 MINIATURE VIDEO */}
-                  {media.thumbnailUri ? (
-                    <Image
-                      source={{ uri: media.thumbnailUri }}
-                      className="w-full h-full"
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View className="w-full h-full items-center justify-center bg-black">
-                      <Ionicons
-                        name="videocam"
-                        size={48}
-                        color="white"
+                  <>
+                    {media.thumbnailUri ? (
+                      <Image
+                        source={{ uri: media.thumbnailUri }}
+                        className="w-full h-full"
+                        resizeMode={
+                          mediaFit === "contain"
+                            ? "contain"
+                            : "cover"
+                        }
                       />
-                    </View>
-                  )}
+                    ) : (
+                      <View className="w-full h-full items-center justify-center bg-black">
+                        <Ionicons
+                          name="videocam"
+                          size={48}
+                          color="white"
+                        />
+                      </View>
+                    )}
+                  </>
 
                   {/* ▶️ PLAY ICON */}
                   <View className="absolute inset-0 items-center justify-center">
@@ -430,6 +441,40 @@ export default function CreatePostScreen() {
             )}
           </View>
 
+          {/* FORMAT VIDEO */}
+          {media?.type === "video" && (
+            <View className="mt-4 px-4">
+              <Text className="text-white mb-2 font-semibold">
+                Format d'affichage
+              </Text>
+              <View className="flex-row gap-2">
+                <TouchableOpacity
+                  onPress={() => setMediaFit("cover")}
+                  className={`flex-1 py-3 rounded-xl items-center ${
+                    mediaFit === "cover" ? "bg-orange-500" : "bg-[#1A1A1A]"
+                  }`}
+                >
+                  <Text className="text-white font-semibold">
+                    Portrait (rogné)
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setMediaFit("contain")}
+                  className={`flex-1 py-3 rounded-xl items-center ${
+                    mediaFit === "contain" ? "bg-orange-500" : "bg-[#1A1A1A]"
+                  }`}
+                >
+                  <Text className="text-white font-semibold">
+                    Paysage (marges)
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <Text className="text-gray-400 text-xs mt-2">
+                Le mode "Paysage" affiche la vidéo entière avec des marges.
+              </Text>
+            </View>
+          )}
+
           <PostTypeSelector value={postType} onChange={setPostType} />
           <SkillTagsSelector selected={skills} onChange={setSkills} />
 
@@ -460,6 +505,37 @@ export default function CreatePostScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Bouton Publier (fixé en bas) */}
+      <View
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          padding: 16,
+          paddingBottom: 24,
+          backgroundColor: "rgba(14,13,13,0.92)",
+          borderTopWidth: 1,
+          borderTopColor: "rgba(255,255,255,0.08)",
+        }}
+      >
+        <TouchableOpacity
+          onPress={handlePublish}
+          disabled={!media || loading || compressing}
+          className={`py-4 rounded-2xl items-center flex-row justify-center ${
+            media && !loading && !compressing ? "bg-orange-500" : "bg-gray-600"
+          }`}
+        >
+          <Text className="text-white text-lg font-semibold">
+            {compressing
+              ? "Compression..."
+              : loading
+                ? "Publication..."
+                : "Publier"}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }

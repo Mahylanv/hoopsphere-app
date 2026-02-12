@@ -96,7 +96,7 @@ export default function FullMediaViewerScreen({ route, navigation }: any) {
 
   return (
     <View style={{ flex: 1, backgroundColor: "black" }}>
-      {/* ❌ Bouton fermer */}
+      {/* Bouton fermer */}
       <TouchableOpacity
         onPress={() => navigation.goBack()}
         style={{

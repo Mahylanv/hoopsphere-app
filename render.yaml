@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: hoopsphere-parser
+    env: docker
+    rootDir: emarque-parser
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /__health

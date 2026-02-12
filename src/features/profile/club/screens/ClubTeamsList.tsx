@@ -201,7 +201,13 @@ export default function ClubTeamsList() {
                               </View>
                             </View>
                             {auth.currentUser?.uid === clubUid && (
-                              <Pressable onPress={() => deletePlayer(item.id!, p.id)}>
+                              <Pressable
+                                hitSlop={8}
+                                onPress={(event) => {
+                                  event.stopPropagation();
+                                  deletePlayer(item.id!, p.id);
+                                }}
+                              >
                                 <Ionicons name="trash" size={18} color="#f87171" />
                               </Pressable>
                             )}

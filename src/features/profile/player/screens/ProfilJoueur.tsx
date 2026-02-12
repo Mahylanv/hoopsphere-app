@@ -36,9 +36,13 @@ import Svg, { Path } from "react-native-svg";
 import { updateUserProfile } from "../../../auth/services/userService";
 import { CARD_NORMAL, CARD_PREMIUM } from "../../../../constants/images";
 
-const CARD_WIDTH = Dimensions.get("window").width * 0.9;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const IS_SMALL_PHONE = SCREEN_WIDTH <= 360 || SCREEN_HEIGHT <= 700;
+
+const CARD_WIDTH = SCREEN_WIDTH * 0.9;
 const CARD_HEIGHT = CARD_WIDTH * 1.3;
-const CARD_PREVIEW_WIDTH = Dimensions.get("window").width * 0.42;
+const CARD_PREVIEW_WIDTH = SCREEN_WIDTH * 0.42;
+const SMALL_PHONE_CARD_SCALE = IS_SMALL_PHONE ? 0.9 : 1;
 
 export default function ProfilJoueur() {
   const {
@@ -212,6 +216,7 @@ export default function ProfilJoueur() {
     outputRange: [0, CARD_HEIGHT * 0.55],
     extrapolate: "clamp",
   });
+  const cardScale = Animated.multiply(scale, SMALL_PHONE_CARD_SCALE);
 
   // Pull-to-refresh
   const [refreshing, setRefreshing] = useState(false);
@@ -228,7 +233,7 @@ export default function ProfilJoueur() {
       const uri = await cardRef.current?.capture?.();
       return uri ?? null;
     } catch (e) {
-      // console.log("❌ Erreur capture:", e);
+      // console.log(" Erreur capture:", e);
       return null;
     }
   };
@@ -300,12 +305,12 @@ export default function ProfilJoueur() {
         <Animated.View
           style={{
             position: "absolute",
-            top: 0,
+            top: IS_SMALL_PHONE ? -24 : 0,
             left: 0,
             right: 0,
             alignItems: "center",
             transform: [
-              { scale },
+              { scale: cardScale },
               { translateY: Animated.add(translateY, adjustedTranslate) },
             ],
           }}
@@ -335,7 +340,13 @@ export default function ProfilJoueur() {
           </View>
         </Animated.View>
 
-        <View className="w-full px-5 -mt-5 mb-4">
+        <View
+          className="w-full px-5"
+          style={{
+            marginTop: IS_SMALL_PHONE ? 8 : -2,
+            marginBottom: IS_SMALL_PHONE ? 10 : 16,
+          }}
+        >
           <View className="flex-row items-center justify-between">
             <LinearGradient
               colors={[brand.orange, brand.blue]}
@@ -439,7 +450,10 @@ export default function ProfilJoueur() {
           </View>
         )}
 
-        <View className="mt-4 px-5">
+        <View
+          className="px-5"
+          style={{ marginTop: IS_SMALL_PHONE ? 24 : 16 }}
+        >
           <View className="flex-row items-center mb-3">
             <Ionicons name="book-outline" size={20} color="#F97316" />
             <Text className="text-white text-lg font-semibold ml-2">
@@ -648,3 +662,6 @@ export default function ProfilJoueur() {
     </SafeAreaView>
   );
 }
+
+
+

@@ -53,6 +53,9 @@ export async function toggleLikePost(postId: string, postOwnerUid: string) {
     // ======================
     transaction.set(postLikeRef, {
       createdAt: serverTimestamp(),
+      postId,
+      postOwnerUid,
+      likerUid: uid,
     });
 
     transaction.set(userLikeRef, {

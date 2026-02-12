@@ -35,13 +35,6 @@ type Props = {
   openPoids: boolean;
   setOpenPoids: (b: boolean) => void;
 
-  openClubModal: boolean;
-  setOpenClubModal: (b: boolean) => void;
-
-  clubs: string[];
-  filteredClubs: string[];
-  setClubSearch: (v: string) => void;
-
   openLevelModal: boolean;
   setOpenLevelModal: (b: boolean) => void;
 
@@ -73,13 +66,6 @@ export default function EditProfileSections(props: Props) {
 
     openPoids,
     setOpenPoids,
-
-    openClubModal,
-    setOpenClubModal,
-
-    clubs,
-    filteredClubs,
-    setClubSearch,
 
     emailError,
     phoneError,
@@ -371,43 +357,13 @@ export default function EditProfileSections(props: Props) {
       <View className="mb-5" />
 
       {/* ⭐ CLUB */}
-      <Text className="text-gray-400 mb-1">Club</Text>
-
-      <TouchableOpacity
-        className="bg-[#222] p-3 rounded-lg mb-5"
-        onPress={() => setOpenClubModal(true)}
-      >
-        <Text className="text-white">
-          {editFields.club || "Sélectionner..."}
-        </Text>
-      </TouchableOpacity>
-
-      <Modal visible={openClubModal} animationType="slide">
-        <View className="flex-1 bg-black p-6">
-          <TouchableOpacity onPress={() => setOpenClubModal(false)}>
-            <Ionicons name="arrow-back" size={28} color="#fff" />
-          </TouchableOpacity>
-
-          <Text className="text-white text-xl font-bold mb-4">
-            Modifier mon club
-          </Text>
-
-          <ClearableInput
-            placeholder="Nom du club"
-            value={editFields.club}
-            onChange={(v) => setEditField("club", v)}
-          />
-
-          <TouchableOpacity
-            onPress={() => setOpenClubModal(false)}
-            className="bg-orange-500 py-4 rounded-xl mt-6"
-          >
-            <Text className="text-white text-center text-lg font-bold">
-              Enregistrer
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
+      <ClearableInput
+        label="Club"
+        placeholder="Nom du club"
+        value={editFields.club}
+        onChange={(v) => setEditField("club", v)}
+      />
+      <View className="mb-5" />
 
       {/* ⭐ EMAIL + TÉLÉPHONE */}
       <View className="flex-row w-full justify-between mb-5">

@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { auth, db } from "../../../../config/firebaseConfig";
 import { addDoc, collection } from "firebase/firestore";
 
-type Player = { prenom: string; nom: string; poste?: string };
+type Player = { id?: string; prenom: string; nom: string; poste?: string };
 
 type Props = {
   visible: boolean;
@@ -75,15 +75,17 @@ export default function AddPlayersModal({
     }
 
     try {
+      const createdPlayers: Player[] = [];
       for (const p of validPlayers) {
-        await addDoc(
+        const created = await addDoc(
           collection(db, "clubs", uid, "equipes", teamId, "joueurs"),
           p
         );
+        createdPlayers.push({ ...p, id: created.id });
       }
 
-      // ÐY"¾ Appeler la callback EXACTEMENT avec ce que ClubTeamsList attend
-      onPlayersAdded(teamId, validPlayers);
+      // Renvoie les ids pour que la suppression marche immediatement
+      onPlayersAdded(teamId, createdPlayers);
 
       setInputs([{ prenom: "", nom: "", poste: "" }]);
       onClose();
@@ -110,7 +112,7 @@ export default function AddPlayersModal({
                 <TextInput
                   value={p.prenom}
                   onChangeText={(v) => updateInput(i, "prenom", v)}
-                  placeholder="PrÇ¸nom"
+                  placeholder="Prénom"
                   placeholderTextColor="#888"
                   className="flex-1 bg-gray-800 text-white rounded-lg px-3 py-2"
                 />
@@ -156,7 +158,7 @@ export default function AddPlayersModal({
           <View className="flex-row justify-end space-x-3 mt-4">
             <TouchableOpacity
               onPress={onClose}
-              className="px-4 py-2 bg-gray-700 rounded-lg"
+              className="px-4 py-2 mr-2 bg-gray-700 rounded-lg"
             >
               <Text className="text-white">Annuler</Text>
             </TouchableOpacity>

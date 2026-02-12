@@ -38,7 +38,7 @@ export default function ForgotPassword() {
             setLoading(true);
             await sendPasswordResetEmail(auth, email.trim());
             Alert.alert(
-                "Email envoyé ✅",
+                "Email envoyé",
                 "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé."
             );
             navigation.goBack();

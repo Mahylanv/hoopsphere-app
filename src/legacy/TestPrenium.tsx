@@ -21,7 +21,7 @@ import { RootStackParamList } from "../types";
 import { updateUserProfile } from "../features/auth/services/userService";
 import usePlayerProfile from "../features/profile/player/hooks/usePlayerProfile";
 
-// ✅ composant réutilisable
+//  composant réutilisable
 import AddressAutocomplete from "../shared/components/AddressAutocomplete";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "TestPrenium">;

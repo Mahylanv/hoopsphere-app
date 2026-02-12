@@ -29,6 +29,7 @@ export type CreatePostPayload = {
   postType: "highlight" | "match" | "training";
   skills: string[];
   visibility: "public" | "private" | "clubs";
+  mediaFit?: "cover" | "contain";
 };
 
 export type UpdatePostPayload = {
@@ -37,6 +38,7 @@ export type UpdatePostPayload = {
   postType: "highlight" | "match" | "training";
   skills: string[];
   visibility: "public" | "private" | "clubs";
+  mediaFit?: "cover" | "contain";
 };
 
 /* ============================================================
@@ -102,6 +104,7 @@ export const createPost = async (payload: CreatePostPayload) => {
       postType: payload.postType,
       skills: payload.skills,
       visibility: payload.visibility,
+      mediaFit: payload.mediaFit ?? "cover",
 
       likeCount: 0,
       commentsCount: 0,
@@ -122,7 +125,7 @@ export const createPost = async (payload: CreatePostPayload) => {
     // console.log("✅ POST CRÉÉ :", postRef.id);
     return postRef.id;
   } catch (e) {
-    console.error("❌ createPost error:", e);
+    console.error(" createPost error:", e);
     throw e;
   }
 };
@@ -147,6 +150,7 @@ export const updatePost = async (
       postType: updates.postType,
       skills: updates.skills,
       visibility: updates.visibility,
+      ...(updates.mediaFit ? { mediaFit: updates.mediaFit } : {}),
       updatedAt: serverTimestamp(),
     };
 
@@ -166,7 +170,7 @@ export const updatePost = async (
 
     // console.log("✅ POST MIS À JOUR :", postId);
   } catch (e) {
-    console.error("❌ updatePost error:", e);
+    console.error(" updatePost error:", e);
     throw e;
   }
 };
@@ -207,7 +211,7 @@ export const deletePost = async (
 
     // console.log("✅ POST SUPPRIMÉ PARTOUT :", postId);
   } catch (e) {
-    console.error("❌ deletePost error:", e);
+    console.error(" deletePost error:", e);
     throw e;
   }
 };

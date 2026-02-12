@@ -2,9 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
+  ScrollView,
   StatusBar,
+  TextInput,
   Text,
+  NativeModules,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,6 +24,33 @@ import {
 } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
+import { Ionicons } from "@expo/vector-icons";
+
+const canUseStripeNative =
+  Platform.OS === "android"
+    ? Boolean(NativeModules?.OnrampSdk && NativeModules?.StripeSdk)
+    : true;
+
+const ANDROID_WEBVIEW_USER_AGENT =
+  "Mozilla/5.0 (Linux; Android 16; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36";
+let StripeNative: any = null;
+try {
+  if (canUseStripeNative) {
+    StripeNative = require("@stripe/stripe-react-native");
+  }
+} catch {
+  StripeNative = null;
+}
+
+const CardField = StripeNative?.CardField ?? null;
+const confirmPaymentFn = StripeNative?.confirmPayment ?? null;
+const confirmSetupIntentFn = StripeNative?.confirmSetupIntent ?? null;
+
+const LockIcon = () => (
+  <View className="w-16 h-16 rounded-full bg-orange-500/20 items-center justify-center mb-3">
+    <Ionicons name="lock-closed" size={26} color="#F97316" />
+  </View>
+);
 import { RootStackParamList } from "../../../types";
 import { auth, db } from "../../../config/firebaseConfig";
 
@@ -46,7 +77,8 @@ type CheckoutMessage =
       receiptOptIn?: boolean;
     }
   | { type: "payment_error"; message?: string }
-  | { type: "go_back" };
+  | { type: "go_back" }
+  | { type: "debug"; payload?: Record<string, any> };
 
 const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
   const htmlConfig = {
@@ -58,13 +90,16 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
     renewalLabel: config.renewalLabel,
     prefillName: config.prefillName,
     prefillEmail: config.prefillEmail,
+    platform: Platform.OS,
   };
 
+  const platformClass = Platform.OS === "android" ? "android" : "ios";
   return `<!doctype html>
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -93,6 +128,7 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
       body {
         height: 100%;
         margin: 0;
+        color-scheme: light;
       }
 
       body {
@@ -149,10 +185,29 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
         font-weight: 600;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 8px;
         margin-bottom: 16px;
         cursor: pointer;
         max-width: fit-content;
+      }
+
+      body.android .back-link {
+        display: none;
+      }
+
+      .back-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        font-size: 16px;
+        line-height: 16px;
+      }
+
+      .back-label {
+        line-height: 16px;
       }
 
       .lock-circle {
@@ -261,12 +316,40 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
         border-radius: 12px;
         border: 1px solid var(--border-strong);
         background: var(--surface-2);
-        padding: 12px 14px;
+        padding: 0 14px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        color: var(--text);
       }
 
       .stripe-field.is-focused {
         border-color: rgba(249, 115, 22, 0.6);
         box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.12);
+      }
+
+      .StripeElement {
+        width: 100%;
+      }
+
+      .StripeElement iframe {
+        background-color: transparent !important;
+      }
+
+      .stripe-field .StripeElement,
+      .stripe-field .StripeElement iframe {
+        height: 100% !important;
+      }
+
+      body.ios .stripe-field {
+        padding: 12px 14px;
+        display: block;
+        min-height: 0;
+      }
+
+      body.ios .stripe-field .StripeElement,
+      body.ios .stripe-field .StripeElement iframe {
+        height: auto !important;
       }
 
       .stripe-row {
@@ -335,13 +418,14 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
       }
     </style>
   </head>
-  <body>
+  <body class="${platformClass}">
     <div class="orb orange"></div>
     <div class="orb blue"></div>
 
     <div class="container">
       <button id="back-button" class="back-link" type="button">
-        ← Retour
+        <span class="back-icon" aria-hidden="true">&larr;</span>
+        <span class="back-label">Retour</span>
       </button>
       <div class="hero">
         <div class="lock-circle">
@@ -425,22 +509,105 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
     <script>
       (function () {
         const config = ${JSON.stringify(htmlConfig)};
-        const stripe = Stripe(config.publishableKey);
-        const elements = stripe.elements({ locale: "fr" });
+        window.onerror = function (message, source, lineno, colno, error) {
+          try {
+            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+              window.ReactNativeWebView.postMessage(
+                JSON.stringify({
+                  type: "payment_error",
+                  message:
+                    "WebView error: " +
+                    String(message) +
+                    " @" +
+                    String(lineno) +
+                    ":" +
+                    String(colno),
+                })
+              );
+            }
+          } catch {}
+          return false;
+        };
 
-        const style = {
+        window.addEventListener("unhandledrejection", function (event) {
+          try {
+            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+              window.ReactNativeWebView.postMessage(
+                JSON.stringify({
+                  type: "payment_error",
+                  message:
+                    "Unhandled promise: " +
+                    String(event && event.reason ? event.reason : "unknown"),
+                })
+              );
+            }
+          } catch {}
+        });
+        const stripe = Stripe(config.publishableKey);
+        const isAndroid = config.platform === "android";
+        const appearance = {
+          theme: "night",
+          variables: {
+            colorText: "#ffffff",
+            colorIcon: "#ffffff",
+            colorPrimary: "#f97316",
+            colorDanger: "#fca5a5",
+            colorBackground: "#00000000",
+            fontFamily: isAndroid ? "sans-serif" : "Space Grotesk, sans-serif",
+          },
+          rules: {
+            ".Input": {
+              color: "#ffffff",
+            },
+            ".Input::placeholder": {
+              color: "#6b7280",
+            },
+          },
+        };
+        const elements = isAndroid
+          ? stripe.elements({ locale: "fr", appearance })
+          : stripe.elements({ locale: "fr" });
+
+        const iosStyle = {
           base: {
-            color: "#ffffff",
+            color: "#FFFFFF",
             fontFamily: "Space Grotesk, sans-serif",
             fontSize: "16px",
             "::placeholder": { color: "#6b7280" },
           },
-          invalid: { color: "#fca5a5" },
+          invalid: {
+            color: "#FCA5A5",
+          },
         };
 
-        const cardNumber = elements.create("cardNumber", { style, showIcon: true });
-        const cardExpiry = elements.create("cardExpiry", { style });
-        const cardCvc = elements.create("cardCvc", { style });
+        const androidStyle = {
+          base: {
+            ...iosStyle.base,
+            iconColor: "#FFFFFF",
+            backgroundColor: "#00000000",
+            fontFamily: "sans-serif",
+            // 🔥 FIX ANDROID WEBVIEW
+            WebkitTextFillColor: "#FFFFFF",
+            caretColor: "#FFFFFF",
+            "::placeholder": {
+              color: "#9CA3AF",
+              WebkitTextFillColor: "#9CA3AF",
+            },
+          },
+          invalid: {
+            ...iosStyle.invalid,
+            WebkitTextFillColor: "#FCA5A5",
+          },
+        };
+
+        const elementStyle = isAndroid ? androidStyle : iosStyle;
+
+        const cardNumber = elements.create("cardNumber", {
+          style: elementStyle,
+          showIcon: true,
+        });
+        const cardExpiry = elements.create("cardExpiry", { style: elementStyle });
+        const cardCvc = elements.create("cardCvc", { style: elementStyle });
 
         cardNumber.mount("#card-number");
         cardExpiry.mount("#card-expiry");
@@ -464,14 +631,23 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
           receiptInput.checked = true;
         }
 
+        const sendGoBack = () => {
+          if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+            window.ReactNativeWebView.postMessage(
+              JSON.stringify({ type: "go_back" })
+            );
+          }
+        };
+
         if (backButton) {
-          backButton.addEventListener("click", () => {
-            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-              window.ReactNativeWebView.postMessage(
-                JSON.stringify({ type: "go_back" })
-              );
-            }
-          });
+          const onBack = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            sendGoBack();
+          };
+          backButton.addEventListener("click", onBack);
+          backButton.addEventListener("touchstart", onBack, { passive: false });
+          backButton.addEventListener("touchend", onBack);
         }
 
         let activeStripeElement = null;
@@ -491,19 +667,21 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
           }
         };
 
-        document.addEventListener("touchstart", (event) => {
-          const target = event.target;
-          if (!target.closest("input") && !target.closest(".stripe-field")) {
-            blurAll();
-          }
-        });
+        if (!isAndroid) {
+          document.addEventListener("touchstart", (event) => {
+            const target = event.target;
+            if (!target.closest("input") && !target.closest(".stripe-field") && !target.closest(".StripeElement")) {
+              blurAll();
+            }
+          });
 
-        document.addEventListener("mousedown", (event) => {
-          const target = event.target;
-          if (!target.closest("input") && !target.closest(".stripe-field")) {
-            blurAll();
-          }
-        });
+          document.addEventListener("mousedown", (event) => {
+            const target = event.target;
+            if (!target.closest("input") && !target.closest(".stripe-field") && !target.closest(".StripeElement")) {
+              blurAll();
+            }
+          });
+        }
 
         const setLoading = (isLoading) => {
           state.loading = isLoading;
@@ -544,6 +722,25 @@ const buildCheckoutHtml = (config: CheckoutConfig, publishableKey: string) => {
         bindStripeElement(cardNumber, 0, "number");
         bindStripeElement(cardExpiry, 1, "expiry");
         bindStripeElement(cardCvc, 2, "cvc");
+
+        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+          try {
+            window.ReactNativeWebView.postMessage(
+              JSON.stringify({
+                type: "debug",
+                payload: {
+                  userAgent: navigator.userAgent,
+                  prefersDark:
+                    window.matchMedia &&
+                    window.matchMedia("(prefers-color-scheme: dark)").matches,
+                  colorScheme:
+                    (window.getComputedStyle(document.documentElement) || {})
+                      .colorScheme || "",
+                },
+              })
+            );
+          } catch {}
+        }
 
         submitButton.addEventListener("click", async () => {
           if (submitButton.disabled) return;
@@ -639,6 +836,11 @@ export default function StripeCheckout() {
   const [config, setConfig] = useState<CheckoutConfig | null>(null);
   const [upgradeIntentId, setUpgradeIntentId] = useState<string | null>(null);
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
+  const [nativeName, setNativeName] = useState("");
+  const [nativeEmail, setNativeEmail] = useState("");
+  const [nativeReceipt, setNativeReceipt] = useState(false);
+  const [nativeCardComplete, setNativeCardComplete] = useState(false);
+  const [nativeLoading, setNativeLoading] = useState(false);
   const hasCompletedRef = useRef(false);
 
   const functions = getFunctions(getApp());
@@ -713,6 +915,231 @@ export default function StripeCheckout() {
       return `${firstName} ${lastName}`.trim();
     } catch {
       return "";
+    }
+  };
+
+  const handleNativePayment = async () => {
+    if (!config) return;
+    if (!confirmPaymentFn || !confirmSetupIntentFn) {
+      setError(
+        "Le module Stripe natif n'est pas disponible sur cet Android. Lance un build dev avec Stripe."
+      );
+      return;
+    }
+    if (!nativeCardComplete) {
+      setError("Merci de saisir une carte valide.");
+      return;
+    }
+    const emailValue = nativeEmail.trim();
+    const billingDetails = {
+      name: nativeName || undefined,
+      email: emailValue || undefined,
+    };
+    setNativeLoading(true);
+    setError(null);
+    hasCompletedRef.current = false;
+
+    try {
+      if (config.intentType === "payment") {
+        const result = await confirmPaymentFn(config.clientSecret, {
+          paymentMethodType: "Card",
+          paymentMethodData: { billingDetails },
+        });
+        if (result.error) {
+          setError(result.error.message || "Une erreur est survenue.");
+          return;
+        }
+        const intent = result.paymentIntent;
+        await finalizePayment({
+          intentId: intent?.id ?? null,
+          paymentMethodId:
+            intent?.paymentMethod?.id || intent?.paymentMethodId || null,
+          billingEmail: emailValue || undefined,
+          receiptOptIn: nativeReceipt,
+        });
+      } else {
+        const result = await confirmSetupIntentFn(config.clientSecret, {
+          paymentMethodType: "Card",
+          paymentMethodData: { billingDetails },
+        });
+        if (result.error) {
+          setError(result.error.message || "Une erreur est survenue.");
+          return;
+        }
+        const intent = result.setupIntent;
+        await finalizePayment({
+          intentId: intent?.id ?? null,
+          paymentMethodId:
+            intent?.paymentMethod?.id || intent?.paymentMethodId || null,
+          billingEmail: emailValue || undefined,
+          receiptOptIn: nativeReceipt,
+        });
+      }
+    } catch (e: any) {
+      setError(e?.message || "Une erreur est survenue.");
+    } finally {
+      setNativeLoading(false);
+    }
+  };
+
+  const finalizePayment = async (params: {
+    intentId?: string | null;
+    paymentMethodId?: string | null;
+    billingEmail?: string;
+    receiptOptIn?: boolean;
+  }) => {
+    if (hasCompletedRef.current) return;
+    hasCompletedRef.current = true;
+    try {
+      const billingEmail =
+        typeof params.billingEmail === "string" ? params.billingEmail.trim() : "";
+      if (isUpgrade) {
+        const intentId = params.intentId || upgradeIntentId;
+        if (!intentId) {
+          throw new Error(
+            "Paiement validé mais identifiant de transaction manquant."
+          );
+        }
+        if (auth.currentUser) {
+          await auth.currentUser.getIdToken(true);
+        }
+        const confirmUpgradePayment = httpsCallable(
+          functions,
+          "confirmUpgradePayment"
+        );
+        const res: any = await confirmUpgradePayment({
+          paymentIntentId: intentId,
+          billingEmail: billingEmail || undefined,
+        });
+        const startLabel = formatDateLabel(
+          typeof res?.data?.switchAt === "number"
+            ? res.data.switchAt * 1000
+            : startAt
+        );
+        Alert.alert(
+          "Upgrade annuel confirmé",
+          startLabel
+            ? `Ton abonnement annuel démarrera le ${startLabel}.`
+            : "Ton abonnement annuel a bien été programmé.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                if (navigation?.canGoBack?.()) {
+                  navigation.pop(2);
+                } else {
+                  navigation.navigate("SubscriptionSettings");
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      if (config?.intentType === "setup") {
+        const paymentMethodId = params.paymentMethodId;
+        if (!paymentMethodId || !subscriptionId) {
+          throw new Error(
+            "Paiement validé mais identifiant de carte manquant."
+          );
+        }
+        const confirmSubscriptionPayment = httpsCallable(
+          functions,
+          "confirmSubscriptionPayment"
+        );
+        await confirmSubscriptionPayment({
+          paymentMethodId,
+          subscriptionId,
+          billingEmail: billingEmail || undefined,
+        });
+      }
+
+      const getSubscriptionInfo = httpsCallable(functions, "getSubscriptionInfo");
+      const res: any = await getSubscriptionInfo({});
+      const status = res?.data?.subscription?.status as
+        | string
+        | null
+        | undefined;
+      if (status !== "active" && status !== "trialing") {
+        Alert.alert(
+          "Paiement en cours",
+          "Le paiement est en cours de confirmation. Ton abonnement sera activé dès validation (tu peux rafraîchir dans les paramètres d’abonnement).",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                if (navigation?.canGoBack?.()) {
+                  navigation.goBack();
+                } else {
+                  navigation.navigate("SubscriptionSettings");
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      const navType = await markPremium();
+      Alert.alert(
+        "Succès",
+        "Abonnement activé ! Un email de confirmation avec la facture a bien été envoyé.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              if (navType === "club") {
+                navigation.reset({
+                  index: 0,
+                  routes: [
+                    {
+                      name: "MainTabsClub",
+                      params: { screen: "Home" },
+                    },
+                  ],
+                });
+              } else {
+                navigation.reset({
+                  index: 0,
+                  routes: [
+                    {
+                      name: "MainTabs",
+                      params: { screen: "HomeScreen" },
+                    },
+                  ],
+                });
+              }
+            },
+          },
+        ]
+      );
+    } catch (err: any) {
+      const code = err?.code || "";
+      const message = err?.message || "";
+      if (isUpgrade && (code === "unauthenticated" || message === "unauthenticated")) {
+        const startLabel = formatDateLabel(startAt);
+        Alert.alert(
+          "Paiement reçu",
+          startLabel
+            ? `Ton paiement est confirmé. L'upgrade sera appliqué d'ici quelques instants (début le ${startLabel}).`
+            : "Ton paiement est confirmé. L'upgrade sera appliqué d'ici quelques instants.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                if (navigation?.canGoBack?.()) {
+                  navigation.pop(2);
+                } else {
+                  navigation.navigate("SubscriptionSettings");
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+      setError(err?.message || "Erreur lors de la mise à jour du compte.");
     }
   };
 
@@ -887,171 +1314,33 @@ export default function StripeCheckout() {
     if (!data) return;
 
     if (data.type === "go_back") {
-      navigation.goBack();
+      if (navigation?.canGoBack?.()) {
+        navigation.goBack();
+      } else {
+        navigation.navigate("SubscriptionSettings");
+      }
+      return;
+    }
+
+    if (data.type === "debug") {
+      console.log("StripeCheckout WebView debug:", data.payload || {});
       return;
     }
 
     if (data.type === "payment_error") {
       setError(data.message || "Une erreur est survenue.");
+      Alert.alert("Erreur paiement", data.message || "Une erreur est survenue.");
       return;
     }
 
+
     if (data.type === "payment_success") {
-      hasCompletedRef.current = true;
-      try {
-        const billingEmail =
-          typeof data.billingEmail === "string" ? data.billingEmail.trim() : "";
-        if (isUpgrade) {
-          const intentId = data.intentId || upgradeIntentId;
-          if (!intentId) {
-            throw new Error(
-              "Paiement validé mais identifiant de transaction manquant."
-            );
-          }
-          if (auth.currentUser) {
-            await auth.currentUser.getIdToken(true);
-          }
-          const confirmUpgradePayment = httpsCallable(
-            functions,
-            "confirmUpgradePayment"
-          );
-          const res: any = await confirmUpgradePayment({
-            paymentIntentId: intentId,
-            billingEmail: billingEmail || undefined,
-          });
-          const startLabel = formatDateLabel(
-            typeof res?.data?.switchAt === "number"
-              ? res.data.switchAt * 1000
-              : startAt
-          );
-          Alert.alert(
-            "Upgrade annuel confirmé",
-            startLabel
-              ? `Ton abonnement annuel démarrera le ${startLabel}.`
-              : "Ton abonnement annuel a bien été programmé.",
-            [
-              {
-                text: "OK",
-                onPress: () => {
-                  if (navigation?.canGoBack?.()) {
-                    navigation.pop(2);
-                  } else {
-                    navigation.navigate("SubscriptionSettings");
-                  }
-                },
-              },
-            ]
-          );
-          return;
-        }
-
-        if (config?.intentType === "setup") {
-          const paymentMethodId = data.paymentMethodId;
-          if (!paymentMethodId || !subscriptionId) {
-            throw new Error(
-              "Paiement validé mais identifiant de carte manquant."
-            );
-          }
-          const confirmSubscriptionPayment = httpsCallable(
-            functions,
-            "confirmSubscriptionPayment"
-          );
-          await confirmSubscriptionPayment({
-            paymentMethodId,
-            subscriptionId,
-            billingEmail: billingEmail || undefined,
-          });
-        }
-
-        const getSubscriptionInfo = httpsCallable(
-          functions,
-          "getSubscriptionInfo"
-        );
-        const res: any = await getSubscriptionInfo({});
-        const status = res?.data?.subscription?.status as
-          | string
-          | null
-          | undefined;
-        if (status !== "active" && status !== "trialing") {
-          Alert.alert(
-            "Paiement en cours",
-            "Le paiement est en cours de confirmation. Ton abonnement sera activé dès validation (tu peux rafraîchir dans les paramètres d’abonnement).",
-            [
-              {
-                text: "OK",
-                onPress: () => {
-                  if (navigation?.canGoBack?.()) {
-                    navigation.goBack();
-                  } else {
-                    navigation.navigate("SubscriptionSettings");
-                  }
-                },
-              },
-            ]
-          );
-          return;
-        }
-
-        const navType = await markPremium();
-        Alert.alert(
-          "Succès",
-          "Abonnement activé ! Un email de confirmation avec la facture a bien été envoyé.",
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                if (navType === "club") {
-                  navigation.reset({
-                    index: 0,
-                    routes: [
-                      {
-                        name: "MainTabsClub",
-                        params: { screen: "Home" },
-                      },
-                    ],
-                  });
-                } else {
-                  navigation.reset({
-                    index: 0,
-                    routes: [
-                      {
-                        name: "MainTabs",
-                        params: { screen: "HomeScreen" },
-                      },
-                    ],
-                  });
-                }
-              },
-            },
-          ]
-        );
-      } catch (err: any) {
-        const code = err?.code || "";
-        const message = err?.message || "";
-        if (isUpgrade && (code === "unauthenticated" || message === "unauthenticated")) {
-          const startLabel = formatDateLabel(startAt);
-          Alert.alert(
-            "Paiement reçu",
-            startLabel
-              ? `Ton paiement est confirmé. L'upgrade sera appliqué d'ici quelques instants (début le ${startLabel}).`
-              : "Ton paiement est confirmé. L'upgrade sera appliqué d'ici quelques instants.",
-            [
-              {
-                text: "OK",
-                onPress: () => {
-                  if (navigation?.canGoBack?.()) {
-                    navigation.pop(2);
-                  } else {
-                    navigation.navigate("SubscriptionSettings");
-                  }
-                },
-              },
-            ]
-          );
-          return;
-        }
-        setError(err?.message || "Erreur lors de la mise à jour du compte.");
-      }
+      await finalizePayment({
+        intentId: data.intentId ?? null,
+        paymentMethodId: data.paymentMethodId ?? null,
+        billingEmail: data.billingEmail,
+        receiptOptIn: data.receiptOptIn,
+      });
     }
   };
 
@@ -1059,6 +1348,25 @@ export default function StripeCheckout() {
     if (!config || !publishableKey) return "";
     return buildCheckoutHtml(config, publishableKey);
   }, [config, publishableKey]);
+
+  useEffect(() => {
+    if (Platform.OS !== "android" || !config) return;
+    if (!nativeName && config.prefillName) {
+      setNativeName(config.prefillName);
+    }
+    if (!nativeEmail && config.prefillEmail) {
+      setNativeEmail(config.prefillEmail);
+      setNativeReceipt(true);
+    }
+  }, [config, nativeEmail, nativeName]);
+
+  const handleNativeBack = () => {
+    if (navigation?.canGoBack?.()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate("SubscriptionSettings");
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-black">
@@ -1068,7 +1376,7 @@ export default function StripeCheckout() {
           <View className="flex-1 items-center justify-center px-6">
             <ActivityIndicator size="large" color="#F97316" />
             <Text className="text-white mt-4 text-base">
-              Chargement du paiement sécurisé...
+              Chargement du Paiement sécurisé...
             </Text>
           </View>
         )}
@@ -1088,19 +1396,210 @@ export default function StripeCheckout() {
           </View>
         )}
 
-        {!loading && !error && config && (
-          <WebView
-            originWhitelist={["*"]}
-            source={{ html }}
-            onMessage={handleMessage}
-            javaScriptEnabled
-            domStorageEnabled
-            startInLoadingState
-            showsVerticalScrollIndicator={false}
-            style={{ flex: 1, backgroundColor: "#0E0D0D" }}
-          />
+                {!loading && !error && config && (
+          Platform.OS === "android" && CardField && confirmPaymentFn && confirmSetupIntentFn ? (
+            <ScrollView
+              className="flex-1 px-4"
+              contentContainerStyle={{ paddingBottom: 28 }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View className="py-3">
+                <Pressable
+                  onPress={handleNativeBack}
+                  className="flex-row items-center self-start"
+                >
+                  <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+                  <Text
+                    style={{ lineHeight: 20 }}
+                    className="text-white font-semibold text-base ml-1"
+                  >
+                    Retour
+                  </Text>
+                </Pressable>
+              </View>
+
+              <View className="items-center mb-4">
+                <LockIcon />
+                <Text className="text-white text-xl font-bold">
+                  Paiement sécurisé
+                </Text>
+                <Text className="text-gray-400 text-sm mt-1 text-center">
+                  Finalise ton abonnement Premium en quelques secondes.
+                </Text>
+                <View className="mt-3 px-4 py-1.5 rounded-full border border-white/10 bg-white/5">
+                  <Text className="text-white font-semibold text-sm">
+                    {config.priceLabel}
+                  </Text>
+                </View>
+              </View>
+
+              <View className="bg-[#111111] border border-white/10 rounded-2xl p-4 mb-4">
+                <Text className="text-white text-base font-semibold mb-2">
+                  Résumé
+                </Text>
+                <View className="flex-row items-center justify-between mb-2">
+                  <Text className="text-gray-400">Plan</Text>
+                  <Text className="text-white font-semibold">
+                    {config.planLabel}
+                  </Text>
+                </View>
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-gray-400">Facturation</Text>
+                  <Text className="text-white font-semibold">
+                    {config.renewalLabel}
+                  </Text>
+                </View>
+              </View>
+
+              <View className="bg-[#111111] border border-white/10 rounded-2xl p-4">
+                <Text className="text-white text-base font-semibold mb-3">
+                  Infos de facturation
+                </Text>
+
+                <Text className="text-gray-400 text-xs mb-2">Nom complet</Text>
+                <TextInput
+                  value={nativeName}
+                  onChangeText={setNativeName}
+                  placeholder="Ex: Jean Dupont"
+                  placeholderTextColor="#6b7280"
+                  className="text-white border border-white/20 rounded-xl px-3 py-3 mb-4"
+                />
+
+                <Text className="text-gray-400 text-xs mb-2">
+                  Adresse email
+                </Text>
+                <TextInput
+                  value={nativeEmail}
+                  onChangeText={setNativeEmail}
+                  placeholder="exemple@email.com"
+                  placeholderTextColor="#6b7280"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  className="text-white border border-white/20 rounded-xl px-3 py-3 mb-4"
+                />
+
+                <Pressable
+                  onPress={() => setNativeReceipt((prev) => !prev)}
+                  className="flex-row items-center mb-4"
+                >
+                  <View
+                    className={`w-5 h-5 rounded border border-white/30 items-center justify-center mr-3 ${
+                      nativeReceipt ? "bg-orange-500" : "bg-transparent"
+                    }`}
+                  >
+                    {nativeReceipt && (
+                      <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                    )}
+                  </View>
+                  <Text className="text-gray-300">
+                    Recevoir un reçu par email
+                  </Text>
+                </Pressable>
+
+                <Text className="text-gray-400 text-xs mb-2">
+                  Numéro de carte
+                </Text>
+                <View className="border border-white/20 rounded-xl px-2 py-2 mb-4">
+                  <CardField
+                    postalCodeEnabled={false}
+                    onCardChange={(card: { complete: boolean }) => setNativeCardComplete(card.complete)}
+                    style={{ width: "100%", height: 48 }}
+                    cardStyle={{
+                      textColor: "#ffffff",
+                      placeholderColor: "#6b7280",
+                      cursorColor: "#ffffff",
+                      textErrorColor: "#fca5a5",
+                      backgroundColor: "#00000000",
+                      fontSize: 16,
+                    }}
+                  />
+                </View>
+
+                {error && (
+                  <Text className="text-red-400 mb-3">{error}</Text>
+                )}
+
+                <Pressable
+                  onPress={handleNativePayment}
+                  disabled={nativeLoading || !nativeCardComplete}
+                  className={`rounded-full py-4 ${
+                    nativeLoading || !nativeCardComplete
+                      ? "bg-orange-400/60"
+                      : "bg-orange-500"
+                  }`}
+                >
+                  <Text className="text-white text-center font-semibold">
+                    {nativeLoading ? "Paiement en cours..." : "Confirmer et payer"}
+                  </Text>
+                </Pressable>
+
+                <Text className="text-gray-400 text-xs text-center mt-3">
+                  Paiement sécurisé par Stripe. Vos informations ne sont jamais
+                  stockées.
+                </Text>
+              </View>
+            </ScrollView>
+          ) : (
+            <>
+              {Platform.OS === "android" && (
+                <View className="px-4 py-3">
+                  <Pressable
+                    onPress={handleNativeBack}
+                    className="flex-row items-center self-start"
+                  >
+                    <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+                    <Text
+                      style={{ lineHeight: 20 }}
+                      className="text-white font-semibold text-base ml-1"
+                    >
+                      Retour
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+              <WebView
+                keyboardDisplayRequiresUserAction={false}
+                originWhitelist={["https://*", "http://*"]}
+                source={{ html, baseUrl: "https://stripe.local" }}
+                onMessage={handleMessage}
+                javaScriptEnabled
+                domStorageEnabled
+                startInLoadingState
+                showsVerticalScrollIndicator={false}
+                mixedContentMode="always"
+                thirdPartyCookiesEnabled
+                sharedCookiesEnabled
+                javaScriptCanOpenWindowsAutomatically
+                setSupportMultipleWindows={false}
+                userAgent={
+                  Platform.OS === "android"
+                    ? ANDROID_WEBVIEW_USER_AGENT
+                    : undefined
+                }
+                forceDarkOn={Platform.OS === "android" ? false : undefined}
+                androidLayerType={
+                  Platform.OS === "android" ? "software" : undefined
+                }
+                renderToHardwareTextureAndroid={
+                  Platform.OS === "android" ? false : undefined
+                }
+                textZoom={Platform.OS === "android" ? 100 : undefined}
+                style={{ flex: 1, backgroundColor: "#0E0D0D" }}
+              />
+              {Platform.OS === "android" && !CardField && (
+                <View className="px-4 pb-4">
+                  <Text className="text-yellow-300 text-xs">
+                    Stripe natif non disponible sur cet Android. Utilise un dev build
+                    (Expo Dev Client) pour un affichage correct des chiffres.
+                  </Text>
+                </View>
+              )}
+            </>
+          )
         )}
       </View>
     </SafeAreaView>
   );
 }
+
+

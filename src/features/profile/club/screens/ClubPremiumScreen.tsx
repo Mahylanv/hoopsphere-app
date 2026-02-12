@@ -191,7 +191,7 @@ export default function ClubPremiumScreen() {
       // Posts aimés par le club
       await fetchLikedPosts(user.uid);
     } catch (e) {
-      // console.log("❌ Erreur chargement Premium club :", e);
+      // console.log(" Erreur chargement Premium club :", e);
     } finally {
       setLoading(false);
     }
@@ -247,7 +247,7 @@ export default function ClubPremiumScreen() {
         setLikedPosts([]);
       }
     } catch (e) {
-      // console.log("❌ Maj premium club :", e);
+      // console.log(" Maj premium club :", e);
       setPremium(!value);
       Alert.alert("Erreur", "Impossible de mettre à jour le statut Premium.");
     }

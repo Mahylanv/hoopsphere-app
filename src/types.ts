@@ -102,7 +102,7 @@ export type RootStackParamList = {
 
   EditClubProfile: undefined;
 
-  Payment: undefined;
+  Payment: { userType?: "joueur" | "club" } | undefined;
   SubscriptionSettings: undefined;
   AnnualUpgrade: undefined;
   StripeCheckout: {
@@ -142,6 +142,7 @@ export type RootStackParamList = {
 export type MainTabParamListJoueur = {
   HomeScreen: undefined;
   Match: undefined;
+  Publish: undefined;
   // Chat: undefined;
   Search: undefined;
   Profil: undefined;
@@ -201,6 +202,7 @@ export type VideoItem = {
   url: string;
   cachedUrl?: string | null;
   mediaType?: "image" | "video";
+  mediaFit?: "cover" | "contain";
   avatar?: string | null;
   playerUid: string;
   likeCount: number;

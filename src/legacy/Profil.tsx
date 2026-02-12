@@ -106,7 +106,7 @@
 //         const newUrl = await updateAvatar(imageUri);
 //         if (newUrl) {
 //           setUserData((prev: any) => ({ ...prev, avatar: newUrl }));
-//           alert("Photo de profil mise à jour ✅");
+//           alert("Photo de profil mise à jour ");
 //         }
 //       }
 //     } catch (error) {
@@ -129,7 +129,7 @@
 //       await updateUserProfile(updatedData);
 //       setUserData((prev: any) => ({ ...prev, ...updatedData }));
 //       setEditMode(false);
-//       alert("Profil mis à jour ✅");
+//       alert("Profil mis à jour");
 //     } catch (e) {
 //       console.error("Erreur mise à jour :", e);
 //     }

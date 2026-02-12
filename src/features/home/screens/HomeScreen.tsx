@@ -63,6 +63,13 @@ export default function HomeScreen({ forClub = false }: Props) {
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [visitorsLoading, setVisitorsLoading] = useState(false);
   const allowedPremium = forClub ? clubPremium : isPremium;
+  const goToPremium = () => {
+    if (forClub) {
+      navigation.navigate("Payment", { userType: "club" });
+    } else {
+      navigation.navigate("Payment");
+    }
+  };
 
   // -------------------------------
   // ⭐ Animations Header / Ranking / Videos
@@ -204,6 +211,7 @@ export default function HomeScreen({ forClub = false }: Props) {
     location: post.location ?? undefined,
     createdAt: post.createdAt,
     skills: post.skills ?? [],
+    mediaFit: post.mediaFit ?? "cover",
   }));
 
   const brand = {
@@ -375,7 +383,7 @@ export default function HomeScreen({ forClub = false }: Props) {
             {!allowedPremium && (
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() => navigation.navigate("Payment")}
+                onPress={goToPremium}
                 className="flex-row items-center bg-orange-500/20 px-3 py-1.5 rounded-full border border-orange-500/40"
               >
                 <Ionicons name="lock-closed" size={14} color={brand.orange} />
@@ -413,7 +421,7 @@ export default function HomeScreen({ forClub = false }: Props) {
                       activeOpacity={0.8}
                       onPress={() => {
                         if (isLocked) {
-                          navigation.navigate("Payment");
+                          goToPremium();
                           return;
                         }
                         if (visitor.type === "club") {

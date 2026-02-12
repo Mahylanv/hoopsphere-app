@@ -569,13 +569,49 @@ const sendSubscriptionEmail = async (
     },
   });
 
-  await transporter.sendMail({
+  const smtpMeta = {
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.port === 465,
     from: smtp.from,
-    to: email,
-    subject: "Confirmation d'abonnement Hoopsphere",
-    text: lines.join("\n"),
-    html,
-  });
+  };
+
+  try {
+    await transporter.verify();
+  } catch (err: any) {
+    console.error("SMTP verify failed:", {
+      ...smtpMeta,
+      name: err?.name,
+      message: err?.message,
+      code: err?.code,
+      response: err?.response,
+      responseCode: err?.responseCode,
+      command: err?.command,
+    });
+    throw err;
+  }
+
+  try {
+    await transporter.sendMail({
+      from: smtp.from,
+      to: email,
+      subject: "Confirmation d'abonnement Hoopsphere",
+      text: lines.join("\n"),
+      html,
+    });
+  } catch (err: any) {
+    console.error("SMTP send failed:", {
+      ...smtpMeta,
+      to: email,
+      name: err?.name,
+      message: err?.message,
+      code: err?.code,
+      response: err?.response,
+      responseCode: err?.responseCode,
+      command: err?.command,
+    });
+    throw err;
+  }
 };
 
 const sendSubscriptionEmailIfNeeded = async (
@@ -609,7 +645,27 @@ const sendSubscriptionEmailIfNeeded = async (
     return;
   }
 
-  await sendSubscriptionEmail(stripe, invoice, userDoc);
+  try {
+    await sendSubscriptionEmail(stripe, invoice, userDoc);
+  } catch (err: any) {
+    console.error("Erreur envoi email abonnement:", {
+      invoiceId: invoice.id,
+      customer: typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id,
+      email: invoice.customer_email ?? null,
+      message: err?.message,
+      code: err?.code,
+    });
+    if (userDoc) {
+      await userDoc.ref.set(
+        {
+          lastInvoiceEmailError: err?.message || "SMTP error",
+          lastInvoiceEmailErrorAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
+    return;
+  }
 
   if (userDoc) {
     await userDoc.ref.set(

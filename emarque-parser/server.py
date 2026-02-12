@@ -2,7 +2,8 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import io, re, os
+import io, re, os, asyncio
+import logging
 import numpy as np
 import cv2
 import pytesseract
@@ -21,6 +22,32 @@ BASE = os.path.dirname(__file__)
 DBG_PATH = os.path.join(BASE, "debug_overlay.png")
 
 # ---------------- Utils ----------------
+logger = logging.getLogger("emarque")
+if not logger.handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
+
+TESSERACT_CMD = os.getenv("TESSERACT_CMD") or os.getenv("TESSERACT_PATH")
+if TESSERACT_CMD:
+    pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
+
+try:
+    OCR_LANGS = set(pytesseract.get_languages(config=""))
+except Exception:
+    OCR_LANGS = set()
+
+OCR_LANG = "fra+eng" if "fra" in OCR_LANGS else "eng"
+TESS_OK = False
+TESS_VERSION = None
+try:
+    TESS_VERSION = str(pytesseract.get_tesseract_version())
+    TESS_OK = True
+    logger.info("Tesseract=%s OCR_LANG=%s", TESS_VERSION, OCR_LANG)
+except Exception as e:
+    logger.warning("Tesseract non detecte (%s). OCR_LANG=%s", e, OCR_LANG)
+
 def ensure(cond, code, msg):
     if not cond:
         raise HTTPException(code, msg)
@@ -78,7 +105,9 @@ def ocr_text(img):
     if img is None or img.size == 0:
         return ""
     try:
-        return pytesseract.image_to_string(img, config="--oem 1 --psm 7 -l fra", timeout=8).strip()
+        return pytesseract.image_to_string(
+            img, config=f"--oem 1 --psm 7 -l {OCR_LANG}", timeout=8
+        ).strip()
     except pytesseract.TesseractError:
         return ""
 
@@ -257,6 +286,8 @@ def reconcile_stats(row):
     if exact_best is not None:
         t,i,e,f = exact_best[1]
     else:
+        if approx_best is None:
+            return
         t,i,e,f = approx_best[1]
 
     row["threes"]  = t
@@ -268,7 +299,7 @@ def reconcile_stats(row):
 
 # -------- Numéro de rencontre : extracteurs robustes --------
 # On conserve les espaces pour gérer "RENCONTRE N°" puis numéro à la ligne suivante
-HDR_OCR_CFG = "--oem 1 --psm 6 -l fra+eng -c preserve_interword_spaces=1"
+HDR_OCR_CFG = f"--oem 1 --psm 6 -l {OCR_LANG} -c preserve_interword_spaces=1"
 
 def _fix_ocr_digits(s: str) -> str:
     # corrige confusions fréquentes de Tesseract + supprime espaces
@@ -450,7 +481,11 @@ def extract_match_number(data: bytes, scale=6) -> (str, str):
             return num, "\n".join(debug_chunks)
 
         # Pleine page PSM 4 (blocs)
-        t_full2 = ocr_try(gray, "--oem 1 --psm 4 -l fra+eng -c preserve_interword_spaces=1", "---OCR-FULL(4)---")
+        t_full2 = ocr_try(
+            gray,
+            f"--oem 1 --psm 4 -l {OCR_LANG} -c preserve_interword_spaces=1",
+            "---OCR-FULL(4)---",
+        )
         num = _extract_num_from_text(t_full2)
         if num:
             return num, "\n".join(debug_chunks)
@@ -496,7 +531,7 @@ def is_emarque_v2(data: bytes, scale=6) -> bool:
         t = norm_txt(txt)
         k_hits = sum(1 for k in key_tokens if k in t)
         c_hits = sum(1 for k in column_tokens if k in t)
-        return (k_hits >= 1 and c_hits >= 2) or k_hits >= 2
+        return (k_hits >= 1 and c_hits >= 1) or k_hits >= 2 or c_hits >= 2
 
     # Lecture metadata brute (Producer / Title) sans parser complet
     raw = ""
@@ -635,6 +670,20 @@ def grid_ocr_full(
 
                 if key == "name":
                     t = ocr_text(cell_txt)
+                    if not t.strip():
+                        try:
+                            t = pytesseract.image_to_string(
+                                cell_txt, config=f"--oem 1 --psm 6 -l {OCR_LANG}", timeout=8
+                            ).strip()
+                        except pytesseract.TesseractError:
+                            t = ""
+                    if not t.strip():
+                        try:
+                            t = pytesseract.image_to_string(
+                                cell_bin, config=f"--oem 1 --psm 6 -l {OCR_LANG}", timeout=8
+                            ).strip()
+                        except pytesseract.TesseractError:
+                            t = ""
                     row["name"] = t
                     seen |= bool(t.strip())
                     n = norm_txt(t)
@@ -644,7 +693,7 @@ def grid_ocr_full(
 
                 elif key == "jersey":
                     v = ocr_digit_vote(cell_bin)
-                    row["jersey"] = v if (v > 0 and v <= 99) else None
+                    row["jersey"] = v if (v is not None and 0 <= v <= 99) else None
                     seen |= bool(v)
 
                 elif key == "starter":
@@ -726,7 +775,7 @@ def clean_players(players):
         if jersey is not None:
             try:
                 jersey = int(jersey)
-                if not (0 < jersey <= 99):
+                if not (0 <= jersey <= 99):
                     jersey = None
             except:
                 jersey = None
@@ -758,7 +807,13 @@ def clean_players(players):
 # ---------------- API ----------------
 @app.get("/__health")
 def health():
-    return {"ok": True}
+    return {
+        "ok": True,
+        "tesseract": TESS_VERSION,
+        "ocr_lang": OCR_LANG,
+        "ocr_available": TESS_OK,
+        "ocr_langs": sorted(OCR_LANGS),
+    }
 
 @app.post("/parse-emarque")
 async def parse_emarque(
@@ -774,34 +829,131 @@ async def parse_emarque(
         ensure(file.filename.lower().endswith(".pdf"), 400, "Le champ 'file' doit être un PDF")
         data = await file.read()
         ensure(data, 400, "Fichier vide")
-        ensure(is_emarque_v2(data, scale=scale), 400, "Le PDF ne semble pas être une feuille e-Marque V2 (FFBB).")
+        if not TESS_OK:
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "error": "OCR indisponible sur le serveur (Tesseract non détecté).",
+                    "details": {
+                        "ocr_available": TESS_OK,
+                        "tesseract": TESS_VERSION,
+                        "ocr_lang": OCR_LANG,
+                        "hint": "Installe tesseract-ocr et tesseract-ocr-fra ou utilise le Dockerfile.",
+                    },
+                },
+                status_code=503,
+            )
 
-        teamA, teamB = grid_ocr_full(
-            data,
-            debug=bool(debug),
-            scale=scale,
-            peak_frac=frac,
-            save_cells=bool(save),
-            force_order=bool(force_order),
-        )
+        def _parse_sync():
+            logger.info(
+                "parse_emarque file=%s size=%s scale=%s frac=%.3f force_order=%s OCR_LANG=%s",
+                file.filename,
+                len(data),
+                scale,
+                frac,
+                force_order,
+                OCR_LANG,
+            )
+            header_ok = is_emarque_v2(data, scale=scale)
 
-        teamA = clean_players(teamA)
-        teamB = clean_players(teamB)
+            teamA, teamB = grid_ocr_full(
+                data,
+                debug=bool(debug),
+                scale=scale,
+                peak_frac=frac,
+                save_cells=bool(save),
+                force_order=bool(force_order),
+            )
+            teamA = clean_players(teamA)
+            teamB = clean_players(teamB)
+            fallback_used = None
+            logger.info(
+                "parse_emarque header_ok=%s players=%s",
+                header_ok,
+                len(teamA) + len(teamB),
+            )
 
-        match_number, header_debug = extract_match_number(data, scale=scale)
-        match_number = match_number or None
+            if len(teamA) + len(teamB) == 0:
+                def clamp_int(v, lo, hi):
+                    return max(lo, min(hi, int(v)))
+                fallback_params = [
+                    {"scale": clamp_int(scale + 1, 2, 10), "peak_frac": max(0.10, frac - 0.04), "force_order": bool(force_order)},
+                    {"scale": clamp_int(scale, 2, 10), "peak_frac": max(0.08, frac - 0.08), "force_order": False},
+                    {"scale": clamp_int(scale + 2, 2, 10), "peak_frac": max(0.06, frac - 0.10), "force_order": False},
+                    {"scale": clamp_int(scale + 2, 2, 10), "peak_frac": min(0.30, frac + 0.06), "force_order": False},
+                ]
+                for params in fallback_params:
+                    logger.info(
+                        "fallback try scale=%s frac=%.3f force_order=%s",
+                        params["scale"],
+                        params["peak_frac"],
+                        params["force_order"],
+                    )
+                    teamA, teamB = grid_ocr_full(
+                        data,
+                        debug=bool(debug),
+                        scale=params["scale"],
+                        peak_frac=params["peak_frac"],
+                        save_cells=bool(save),
+                        force_order=bool(params["force_order"]),
+                    )
+                    teamA = clean_players(teamA)
+                    teamB = clean_players(teamB)
+                    if len(teamA) + len(teamB) > 0:
+                        fallback_used = params
+                        break
+                logger.info(
+                    "fallback result players=%s used=%s",
+                    len(teamA) + len(teamB),
+                    fallback_used,
+                )
+            if not header_ok and len(teamA) + len(teamB) == 0:
+                pdf_txt = _pdf_text_first_pages(data, max_pages=1)
+                pdf_txt_preview = norm_txt(pdf_txt)[:200] if pdf_txt else ""
+                logger.warning(
+                    "emarque not detected. pdf_text_preview='%s'",
+                    pdf_txt_preview,
+                )
+                return 400, {
+                    "ok": False,
+                    "error": "Le PDF ne semble pas etre une feuille e-Marque V2 (FFBB).",
+                    "details": {
+                        "header_ok": header_ok,
+                        "players": len(teamA) + len(teamB),
+                        "ocr_available": TESS_OK,
+                        "tesseract": TESS_VERSION,
+                        "ocr_lang": OCR_LANG,
+                        "fallback_used": fallback_used,
+                        "pdf_text_preview": pdf_txt_preview,
+                    },
+                }
+            match_number, header_debug = extract_match_number(data, scale=scale)
+            match_number = match_number or None
 
-        return {
-            "ok": True,
-            "match": {"number": match_number},
-            "teams": [
-                {"name": "Locaux",   "players": teamA},
-                {"name": "Visiteurs","players": teamB}
-            ],
-            "debug_overlay": ("saved to debug_overlay.png" if debug else None),
-            "header_text": (header_debug if debug else None),
-        }
+            return 200, {
+                "ok": True,
+                "warning": (
+                    None
+                    if header_ok and not fallback_used
+                    else "Header non reconnu, OCR force"
+                ),
+                "match": {"number": match_number},
+                "teams": [
+                    {"name": "Locaux",   "players": teamA},
+                    {"name": "Visiteurs","players": teamB}
+                ],
+                "debug_overlay": ("saved to debug_overlay.png" if debug else None),
+                "header_text": (header_debug if debug else None),
+            }
+
+        status, payload = await asyncio.to_thread(_parse_sync)
+        if status != 200:
+            return JSONResponse(payload, status_code=status)
+        return payload
     except HTTPException as he:
         return JSONResponse({"ok": False, "error": he.detail}, status_code=he.status_code)
     except Exception as e:
+        import traceback
+        print(traceback.format_exc())
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+

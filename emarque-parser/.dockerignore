@@ -1,0 +1,10 @@
+__pycache__/
+.venv/
+.pytest_cache/
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.png
+debug_cells/
+assets/

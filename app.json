@@ -1,17 +1,19 @@
 {
   "expo": {
-    "name": "Hoopsphere",
+    "name": "Hoopsphère",
     "slug": "Hoopsphere",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hoopsphere.go",
@@ -19,21 +21,45 @@
         "ITSAppUsesNonExemptEncryption": false
       }
     },
+
     "android": {
+      "icon": "./assets/icon.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/foreground.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.hoopsphere.app",
+      "versionCode": 2,
+      "permissions": [
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
+        "READ_EXTERNAL_STORAGE"
+      ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
+    "androidStatusBar": {
+      "backgroundColor": "#0E0D0D",
+      "barStyle": "light-content"
+    },
+    "androidNavigationBar": {
+      "backgroundColor": "#0E0D0D",
+      "barStyle": "light-content"
+    },
+
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./assets/favicon-16x16.png",
       "bundler": "metro"
     },
+
     "experiments": {
       "reactNativeRuntime": true
+    },
+
+    "extra": {
+      "eas": {
+        "projectId": "2f05de6c-03e3-432a-aa0f-4dec570fb8f1"
+      }
     }
   }
 }

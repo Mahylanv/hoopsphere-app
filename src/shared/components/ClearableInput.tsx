@@ -45,7 +45,7 @@ export default function ClearableInput({
           className={`bg-[#222] text-white p-3 rounded-lg pr-10 ${getBorderColor()}`}
         />
 
-        {/* ❌ Effacer */}
+        {/* Effacer */}
         {value !== "" && (
           <TouchableOpacity
             onPress={() => {

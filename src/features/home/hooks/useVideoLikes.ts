@@ -17,6 +17,7 @@ export type VideoItem = {
   description?: string;
   location?: string | null;
   createdAt?: any;
+  mediaFit?: "cover" | "contain";
 };
 
 /* ============================================================
@@ -91,7 +92,7 @@ export function useVideoLikes(
     try {
       await toggleLikePost(video.id, video.playerUid);
     } catch (e) {
-      console.error("❌ toggleLikePost error:", e);
+      console.error("toggleLikePost error:", e);
     }
   };
 

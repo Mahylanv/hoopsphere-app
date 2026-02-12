@@ -1,4 +1,4 @@
-﻿// src/Components/Connexion.tsx
+// src/Components/Connexion.tsx
 
 import React, { useEffect, useState } from "react";
 import {
@@ -19,6 +19,7 @@ import { Asset } from "expo-asset";
 
 import { RootStackParamList } from "../../../types";
 import clsx from "clsx";
+import { useAuth } from "../context/AuthContext";
 
 import { auth, db } from "../../../config/firebaseConfig";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -34,6 +35,7 @@ const backgroundImage = require("../../../../assets/connexion-basket.jpeg");
 
 export default function Connexion() {
   const navigation = useNavigation<ConnexionNavProp>();
+  const { setUserType } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -73,6 +75,7 @@ export default function Connexion() {
       const joueurDoc = await getDoc(doc(db, "joueurs", uid));
       if (joueurDoc.exists()) {
         await AsyncStorage.setItem("userType", "joueur");
+        setUserType("joueur");
         navigation.reset({
           index: 0,
           routes: [{ name: "MainTabs" }],
@@ -84,6 +87,7 @@ export default function Connexion() {
       const clubDoc = await getDoc(doc(db, "clubs", uid));
       if (clubDoc.exists()) {
         await AsyncStorage.setItem("userType", "club");
+        setUserType("club");
         navigation.reset({
           index: 0,
           routes: [{ name: "MainTabsClub" }],
@@ -190,7 +194,7 @@ export default function Connexion() {
           </Text>
         )}
 
-        {/* âš¡ Message d'erreur */}
+        {/* ⚡ Message d'erreur */}
         {error && (
           <View className="bg-red-500/10 border border-red-500/40 rounded-xl px-4 py-3 mb-4">
             <Text className="text-red-300 text-center">{error}</Text>
@@ -223,7 +227,7 @@ export default function Connexion() {
           </Text>
         </Pressable>
 
-        {/* âš¡ Message d'erreur */}
+        {/* ⚡ Message d'erreur */}
         <Pressable
           className="items-center mt-2 flex-row justify-center gap-2"
           onPress={() => navigation.goBack()}
