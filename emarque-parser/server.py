@@ -108,7 +108,7 @@ def ocr_text(img):
         return pytesseract.image_to_string(
             img, config=f"--oem 1 --psm 7 -l {OCR_LANG}", timeout=8
         ).strip()
-    except pytesseract.TesseractError:
+    except (pytesseract.TesseractError, RuntimeError):
         return ""
 
 def ocr_digit_once(img, inv=None):
@@ -124,7 +124,7 @@ def ocr_digit_once(img, inv=None):
         t = g
     try:
         txt = pytesseract.image_to_string(t, config=DIGIT_CFG, timeout=6).strip()
-    except pytesseract.TesseractError:
+    except (pytesseract.TesseractError, RuntimeError):
         return None
     txt = re.sub(r"\D", "", txt)
     if txt.isdigit():
@@ -139,7 +139,7 @@ def ocr_digit_vote(cell):
         txt = pytesseract.image_to_string(cell, config=DIGIT_CFG, timeout=5).strip()
         txt = re.sub(r"\D","",txt)
         if txt.isdigit(): cands.append(int(txt))
-    except pytesseract.TesseractError:
+    except (pytesseract.TesseractError, RuntimeError):
         pass
     v = ocr_digit_once(cell, inv=False)
     if v is not None: cands.append(v)
@@ -202,7 +202,7 @@ def ocr_fouls(cell_bin):
                 v = int(s)
                 if 0 <= v <= 5:
                     reads.append(v)
-        except pytesseract.TesseractError:
+        except (pytesseract.TesseractError, RuntimeError):
             pass
 
     # vote majoritaire
@@ -448,7 +448,7 @@ def extract_match_number(data: bytes, scale=6) -> (str, str):
         def ocr_try(img, cfg, tag):
             try:
                 t = pytesseract.image_to_string(img, config=cfg, timeout=10) or ""
-            except pytesseract.TesseractError:
+            except (pytesseract.TesseractError, RuntimeError):
                 t = ""
             if t.strip():
                 debug_chunks.append(f"{tag}\n{t[:2000]}")
@@ -557,7 +557,7 @@ def is_emarque_v2(data: bytes, scale=6) -> bool:
             t_top = pytesseract.image_to_string(
                 gray, config=HDR_OCR_CFG, timeout=8
             ) or ""
-        except pytesseract.TesseractError:
+        except (pytesseract.TesseractError, RuntimeError):
             t_top = ""
         return score(t_top)
     except Exception:
@@ -675,14 +675,14 @@ def grid_ocr_full(
                             t = pytesseract.image_to_string(
                                 cell_txt, config=f"--oem 1 --psm 6 -l {OCR_LANG}", timeout=8
                             ).strip()
-                        except pytesseract.TesseractError:
+                        except (pytesseract.TesseractError, RuntimeError):
                             t = ""
                     if not t.strip():
                         try:
                             t = pytesseract.image_to_string(
                                 cell_bin, config=f"--oem 1 --psm 6 -l {OCR_LANG}", timeout=8
                             ).strip()
-                        except pytesseract.TesseractError:
+                        except (pytesseract.TesseractError, RuntimeError):
                             t = ""
                     row["name"] = t
                     seen |= bool(t.strip())
@@ -706,7 +706,7 @@ def grid_ocr_full(
                             cell_txt, config="--oem 1 --psm 7 -l eng -c tessedit_char_whitelist=0123456789:",
                             timeout=6
                         ).strip().replace(" ", "")
-                    except pytesseract.TesseractError:
+                    except (pytesseract.TesseractError, RuntimeError):
                         s = ""
                     m = re.search(r"(\d{1,2})[:hH](\d{2})", s) or re.search(r"(\d{1,2})(\d{2})$", re.sub(r"\D","",s))
                     row["play_time"] = f"{int(m.group(1)):02d}:{int(m.group(2)):02d}" if m else ""
@@ -956,4 +956,3 @@ async def parse_emarque(
         import traceback
         print(traceback.format_exc())
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
-
