@@ -1,5 +1,5 @@
 # server.py
-from fastapi import FastAPI, UploadFile, File, HTTPException, Query
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import io, re, os, asyncio
@@ -61,6 +61,18 @@ def norm_txt(s: str) -> str:
     s = re.sub(r"[^\w ]+", " ", s)
     return re.sub(r"\s+"," ", s).strip()
 
+def tokens_for_name(s: str):
+    return set(t for t in norm_txt(s).split() if len(t) > 1)
+
+def names_match(a: str, b: str) -> bool:
+    A = tokens_for_name(a)
+    B = tokens_for_name(b)
+    if not A or not B:
+        return False
+    small = A if len(A) <= len(B) else B
+    big = B if len(A) <= len(B) else A
+    return all(t in big for t in small)
+
 # libellés tolérés
 CANON = {
     "jersey": ["n", "n maillot", "no maillot", "n°", "n° maillot", "numero"],
@@ -106,7 +118,7 @@ def ocr_text(img):
         return ""
     try:
         return pytesseract.image_to_string(
-            img, config=f"--oem 1 --psm 7 -l {OCR_LANG}", timeout=8
+            img, config=f"--oem 1 --psm 7 -l {OCR_LANG}", timeout=6
         ).strip()
     except (pytesseract.TesseractError, RuntimeError):
         return ""
@@ -570,8 +582,11 @@ def grid_ocr_full(
     scale=7,
     peak_frac=0.18,
     save_cells=False,
-    force_order=True
+    force_order=True,
+    target_fullname=""
 ):
+    target_fullname = (target_fullname or "").strip()
+    target_mode = bool(target_fullname)
     bgr = render_highres_bgr(data, scale=scale)
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
 
@@ -658,6 +673,8 @@ def grid_ocr_full(
                 continue
 
             row, seen = {}, False
+            row_name_done = False
+            row_matches_target = not target_mode
 
             for i in range(len(xs) - 1):
                 if i not in col_keys:
@@ -668,24 +685,31 @@ def grid_ocr_full(
 
                 key = col_keys[i]
 
+                # Mode cible: éviter l'OCR coûteux si le nom de la ligne ne correspond pas.
+                if target_mode and row_name_done and not row_matches_target and key not in ("jersey", "name"):
+                    continue
+
                 if key == "name":
                     t = ocr_text(cell_txt)
                     if not t.strip():
                         try:
                             t = pytesseract.image_to_string(
-                                cell_txt, config=f"--oem 1 --psm 6 -l {OCR_LANG}", timeout=8
+                                cell_txt, config=f"--oem 1 --psm 6 -l {OCR_LANG}", timeout=5
                             ).strip()
                         except (pytesseract.TesseractError, RuntimeError):
                             t = ""
                     if not t.strip():
                         try:
                             t = pytesseract.image_to_string(
-                                cell_bin, config=f"--oem 1 --psm 6 -l {OCR_LANG}", timeout=8
+                                cell_bin, config=f"--oem 1 --psm 6 -l {OCR_LANG}", timeout=5
                             ).strip()
                         except (pytesseract.TesseractError, RuntimeError):
                             t = ""
                     row["name"] = t
                     seen |= bool(t.strip())
+                    row_name_done = True
+                    if target_mode:
+                        row_matches_target = names_match(t, target_fullname)
                     n = norm_txt(t)
                     if n in BAD_NAME_TOKENS or "depart" in n or n == "nom prenom":
                         row = {}
@@ -725,6 +749,9 @@ def grid_ocr_full(
                     cv2.imwrite(os.path.join(out_dir, f"{i:02d}_{key}.png"), cell_txt)
 
             if not (row.get("name") or row.get("jersey") is not None or seen):
+                continue
+
+            if target_mode and not row_matches_target:
                 continue
 
             reconcile_stats(row)
@@ -818,9 +845,10 @@ def health():
 @app.post("/parse-emarque")
 async def parse_emarque(
     file: UploadFile = File(...),
+    fullname: str = Form(""),
     debug: int = Query(0),
     mode: str = Query("grid"),
-    scale: int = Query(7, ge=2, le=10),
+    scale: int = Query(6, ge=2, le=10),
     frac: float = Query(0.18, ge=0.05, le=0.5),
     save: int = Query(0),
     force_order: int = Query(1),
@@ -863,6 +891,7 @@ async def parse_emarque(
                 peak_frac=frac,
                 save_cells=bool(save),
                 force_order=bool(force_order),
+                target_fullname=fullname,
             )
             teamA = clean_players(teamA)
             teamB = clean_players(teamB)
@@ -882,6 +911,8 @@ async def parse_emarque(
                     {"scale": clamp_int(scale + 2, 2, 10), "peak_frac": max(0.06, frac - 0.10), "force_order": False},
                     {"scale": clamp_int(scale + 2, 2, 10), "peak_frac": min(0.30, frac + 0.06), "force_order": False},
                 ]
+                if (fullname or "").strip():
+                    fallback_params = fallback_params[:2]
                 for params in fallback_params:
                     logger.info(
                         "fallback try scale=%s frac=%.3f force_order=%s",
@@ -896,6 +927,7 @@ async def parse_emarque(
                         peak_frac=params["peak_frac"],
                         save_cells=bool(save),
                         force_order=bool(params["force_order"]),
+                        target_fullname=fullname,
                     )
                     teamA = clean_players(teamA)
                     teamB = clean_players(teamB)
