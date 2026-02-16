@@ -254,7 +254,30 @@ export default function Match() {
         body: form,
         signal: controller.signal,
       });
-      const json = (await resp.json()) as any;
+      const rawBody = await resp.text();
+      let json: any = null;
+      try {
+        json = rawBody ? JSON.parse(rawBody) : null;
+      } catch {
+        json = null;
+      }
+
+      if (!json || typeof json !== "object") {
+        const contentType = resp.headers.get("content-type") || "";
+        const preview = rawBody.replace(/\s+/g, " ").trim().slice(0, 180);
+        console.warn(
+          "Parser response is not JSON",
+          `status=${resp.status}`,
+          `contentType=${contentType}`,
+          `bodyPreview=${preview}`
+        );
+        throw new Error(
+          resp.ok
+            ? "Réponse invalide du serveur parser. Réessaie dans quelques secondes."
+            : `Serveur parser indisponible (${resp.status}). Réessaie dans quelques secondes.`
+        );
+      }
+
       if (!resp.ok || json?.ok === false) {
         const errMsg =
           json?.error ||
