@@ -1,6 +1,7 @@
 // src/Pages/Match.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Platform,
   View,
   Text,
   TouchableOpacity,
@@ -9,10 +10,15 @@ import {
   StatusBar,
   DeviceEventEmitter,
   ScrollView,
+  Modal,
+  Image,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
-import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import * as FileSystem from "expo-file-system";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { doc, serverTimestamp, getDoc, addDoc, collection } from "firebase/firestore";
 import { auth, db } from "../config/firebaseConfig";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
@@ -58,6 +64,10 @@ const rawApiUrl = (process.env.EXPO_PUBLIC_EMARQUE_URL || "http://localhost:8000
 const API_URL = rawApiUrl.endsWith("/parse-emarque")
   ? rawApiUrl
   : `${rawApiUrl.replace(/\/$/, "")}/parse-emarque`;
+const PARSE_DURATION_KEY = "emarque_parse_durations_ms";
+const DEFAULT_PARSE_MS = 45000;
+const MIN_PARSE_MS = 10000;
+const MAX_PARSE_MS = 120000;
 
 function normalize(s: string) {
   return s
@@ -97,9 +107,16 @@ export default function Match() {
   const [pdfName, setPdfName] = useState<string | null>(null);
   const [pdfUri, setPdfUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [etaSeconds, setEtaSeconds] = useState<number | null>(null);
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [matchNumber, setMatchNumber] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showExample, setShowExample] = useState(false);
+  const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const progressStartRef = useRef<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const estimateMsRef = useRef<number>(DEFAULT_PARSE_MS);
 
   // Récupère Prenom/Nom depuis joueurs/{uid}, en gérant les 2 casings
   useEffect(() => {
@@ -138,6 +155,27 @@ export default function Match() {
     run();
   }, []);
 
+  useEffect(() => {
+    const loadEstimates = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(PARSE_DURATION_KEY);
+        if (!raw) return;
+        const list = JSON.parse(raw) as number[];
+        if (!Array.isArray(list) || list.length === 0) return;
+        const valid = list.filter((v) => Number.isFinite(v) && v > 0);
+        if (valid.length === 0) return;
+        const avg = valid.reduce((sum, v) => sum + v, 0) / valid.length;
+        estimateMsRef.current = Math.min(
+          MAX_PARSE_MS,
+          Math.max(MIN_PARSE_MS, Math.round(avg))
+        );
+      } catch {
+        // ignore
+      }
+    };
+    loadEstimates();
+  }, []);
+
   const canParse = useMemo(
     () => !!pdfUri && !!fullName?.trim() && !profileLoading,
     [pdfUri, fullName, profileLoading]
@@ -152,7 +190,23 @@ export default function Match() {
     if (res?.assets && res.assets.length > 0) {
       const f = res.assets[0];
       setPdfName(f.name || "feuille.pdf");
-      setPdfUri(f.uri);
+      // Android: ensure we upload a real local file path
+      if (Platform.OS === "android") {
+        const safeName = (f.name || "feuille.pdf").replace(/[^\w.-]+/g, "_");
+        const fsAny = FileSystem as any;
+        const baseDir =
+          fsAny.cacheDirectory || fsAny.documentDirectory || "";
+        const dest = `${baseDir}emarque_${Date.now()}_${safeName}`;
+        const sourceUri = (f as any).fileCopyUri || f.uri;
+        try {
+          await FileSystem.copyAsync({ from: sourceUri, to: dest });
+          setPdfUri(dest);
+        } catch {
+          setPdfUri(sourceUri);
+        }
+      } else {
+        setPdfUri(f.uri);
+      }
     }
   };
 
@@ -170,13 +224,60 @@ export default function Match() {
       setLoading(true);
       setStats(null);
       setMatchNumber(null);
+      setProgress(0);
+      setEtaSeconds(null);
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      const progressEstimateMs = estimateMsRef.current || DEFAULT_PARSE_MS;
+      const start = Date.now();
+      progressStartRef.current = start;
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+      progressTimerRef.current = setInterval(() => {
+        const elapsed = Date.now() - start;
+        const ratio = Math.min(0.95, elapsed / progressEstimateMs);
+        const remaining = Math.max(
+          1,
+          Math.ceil((progressEstimateMs - elapsed) / 1000)
+        );
+        setProgress(ratio);
+        setEtaSeconds(remaining);
+      }, 500);
 
       const form = new FormData();
       form.append("fullname", fullName);
       form.append("file", { name: pdfName || "feuille.pdf", type: "application/pdf", uri: pdfUri } as any);
 
-      const resp = await fetch(API_URL, { method: "POST", body: form });
-      const json = (await resp.json()) as any;
+      const resp = await fetch(API_URL, {
+        method: "POST",
+        body: form,
+        signal: controller.signal,
+      });
+      const rawBody = await resp.text();
+      let json: any = null;
+      try {
+        json = rawBody ? JSON.parse(rawBody) : null;
+      } catch {
+        json = null;
+      }
+
+      if (!json || typeof json !== "object") {
+        const contentType = resp.headers.get("content-type") || "";
+        const preview = rawBody.replace(/\s+/g, " ").trim().slice(0, 180);
+        console.warn(
+          "Parser response is not JSON",
+          `status=${resp.status}`,
+          `contentType=${contentType}`,
+          `bodyPreview=${preview}`
+        );
+        throw new Error(
+          resp.ok
+            ? "Réponse invalide du serveur parser. Réessaie dans quelques secondes."
+            : `Serveur parser indisponible (${resp.status}). Réessaie dans quelques secondes.`
+        );
+      }
+
       if (!resp.ok || json?.ok === false) {
         const errMsg =
           json?.error ||
@@ -202,11 +303,58 @@ export default function Match() {
       }
       setStats(found);
     } catch (e: any) {
+      if (e?.name === "AbortError") {
+        return;
+      }
       console.error(e);
       Alert.alert("Erreur parsing", e?.message || "Impossible de lire le PDF.");
     } finally {
+      const startedAt = progressStartRef.current;
+      if (startedAt) {
+        const actualMs = Date.now() - startedAt;
+        const prev = estimateMsRef.current || DEFAULT_PARSE_MS;
+        const smoothed = Math.round(prev * 0.7 + actualMs * 0.3);
+        estimateMsRef.current = Math.min(
+          MAX_PARSE_MS,
+          Math.max(MIN_PARSE_MS, smoothed)
+        );
+        try {
+          const raw = await AsyncStorage.getItem(PARSE_DURATION_KEY);
+          const list = raw ? (JSON.parse(raw) as number[]) : [];
+          const next = Array.isArray(list) ? list : [];
+          next.push(actualMs);
+          while (next.length > 5) next.shift();
+          await AsyncStorage.setItem(
+            PARSE_DURATION_KEY,
+            JSON.stringify(next)
+          );
+        } catch {
+          // ignore
+        }
+      }
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
+      }
+      abortRef.current = null;
+      setProgress(1);
+      setEtaSeconds(null);
       setLoading(false);
     }
+  };
+
+  const handleCancelParse = () => {
+    if (!loading) return;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    if (progressTimerRef.current) {
+      clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+    }
+    progressStartRef.current = null;
+    setProgress(0);
+    setEtaSeconds(null);
+    setLoading(false);
   };
 
   const handleSave = async () => {
@@ -233,38 +381,34 @@ export default function Match() {
         turnovers: null as number | null,
       };
 
-      const ref = doc(db, "joueurs", user.uid, "matches", String(matchNumber));
-      await setDoc(
-        ref,
-        {
-          // Méta obligatoires pour tes règles
-          matchNumber: String(matchNumber),
-          playerUid: user.uid,
-          playerFullname: fullName.trim(),
+      const ref = collection(db, "joueurs", user.uid, "matches");
+      await addDoc(ref, {
+        // Méta obligatoires pour tes règles
+        matchNumber: String(matchNumber),
+        playerUid: user.uid,
+        playerFullname: fullName.trim(),
 
-          // Date du match (à défaut d’info dans le PDF, on timestamp)
-          matchDate: serverTimestamp(),
+        // Date du match (à défaut d’info dans le PDF, on timestamp)
+        matchDate: serverTimestamp(),
 
-          // Champs normalisés pour le graphique
-          ...normalized,
+        // Champs normalisés pour le graphique
+        ...normalized,
 
-          // Tes champs d’origine — conservés (utile pour l’écran détail)
-          jersey: stats.jersey ?? null,
-          starter: stats.starter ?? null,
-          play_time: stats.play_time ?? null,
-          shots_made: toNum(stats.shots_made),
-          threes: toNum(stats.threes),
-          two_int: toNum(stats.two_int),
-          two_ext: toNum(stats.two_ext),
-          ft_made: toNum(stats.ft_made),
-          fouls_committed: toNum(stats.fouls_committed),
+        // Tes champs d’origine — conservés (utile pour l’écran détail)
+        jersey: stats.jersey ?? null,
+        starter: stats.starter ?? null,
+        play_time: stats.play_time ?? null,
+        shots_made: toNum(stats.shots_made),
+        threes: toNum(stats.threes),
+        two_int: toNum(stats.two_int),
+        two_ext: toNum(stats.two_ext),
+        ft_made: toNum(stats.ft_made),
+        fouls_committed: toNum(stats.fouls_committed),
 
-          // Trace
-          sourcePdfName: pdfName ?? null,
-          parsedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+        // Trace
+        sourcePdfName: pdfName ?? null,
+        parsedAt: serverTimestamp(),
+      });
 
       // Rafraîchir le profil/graphique
       DeviceEventEmitter.emit("force-profile-reload");
@@ -283,6 +427,34 @@ export default function Match() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0E0D0D" }}>
       <StatusBar barStyle="light-content" />
+      <Modal
+        visible={showExample}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowExample(false)}
+      >
+        <Pressable
+          onPress={() => setShowExample(false)}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.8)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 16,
+          }}
+        >
+          <Image
+            source={require("../../assets/feuille.png")}
+            style={{
+              width: "100%",
+              height: "85%",
+              borderRadius: 12,
+              backgroundColor: "#111827",
+            }}
+            resizeMode="contain"
+          />
+        </Pressable>
+      </Modal>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 16, paddingBottom: 28 }}
@@ -312,6 +484,20 @@ export default function Match() {
               PDF officiel uniquement (e‑Marque V2)
             </Text>
           </View>
+          <TouchableOpacity
+            onPress={() => setShowExample(true)}
+            style={{ marginTop: 6 }}
+          >
+            <Text
+              style={{
+                color: "#93c5fd",
+                textDecorationLine: "underline",
+                fontWeight: "600",
+              }}
+            >
+              Exemple de pdf accepté
+            </Text>
+          </TouchableOpacity>
         </LinearGradient>
 
         <View
@@ -366,6 +552,68 @@ export default function Match() {
           </TouchableOpacity>
         </View>
         {pdfName ? <Text style={{ color: "#9ca3af", marginBottom: 12 }}>{pdfName}</Text> : null}
+
+        {loading && (
+          <View
+            style={{
+              backgroundColor: "#0b111d",
+              borderRadius: 16,
+              padding: 14,
+              borderWidth: 1,
+              borderColor: "rgba(249,115,22,0.3)",
+              marginBottom: 12,
+            }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "700", marginBottom: 6 }}>
+              Analyse du PDF en cours…
+            </Text>
+            <View
+              style={{
+                height: 10,
+                backgroundColor: "#1f2937",
+                borderRadius: 999,
+                overflow: "hidden",
+              }}
+            >
+              <View
+                style={{
+                  height: "100%",
+                  width: `${Math.round(progress * 100)}%`,
+                  backgroundColor: "#f97316",
+                }}
+              />
+            </View>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginTop: 6,
+              }}
+            >
+              <Text style={{ color: "#9ca3af", fontSize: 12 }}>
+                {etaSeconds
+                  ? `Temps estimé restant : ~${etaSeconds}s`
+                  : "Temps estimé en cours…"}
+              </Text>
+              <Text style={{ color: "#f97316", fontSize: 12, fontWeight: "700" }}>
+                {Math.round(progress * 100)}%
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={handleCancelParse}
+              style={{
+                marginTop: 12,
+                backgroundColor: "#374151",
+                paddingVertical: 10,
+                borderRadius: 10,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "700" }}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {matchNumber ? (
           <View

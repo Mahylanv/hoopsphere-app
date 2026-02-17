@@ -29,7 +29,7 @@ export function usePlayers() {
         setLoading(false);
       },
       (err) => {
-        console.error("❌ Erreur Firestore joueurs:", err);
+        console.error("Erreur Firestore joueurs:", err);
         setError("Impossible de charger les joueurs");
         setLoading(false);
       }

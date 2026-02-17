@@ -62,7 +62,7 @@ export function useFavoritePlayers(enabled = true) {
         setLoading(false);
       },
       (err) => {
-        console.error("❌ Erreur snapshot favoritePlayers:", err);
+        console.error(" Erreur snapshot favoritePlayers:", err);
         setLoading(false);
       }
     );
@@ -122,7 +122,7 @@ export function useFavoritePlayers(enabled = true) {
           doc(db, "clubs", clubUid, "favoritePlayers", playerUid)
         );
       } catch (e) {
-        console.error("❌ Erreur suppression favori joueur:", playerUid, e);
+        console.error(" Erreur suppression favori joueur:", playerUid, e);
       }
     }
   }, [clubUid, favoritePlayerIds, enabled]);

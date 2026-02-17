@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   StyleSheet,
+  Platform,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
@@ -52,6 +53,10 @@ export default function ProfilClub() {
   );
   const [ownerMenuVisible, setOwnerMenuVisible] = useState(false);
   const insets = useSafeAreaInsets();
+  const safeTopInset = Math.max(
+    insets.top,
+    Platform.OS === "android" ? StatusBar.currentHeight ?? 0 : 0
+  );
 
   const resetToLegacyHome = () => {
     const parentNav = (navigation as any)?.getParent?.();
@@ -116,7 +121,7 @@ export default function ProfilClub() {
           },
           { merge: true }
         );
-        // console.log("✅ Vue club enregistrée en BDD", { clubId, viewerUid, viewDocId });
+        // console.log("Vue club enregistrée en BDD", { clubId, viewerUid, viewDocId });
         hasRecordedView.current = true;
       } catch (e) {
         // console.log("⚠️ Impossible d'enregistrer la vue club :", e);
@@ -172,7 +177,7 @@ export default function ProfilClub() {
       await updateDoc(doc(db, "clubs", uid), { logo: downloadUrl });
       setClub((prev: any) => ({ ...prev, logo: downloadUrl }));
 
-      Alert.alert("Succès ✅", "Logo mis à jour avec succès !");
+      Alert.alert("Succès", "Logo mis à jour avec succès !");
     } catch (err) {
       console.error("Erreur upload logo :", err);
       Alert.alert("Erreur", "Impossible de mettre à jour le logo.");
@@ -270,6 +275,7 @@ export default function ProfilClub() {
           visible={ownerMenuVisible}
           transparent
           animationType="fade"
+          statusBarTranslucent
           onRequestClose={closeOwnerMenu}
         >
           <View className="flex-1">
@@ -280,7 +286,7 @@ export default function ProfilClub() {
             <View
               style={{
                 position: "absolute",
-                top: insets.top + 12,
+                top: safeTopInset + 12,
                 right: 12,
               }}
             >

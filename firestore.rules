@@ -28,6 +28,13 @@ service cloud.firestore {
         allow update: if false;
       }
 
+      match /devices/{deviceId} {
+        allow read, create, delete: if
+          request.auth != null &&
+          request.auth.uid == uid;
+        allow update: if false;
+      }
+
       match /matches/{matchId} {
         allow read: if true;
         allow create, update, delete: if
@@ -130,6 +137,13 @@ service cloud.firestore {
         request.auth.uid == clubUid;
 
       match /favoritePlayers/{playerUid} {
+        allow read, create, delete: if
+          request.auth != null &&
+          request.auth.uid == clubUid;
+        allow update: if false;
+      }
+
+      match /devices/{deviceId} {
         allow read, create, delete: if
           request.auth != null &&
           request.auth.uid == clubUid;

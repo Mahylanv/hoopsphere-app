@@ -15,9 +15,10 @@ import {
   SafeAreaView,
   initialWindowMetrics,
 } from "react-native-safe-area-context";
-import { StatusBar, ActivityIndicator, View } from "react-native";
+import { StatusBar, ActivityIndicator, View, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { MenuProvider } from "react-native-popup-menu";
+import * as NavigationBar from "expo-navigation-bar";
 
 import { AuthProvider, useAuth } from "./src/features/auth/context/AuthContext";
 import { RootStackParamList } from "./src/types";
@@ -210,9 +211,23 @@ function RootNavigator() {
 }
 
 export default function App() {
+  React.useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const run = async () => {
+      try {
+        await NavigationBar.setBackgroundColorAsync("#0E0D0D");
+        await NavigationBar.setButtonStyleAsync("light");
+        await NavigationBar.setVisibilityAsync("visible");
+      } catch {
+        // ignore
+      }
+    };
+    run();
+  }, []);
+
   return (
     <StripeWrapper>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#0E0D0D" }}>
         <AuthProvider>
           <SafeAreaProvider initialMetrics={initialWindowMetrics}>
             <StatusBar

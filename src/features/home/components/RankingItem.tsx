@@ -1,7 +1,14 @@
 // src/Home/components/RankingItem.tsx
 
 import React from "react";
-import { View, Text, Image, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  useWindowDimensions,
+  Platform,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { RankingFilter } from "../../search/utils/sortPlayers";
@@ -29,6 +36,10 @@ export default function RankingItem({
   filter,
   onPress,
 }: RankingItemProps) {
+  const { width } = useWindowDimensions();
+  const isSmallDevice = width <= 360;
+  const isIOS = Platform.OS === "ios";
+
   const brand = {
     orange: "#F97316",
     blue: "#2563EB",
@@ -47,7 +58,7 @@ export default function RankingItem({
       ? "arrow-up"
       : player.trend === "down"
         ? "arrow-down"
-        : "remove";
+        : "remove-outline";
   const avatarUri =
     typeof player.avatar === "string" &&
     player.avatar.trim() !== "" &&
@@ -59,7 +70,7 @@ export default function RankingItem({
   const getStatText = () => {
     switch (filter) {
       case "rating":
-        return `Rating : ${player.rating}/100`;
+        return "";
       case "points":
         return `PTS : ${player.average}`;
       case "threes":
@@ -77,6 +88,8 @@ export default function RankingItem({
     }
   };
 
+  const statText = getStatText();
+
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
       <LinearGradient
@@ -85,28 +98,56 @@ export default function RankingItem({
         end={{ x: 1, y: 1 }}
         style={{
           borderRadius: 18,
-          padding: 1.5,
-          marginBottom: 12,
+          padding: isIOS ? 0.8 : 1.5,
+          marginBottom: isSmallDevice ? 10 : 12,
         }}
       >
-        <View className="flex-row items-center rounded-[16px] px-4 py-3 bg-[#0E0D0D] border border-gray-800">
-          <View className="w-10 h-10 rounded-full items-center justify-center mr-3"
+        <View
+          className="flex-row items-center rounded-[16px] bg-[#0E0D0D] border border-gray-800"
+          style={{
+            paddingHorizontal: isSmallDevice ? 10 : 16,
+            paddingVertical: isSmallDevice ? 8 : 12,
+            borderWidth: isIOS ? 0.5 : 1,
+          }}
+        >
+          <View
+            className="rounded-full items-center justify-center mr-3"
             style={{ backgroundColor: "rgba(249,115,22,0.14)" }}
           >
-            <Text className="text-orange-500 text-xl font-bold">
-              {player.rank}
-            </Text>
+            <View
+              style={{
+                width: isSmallDevice ? 24 : 30,
+                height: isSmallDevice ? 24 : 30,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text
+                className="text-orange-500 font-bold"
+                style={{ fontSize: isSmallDevice ? 12 : 16 }}
+              >
+                {player.rank}
+              </Text>
+            </View>
           </View>
 
           <Image
             source={avatarUri ? { uri: avatarUri } : PROFILE_PLACEHOLDER}
-            className="w-12 h-12 rounded-full mr-4 bg-gray-700"
+            className="rounded-full mr-3 bg-gray-700"
+            style={{
+              width: isSmallDevice ? 36 : 44,
+              height: isSmallDevice ? 36 : 44,
+            }}
             resizeMode="cover"
           />
 
           <View className="flex-1">
-            <View className="flex-row items-center">
-              <Text className="text-white font-semibold text-lg">
+            <View className="flex-row items-center flex-wrap">
+              <Text
+                className="text-white font-semibold"
+                style={{ fontSize: isSmallDevice ? 15 : 18 }}
+                numberOfLines={1}
+              >
                 {player.name}
               </Text>
               {player.premium && (
@@ -115,20 +156,44 @@ export default function RankingItem({
                 </View>
               )}
             </View>
-            <View className="flex-row items-center mt-1">
-              <Text className="text-gray-300 text-sm">{getStatText()}</Text>
-              <View className="flex-row items-center ml-3 px-2 py-1 rounded-full"
-                style={{ backgroundColor: "rgba(37,99,235,0.18)" }}
+            <View className="flex-row items-center mt-1 flex-wrap">
+              {statText ? (
+                <Text
+                  className="text-gray-300"
+                  style={{ fontSize: isSmallDevice ? 12 : 14 }}
+                  numberOfLines={1}
+                >
+                  {statText}
+                </Text>
+              ) : null}
+              <View
+                className="flex-row items-center px-2 py-1 rounded-full"
+                style={{
+                  backgroundColor: "rgba(37,99,235,0.18)",
+                  marginLeft: 0,
+                }}
               >
-                <Ionicons name="star" size={12} color={brand.orange} />
-                <Text className="text-gray-200 text-xs ml-1">
+                <Ionicons
+                  name="star"
+                  size={isSmallDevice ? 10 : 12}
+                  color={brand.orange}
+                />
+                <Text
+                  className="text-gray-200 ml-1"
+                  style={{ fontSize: isSmallDevice ? 10 : 12 }}
+                  numberOfLines={1}
+                >
                   {player.rating.toFixed(0)} pts
                 </Text>
               </View>
             </View>
           </View>
 
-          <Ionicons name={trendIcon} size={26} color={trendColor} />
+          <Ionicons
+            name={trendIcon}
+            size={isSmallDevice ? 20 : 26}
+            color={trendColor}
+          />
         </View>
       </LinearGradient>
     </TouchableOpacity>
