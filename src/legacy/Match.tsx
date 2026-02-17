@@ -359,7 +359,6 @@ export default function Match() {
 
   const handleSave = async () => {
     if (!stats) return Alert.alert("Aucune stats", "Analyse d’abord un PDF pour récupérer tes stats.");
-    if (!matchNumber) return Alert.alert("Numéro de match manquant", "Le numéro de rencontre n’a pas été détecté.");
     const user = auth.currentUser;
     if (!user?.uid) return Alert.alert("Connexion requise", "Tu dois être connecté pour enregistrer tes stats.");
 
@@ -384,7 +383,8 @@ export default function Match() {
       const ref = collection(db, "joueurs", user.uid, "matches");
       await addDoc(ref, {
         // Méta obligatoires pour tes règles
-        matchNumber: String(matchNumber),
+        // `matchNumber` peut être absent selon la qualité OCR du header.
+        matchNumber: matchNumber || null,
         playerUid: user.uid,
         playerFullname: fullName.trim(),
 
@@ -634,6 +634,21 @@ export default function Match() {
             </View>
             <Row label="N° de rencontre" value={matchNumber} />
           </View>
+        ) : stats ? (
+          <View
+            style={{
+              marginTop: 4,
+              padding: 12,
+              borderRadius: 12,
+              backgroundColor: "#1f2937",
+              borderWidth: 1,
+              borderColor: "rgba(249,115,22,0.35)",
+            }}
+          >
+            <Text style={{ color: "#fbbf24", fontSize: 13 }}>
+              Numéro de rencontre non détecté. Tu peux quand même enregistrer tes stats.
+            </Text>
+          </View>
         ) : null}
 
         {stats && (
@@ -669,10 +684,10 @@ export default function Match() {
 
             <TouchableOpacity
               onPress={handleSave}
-              disabled={saving || !matchNumber}
+              disabled={saving}
               style={{
                 marginTop: 12,
-                backgroundColor: matchNumber ? "#f97316" : "#374151",
+                backgroundColor: saving ? "#374151" : "#f97316",
                 padding: 14,
                 borderRadius: 12,
                 alignItems: "center",
