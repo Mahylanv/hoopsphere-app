@@ -15,6 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../../../types";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import KeyboardFormScrollView from "../../../../../shared/components/KeyboardFormScrollView";
 
 type NavProps = NativeStackNavigationProp<
   RootStackParamList,
@@ -77,7 +78,10 @@ export default function InscriptionJoueurStep1() {
           </View>
 
           {/* ---------- PAGE CENTRÉE ---------- */}
-          <View className="flex-1 justify-center">
+          <KeyboardFormScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+          >
             <Text className="text-white text-3xl font-bold text-center mb-3">
               Crée ton profil joueur
             </Text>
@@ -168,7 +172,7 @@ export default function InscriptionJoueurStep1() {
           <View className="w-6 h-[2px] bg-gray-600 mx-1" />
           <View className="w-2 h-2 rounded-full bg-gray-600" />
         </View>
-          </View>
+          </KeyboardFormScrollView>
         </SafeAreaView>
       </ImageBackground>
     </View>

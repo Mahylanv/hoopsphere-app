@@ -7,14 +7,12 @@ import {
   TextInput,
   StatusBar,
   ScrollView,
-  Platform,
   TouchableOpacity,
   Pressable,
   Image,
   Alert,
   Modal,
   ImageBackground,
-  KeyboardAvoidingView,
   Keyboard,
   TouchableWithoutFeedback,
 } from "react-native";
@@ -30,6 +28,7 @@ import DepartmentSelect from "../../../../../shared/components/DepartmentSelect"
 import { registerPlayer } from "../../../services/authService";
 
 import { auth } from "../../../../../config/firebaseConfig";
+import KeyboardFormScrollView from "../../../../../shared/components/KeyboardFormScrollView";
 
 const tailles = Array.from({ length: 71 }, (_, i) => `${150 + i} cm`);
 const poidsOptions = Array.from({ length: 101 }, (_, i) => `${40 + i} kg`);
@@ -151,11 +150,7 @@ export default function InscriptionJoueurStep3() {
         <View className="absolute inset-0 bg-black/55" />
         <SafeAreaView className="flex-1">
           <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <KeyboardAvoidingView
-              className="flex-1"
-              behavior={Platform.OS === "ios" ? "padding" : undefined}
-              keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-            >
+            <View className="flex-1">
               {/* -------------------------------- HEADER -------------------------------- */}
               <View className="flex-row items-center px-6 mt-6">
                 <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -195,11 +190,12 @@ export default function InscriptionJoueurStep3() {
               </View>
 
               {/* -------------------------------- FORM -------------------------------- */}
-              <ScrollView
-                className="px-6"
-                contentContainerStyle={{ paddingBottom: 120 }}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
+              <KeyboardFormScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{
+                  paddingHorizontal: 24,
+                  paddingBottom: 120,
+                }}
               >
         {/* TAILLE */}
         <TouchableOpacity
@@ -307,8 +303,8 @@ export default function InscriptionJoueurStep3() {
           <View className="w-6 h-[2px] bg-gray-600 mx-1" />
           <View className="w-2 h-2 rounded-full bg-orange-500" />
         </View>
-          </ScrollView>
-            </KeyboardAvoidingView>
+          </KeyboardFormScrollView>
+            </View>
           </TouchableWithoutFeedback>
 
       {/* -------------------------------- MODALES -------------------------------- */}

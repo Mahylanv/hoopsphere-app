@@ -7,13 +7,10 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
-  ScrollView,
   Modal,
   Dimensions,
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -32,6 +29,7 @@ import {
 } from "firebase/storage";
 import { storage } from "../../../../../config/firebaseConfig";
 import { auth } from "../../../../../config/firebaseConfig";
+import KeyboardFormScrollView from "../../../../../shared/components/KeyboardFormScrollView";
 
 const { width, height } = Dimensions.get("window");
 
@@ -234,14 +232,10 @@ export default function EditPostScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        className="flex-1"
+      <KeyboardFormScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 50 }}
       >
-        <ScrollView
-          contentContainerStyle={{ paddingBottom: 50 }}
-          keyboardShouldPersistTaps="handled"
-        >
         {/* VISIBILITY */}
         <View className="mt-6 ml-5">
           <Text className="text-white mb-2 font-semibold">Visibilité</Text>
@@ -453,8 +447,7 @@ export default function EditPostScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardFormScrollView>
 
       {/* FULLSCREEN VIDEO */}
       <Modal visible={fullscreen} transparent animationType="fade">

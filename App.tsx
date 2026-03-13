@@ -19,6 +19,7 @@ import { StatusBar, ActivityIndicator, View, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { MenuProvider } from "react-native-popup-menu";
 import * as NavigationBar from "expo-navigation-bar";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { AuthProvider, useAuth } from "./src/features/auth/context/AuthContext";
 import { RootStackParamList } from "./src/types";
@@ -229,19 +230,21 @@ export default function App() {
     <StripeWrapper>
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#0E0D0D" }}>
         <AuthProvider>
-          <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-            <StatusBar
-              translucent
-              backgroundColor="transparent"
-              barStyle="light-content"
-            />
+          <KeyboardProvider statusBarTranslucent>
+            <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+              <StatusBar
+                translucent
+                backgroundColor="transparent"
+                barStyle="light-content"
+              />
 
-            <MenuProvider skipInstanceCheck>
-              <PersistedNavContainer>
-                <RootNavigator />
-              </PersistedNavContainer>
-            </MenuProvider>
-          </SafeAreaProvider>
+              <MenuProvider skipInstanceCheck>
+                <PersistedNavContainer>
+                  <RootNavigator />
+                </PersistedNavContainer>
+              </MenuProvider>
+            </SafeAreaProvider>
+          </KeyboardProvider>
         </AuthProvider>
       </GestureHandlerRootView>
     </StripeWrapper>
