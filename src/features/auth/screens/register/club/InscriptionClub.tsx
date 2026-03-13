@@ -8,8 +8,6 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   ImageBackground,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,6 +18,7 @@ import { RootStackParamList } from "../../../../../types";
 import { TextInput as RNTextInput } from "react-native";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../../../../config/firebaseConfig";
+import KeyboardFormScrollView from "../../../../../shared/components/KeyboardFormScrollView";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "InscriptionClub">;
 
@@ -90,9 +89,12 @@ export default function InscriptionClub() {
         <View className="absolute inset-0 bg-black/55" />
         <SafeAreaView style={{ flex: 1 }}>
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <KeyboardAvoidingView
-              className="flex-1 px-6"
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
+            <KeyboardFormScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{
+                flexGrow: 1,
+                paddingHorizontal: 24,
+              }}
             >
           {/* HEADER */}
           <View className="flex-row items-center mt-6 mb-4">
@@ -225,7 +227,7 @@ export default function InscriptionClub() {
               <View className="w-2 h-2 rounded-full bg-gray-600" />
             </View>
           </View>
-            </KeyboardAvoidingView>
+            </KeyboardFormScrollView>
           </TouchableWithoutFeedback>
         </SafeAreaView>
       </ImageBackground>

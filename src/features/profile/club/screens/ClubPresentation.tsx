@@ -10,8 +10,6 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { RootStackParamList } from "../../../../types";
 import { auth, db } from "../../../../config/firebaseConfig";
 import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
+import KeyboardFormScrollView from "../../../../shared/components/KeyboardFormScrollView";
 
 type ClubProfileRouteProp = RouteProp<RootStackParamList, "ProfilClub">;
 
@@ -226,20 +225,16 @@ export default function ClubPresentation() {
       {/* === MODAL D'ÉDITION (seulement propriétaire) === */}
       {isOwner && (
         <Modal visible={modalVisible} transparent animationType="fade">
-          <KeyboardAvoidingView
+          <KeyboardFormScrollView
             style={{ flex: 1 }}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              paddingHorizontal: 24,
+            }}
           >
-            <ScrollView
-              className="flex-1 bg-black/70"
-              contentContainerStyle={{
-                flexGrow: 1,
-                justifyContent: "center",
-                alignItems: "center",
-                paddingHorizontal: 24,
-              }}
-              keyboardShouldPersistTaps="handled"
-            >
+            <View className="flex-1 bg-black/70 justify-center items-center">
               <View className="bg-[#0E0D0D] p-6 rounded-xl w-full max-w-md border border-gray-700">
                 <Text className="text-lg text-white font-semibold mb-3">
                   {fieldToEdit === "description" && "Ajouter une description"}
@@ -282,8 +277,8 @@ export default function ClubPresentation() {
                   </TouchableOpacity>
                 </View>
               </View>
-            </ScrollView>
-          </KeyboardAvoidingView>
+            </View>
+          </KeyboardFormScrollView>
         </Modal>
       )}
     </ScrollView>

@@ -7,9 +7,6 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -29,6 +26,7 @@ import { createPost } from "../../services/postService";
 import { usePremiumStatus } from "../../../../../shared/hooks/usePremiumStatus";
 import { auth, db } from "../../../../../config/firebaseConfig";
 import AddressAutocomplete from "../../../../../shared/components/AddressAutocomplete";
+import KeyboardFormScrollView from "../../../../../shared/components/KeyboardFormScrollView";
 
 /* ============================================================
    TYPES
@@ -319,11 +317,10 @@ export default function CreatePostScreen() {
   ============================================================ */
   return (
     <SafeAreaView className="flex-1 bg-black">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        className="flex-1"
+      <KeyboardFormScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 140 }}
       >
-        <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
           {/* HEADER */}
           <View className="flex-row items-center justify-between px-4 py-3">
             <TouchableOpacity onPress={handleCancel} disabled={loading || compressing}>
@@ -503,8 +500,7 @@ export default function CreatePostScreen() {
               onSelect={(addr) => setLocation(addr.label)}
             />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardFormScrollView>
 
       {/* Bouton Publier (fixé en bas) */}
       <View

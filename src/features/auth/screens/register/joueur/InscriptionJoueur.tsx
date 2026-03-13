@@ -7,14 +7,12 @@ import {
   Pressable,
   StatusBar,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../../../types";
+import KeyboardFormScrollView from "../../../../../shared/components/KeyboardFormScrollView";
 
 // 👉 Firebase
 import { auth, db } from "../../../../../config/firebaseConfig";
@@ -112,11 +110,14 @@ export default function InscriptionJoueur() {
       <SafeAreaView className="flex-1">
         <StatusBar barStyle="light-content" translucent />
 
-        <KeyboardAvoidingView
+        <KeyboardFormScrollView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: "center",
+            paddingHorizontal: 24,
+          }}
         >
-          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingHorizontal: 24 }}>
             <View className="bg-white/90 rounded-2xl p-6 space-y-4">
               <Text className="text-2xl font-bold text-center mb-2">
                 Inscription Joueur
@@ -185,8 +186,7 @@ export default function InscriptionJoueur() {
                 <Text className="text-blue-600">Retour</Text>
               </Pressable>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+        </KeyboardFormScrollView>
       </SafeAreaView>
     </ImageBackground>
   );

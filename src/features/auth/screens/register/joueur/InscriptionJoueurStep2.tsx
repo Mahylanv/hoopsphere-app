@@ -8,7 +8,6 @@ import {
   Pressable,
   StatusBar,
   TouchableOpacity,
-  ScrollView,
   Platform,
   Modal,
   ImageBackground,
@@ -19,6 +18,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { RootStackParamList } from "../../../../../types";
+import KeyboardFormScrollView from "../../../../../shared/components/KeyboardFormScrollView";
 
 type Route2Prop = RouteProp<RootStackParamList, "InscriptionJoueurStep2">;
 type Nav2Prop = NativeStackNavigationProp<
@@ -98,7 +98,8 @@ export default function InscriptionJoueurStep2() {
           </View>
 
           {/* ---------- CONTENT SCROLL ---------- */}
-          <ScrollView
+          <KeyboardFormScrollView
+            style={{ flex: 1 }}
             contentContainerStyle={{
               justifyContent: "center",
               flexGrow: 1,
@@ -271,7 +272,7 @@ export default function InscriptionJoueurStep2() {
           <View className="w-6 h-[2px] bg-gray-600 mx-1" />
           <View className="w-2 h-2 rounded-full bg-gray-600" />
         </View>
-          </ScrollView>
+          </KeyboardFormScrollView>
         </SafeAreaView>
       </ImageBackground>
     </View>

@@ -7,8 +7,6 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   TouchableWithoutFeedback,
   Keyboard,
   ImageBackground,
@@ -28,6 +26,7 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import DepartmentSelect from "../../../../../shared/components/DepartmentSelect";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../../../context/AuthContext";
+import KeyboardFormScrollView from "../../../../../shared/components/KeyboardFormScrollView";
 
 type NavProps = NativeStackNavigationProp<
   RootStackParamList,
@@ -134,9 +133,9 @@ export default function InscriptionClubStep2() {
         <View className="absolute inset-0 bg-black/55" />
         <SafeAreaView className="flex-1 px-6">
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-              className="flex-1"
+            <KeyboardFormScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ flexGrow: 1 }}
             >
 
           {/* ---------- HEADER ---------- */}
@@ -248,7 +247,7 @@ export default function InscriptionClubStep2() {
             </View>
 
           </View>
-            </KeyboardAvoidingView>
+            </KeyboardFormScrollView>
           </TouchableWithoutFeedback>
         </SafeAreaView>
       </ImageBackground>
