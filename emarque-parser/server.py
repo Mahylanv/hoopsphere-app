@@ -2,6 +2,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import hashlib
 import io, re, os, asyncio
 import logging
 import numpy as np
@@ -20,6 +21,11 @@ app.add_middleware(
 
 BASE = os.path.dirname(__file__)
 DBG_PATH = os.path.join(BASE, "debug_overlay.png")
+OFFICIAL_SHA256_PATH = os.getenv(
+    "OFFICIAL_SHA256_PATH",
+    os.path.join(BASE, "official_ffbb_sha256.txt"),
+)
+REQUIRE_CERTIFIED_SHA256 = os.getenv("REQUIRE_CERTIFIED_SHA256", "0").strip() == "1"
 
 # ---------------- Utils ----------------
 logger = logging.getLogger("emarque")
@@ -52,6 +58,41 @@ def ensure(cond, code, msg):
     if not cond:
         raise HTTPException(code, msg)
 
+def normalize_sha256(value: str) -> str:
+    s = (value or "").strip().lower()
+    return s if re.fullmatch(r"[a-f0-9]{64}", s) else ""
+
+def compute_sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+def load_official_sha256_registry():
+    hashes = set()
+    sources = []
+
+    if os.path.exists(OFFICIAL_SHA256_PATH):
+        try:
+            with open(OFFICIAL_SHA256_PATH, "r", encoding="utf-8") as fh:
+                for raw_line in fh:
+                    line = raw_line.split("#", 1)[0].strip()
+                    if not line:
+                        continue
+                    digest = normalize_sha256(line)
+                    if digest:
+                        hashes.add(digest)
+            sources.append(OFFICIAL_SHA256_PATH)
+        except Exception as e:
+            logger.warning("Impossible de charger %s (%s)", OFFICIAL_SHA256_PATH, e)
+
+    raw_env = os.getenv("OFFICIAL_SHA256_VALUES", "")
+    for item in raw_env.split(","):
+        digest = normalize_sha256(item)
+        if digest:
+            hashes.add(digest)
+    if raw_env.strip():
+        sources.append("env:OFFICIAL_SHA256_VALUES")
+
+    return hashes, sources
+
 def norm_txt(s: str) -> str:
     s = (s or "").lower()
     s = (s.replace("é","e").replace("è","e").replace("ê","e")
@@ -60,6 +101,14 @@ def norm_txt(s: str) -> str:
             .replace("ç","c"))
     s = re.sub(r"[^\w ]+", " ", s)
     return re.sub(r"\s+"," ", s).strip()
+
+OFFICIAL_SHA256_HASHES, OFFICIAL_SHA256_SOURCES = load_official_sha256_registry()
+logger.info(
+    "SHA256 registry loaded count=%s strict=%s sources=%s",
+    len(OFFICIAL_SHA256_HASHES),
+    REQUIRE_CERTIFIED_SHA256,
+    OFFICIAL_SHA256_SOURCES or ["none"],
+)
 
 def tokens_for_name(s: str):
     return set(t for t in norm_txt(s).split() if len(t) > 1)
@@ -840,6 +889,9 @@ def health():
         "ocr_lang": OCR_LANG,
         "ocr_available": TESS_OK,
         "ocr_langs": sorted(OCR_LANGS),
+        "sha256_registry_size": len(OFFICIAL_SHA256_HASHES),
+        "sha256_registry_sources": OFFICIAL_SHA256_SOURCES,
+        "sha256_strict_mode": REQUIRE_CERTIFIED_SHA256,
     }
 
 @app.post("/parse-emarque")
@@ -857,6 +909,15 @@ async def parse_emarque(
         ensure(file.filename.lower().endswith(".pdf"), 400, "Le champ 'file' doit être un PDF")
         data = await file.read()
         ensure(data, 400, "Fichier vide")
+        ensure(data.startswith(b"%PDF-"), 400, "Le fichier transmis n'est pas un PDF valide")
+        pdf_sha256 = compute_sha256(data)
+        sha256_certified = pdf_sha256 in OFFICIAL_SHA256_HASHES
+        certification = {
+            "sha256": pdf_sha256,
+            "certified": sha256_certified,
+            "registry_size": len(OFFICIAL_SHA256_HASHES),
+            "strict_mode": REQUIRE_CERTIFIED_SHA256,
+        }
         if not TESS_OK:
             return JSONResponse(
                 {
@@ -867,20 +928,41 @@ async def parse_emarque(
                         "tesseract": TESS_VERSION,
                         "ocr_lang": OCR_LANG,
                         "hint": "Installe tesseract-ocr et tesseract-ocr-fra ou utilise le Dockerfile.",
+                        "certification": certification,
                     },
                 },
                 status_code=503,
             )
+        if REQUIRE_CERTIFIED_SHA256 and not OFFICIAL_SHA256_HASHES:
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "error": "Mode SHA-256 strict actif mais aucun hash officiel n'est configure.",
+                    "details": {"certification": certification},
+                },
+                status_code=503,
+            )
+        if REQUIRE_CERTIFIED_SHA256 and not sha256_certified:
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "error": "Le PDF n'est pas certifie par SHA-256 dans le registre FFBB.",
+                    "details": {"certification": certification},
+                },
+                status_code=403,
+            )
 
         def _parse_sync():
             logger.info(
-                "parse_emarque file=%s size=%s scale=%s frac=%.3f force_order=%s OCR_LANG=%s",
+                "parse_emarque file=%s size=%s scale=%s frac=%.3f force_order=%s OCR_LANG=%s certified=%s sha256=%s",
                 file.filename,
                 len(data),
                 scale,
                 frac,
                 force_order,
                 OCR_LANG,
+                sha256_certified,
+                pdf_sha256[:16],
             )
             header_ok = is_emarque_v2(data, scale=scale)
 
@@ -957,6 +1039,7 @@ async def parse_emarque(
                         "ocr_lang": OCR_LANG,
                         "fallback_used": fallback_used,
                         "pdf_text_preview": pdf_txt_preview,
+                        "certification": certification,
                     },
                 }
             match_number, header_debug = extract_match_number(data, scale=scale)
@@ -970,6 +1053,7 @@ async def parse_emarque(
                     else "Header non reconnu, OCR force"
                 ),
                 "match": {"number": match_number},
+                "certification": certification,
                 "teams": [
                     {"name": "Locaux",   "players": teamA},
                     {"name": "Visiteurs","players": teamB}

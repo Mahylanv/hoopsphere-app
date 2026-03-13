@@ -1,0 +1,6 @@
+# SHA-256 autorises pour les PDFs officiels FFBB.
+# Un hash hexadecimal en minuscules par ligne.
+# Les lignes vides et les commentaires sont ignores.
+#
+# Exemple :
+# 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
