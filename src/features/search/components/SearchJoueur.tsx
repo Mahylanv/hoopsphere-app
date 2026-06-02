@@ -26,18 +26,9 @@ import { usePremiumStatus } from "../../../shared/hooks/usePremiumStatus";
 import PremiumBadge from "../../../shared/components/PremiumBadge";
 import { LinearGradient } from "expo-linear-gradient";
 import { PROFILE_PLACEHOLDER } from "../../../constants/images";
+import { filterPlayers } from "../utils/filterPlayers";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "SearchJoueur">;
-
-const parseTaille = (t?: string) => {
-  if (!t) return 0;
-  return parseInt(t.replace("cm", "").replace(" ", ""));
-};
-
-const parsePoids = (p?: string) => {
-  if (!p) return 0;
-  return parseInt(p.replace("kg", "").replace(" ", ""));
-};
 
 export default function SearchJoueur() {
   const navigation = useNavigation<NavProp>();
@@ -82,71 +73,7 @@ export default function SearchJoueur() {
 
   // Filtrage complet
   useEffect(() => {
-    let results = joueurs;
-
-    // Recherche textuelle
-    if (search) {
-      const lower = search.toLowerCase();
-      results = results.filter(
-        (j) =>
-          j.nom?.toLowerCase().includes(lower) ||
-          j.prenom?.toLowerCase().includes(lower) ||
-          j.club?.toLowerCase().includes(lower) ||
-          j.departement?.toLowerCase().includes(lower)
-      );
-    }
-
-    // Poste
-    if (filters.poste && filters.poste.length > 0) {
-      results = results.filter(
-        (j) => j.poste && filters.poste!.includes(j.poste)
-      );
-    }
-
-    // Département
-    if (filters.departement && filters.departement.length > 0) {
-      results = results.filter(
-        (j) => j.departement && filters.departement!.includes(j.departement)
-      );
-    }
-
-    // Genre
-    if (filters.genre && filters.genre.length > 0) {
-      results = results.filter(
-        (j) => j.genre && filters.genre!.includes(j.genre)
-      );
-    }
-
-    // Main forte
-    if (filters.main && filters.main.length > 0) {
-      results = results.filter(
-        (j) => j.main && filters.main!.includes(j.main.trim())
-      );
-    }
-
-    // Taille
-    if (filters.tailleMin != null) {
-      results = results.filter(
-        (j) => parseTaille(j.taille) >= filters.tailleMin!
-      );
-    }
-
-    if (filters.tailleMax != null) {
-      results = results.filter(
-        (j) => parseTaille(j.taille) <= filters.tailleMax!
-      );
-    }
-
-    // Poids
-    if (filters.poidsMin != null) {
-      results = results.filter((j) => parsePoids(j.poids) >= filters.poidsMin!);
-    }
-
-    if (filters.poidsMax != null) {
-      results = results.filter((j) => parsePoids(j.poids) <= filters.poidsMax!);
-    }
-
-    setFiltered(results);
+    setFiltered(filterPlayers(joueurs, search, filters));
     setVisibleCount(6);
   }, [search, joueurs, filters]);
 

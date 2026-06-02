@@ -4,6 +4,7 @@
   "main": "index.ts",
   "scripts": {
     "dev:parser": "bash ./scripts/dev-with-parser.sh",
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",

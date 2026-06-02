@@ -43,6 +43,7 @@ import FavoriteClubsTab from "../screens/FavoriteClubsTab";
 import PremiumWall from "../../../shared/components/PremiumWall";
 import { usePremiumStatus } from "../../../shared/hooks/usePremiumStatus";
 import PremiumBadge from "../../../shared/components/PremiumBadge";
+import { filterClubs } from "../utils/filterClubs";
 
 type SearchNavProp = NativeStackNavigationProp<RootStackParamList, "Search">;
 const Tab = createMaterialTopTabNavigator();
@@ -232,55 +233,7 @@ function ClubsTab({ isPremium, onUpgrade }: PremiumProps) {
 
   // Filtrage
   useEffect(() => {
-    let results = clubs;
-
-    // 1) Recherche texte : name, city, department
-    if (search) {
-      const lower = search.trim().toLowerCase();
-      results = results.filter((c) => {
-        const name = (c.name || "").toLowerCase();
-        const city = (c.city || "").toLowerCase();
-        const dep = (c.department || "").toLowerCase();
-        return (
-          name.includes(lower) || city.includes(lower) || dep.includes(lower)
-        );
-      });
-    }
-
-    // 2) Catégories
-    if (filters.categories && filters.categories.length > 0) {
-      results = results.filter((c) =>
-        (c.categories || []).some((cat) => filters.categories!.includes(cat))
-      );
-    }
-
-    // 3) Départements
-    if (filters.departments && filters.departments.length > 0) {
-      results = results.filter(
-        (c) => !!c.department && filters.departments!.includes(c.department!)
-      );
-    }
-
-    // 4) Équipes (Masculines / Féminines / Mixte strict)
-    if (filters.teamKinds && filters.teamKinds.length > 0) {
-      const wantM = filters.teamKinds.some((v) => /masculin/i.test(v));
-      const wantF = filters.teamKinds.some((v) => /feminin|féminin/i.test(v));
-      const wantX = filters.teamKinds.some((v) => /(mixte|les deux)/i.test(v)); // “Les deux” traité comme Mixte explicite
-
-      results = results.filter((c) => {
-        const kinds = extractTeamKinds(c.teams);
-        const hasM = kinds.has("masculines");
-        const hasF = kinds.has("feminines");
-        const isMixte = hasMixte(c.teams); // doit être explicitement mixte
-
-        if (wantX && isMixte) return true;
-        if (wantM && hasM) return true;
-        if (wantF && hasF) return true;
-        return false;
-      });
-    }
-
-    setFiltered(results);
+    setFiltered(filterClubs(clubs, search, filters));
     setVisibleCount(10);
   }, [search, clubs, filters]);
 
