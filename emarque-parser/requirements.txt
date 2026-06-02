@@ -7,5 +7,6 @@ numpy
 pillow
 pytesseract
 python-multipart
+cryptography
 # Option si PDF vectoriels :
 # camelot-py[cv]

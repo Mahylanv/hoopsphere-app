@@ -6,11 +6,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +16,7 @@ import { auth, db } from "../../../../config/firebaseConfig";
 import { useNavigation } from "@react-navigation/native";
 import { BlurView } from "expo-blur";
 import DepartmentSelect from "../../../../shared/components/DepartmentSelect";
+import KeyboardFormScrollView from "../../../../shared/components/KeyboardFormScrollView";
 
 export default function EditClubProfile() {
   const navigation = useNavigation();
@@ -150,17 +148,10 @@ export default function EditClubProfile() {
         </Text>
       </View>
 
-      {/* ⭐ MAGIC FIX: KeyboardAvoidingView */}
-      <KeyboardAvoidingView
+      <KeyboardFormScrollView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        contentContainerStyle={{ padding: 20, paddingBottom: 60 }}
       >
-        <ScrollView
-          contentContainerStyle={{ padding: 20, paddingBottom: 60 }}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          nestedScrollEnabled
-        >
           <BlurView intensity={40} tint="dark" className="rounded-3xl p-5 mb-4">
             <Text className="text-white text-lg font-semibold mb-4">
               Informations générales
@@ -304,9 +295,7 @@ export default function EditClubProfile() {
               Supprimer mon compte
             </Text>
           </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardFormScrollView>
     </SafeAreaView>
   );
 }
-

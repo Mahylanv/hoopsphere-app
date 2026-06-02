@@ -4,6 +4,16 @@ import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import { defineSecret } from "firebase-functions/params";
 import Stripe from "stripe";
+import type { Stripe as StripeClient } from "stripe/cjs/stripe.core";
+import type { CustomerCreateParams } from "stripe/cjs/resources/Customers";
+import type { Event } from "stripe/cjs/resources/Events";
+import type { Invoice } from "stripe/cjs/resources/Invoices";
+import type { PaymentIntent } from "stripe/cjs/resources/PaymentIntents";
+import type { Subscription } from "stripe/cjs/resources/Subscriptions";
+import type {
+  SubscriptionSchedule,
+  SubscriptionScheduleUpdateParams,
+} from "stripe/cjs/resources/SubscriptionSchedules";
 import * as nodemailer from "nodemailer";
 
 admin.initializeApp();
@@ -59,7 +69,7 @@ const getStripeOrThrow = () => {
       error || "Stripe secret manquant."
     );
   }
-  return new Stripe(secret, { apiVersion: "2025-12-15.clover" });
+  return new Stripe(secret, { apiVersion: "2026-05-27.dahlia" });
 };
 
 const resolveSmtpConfig = () => {
@@ -149,7 +159,7 @@ const resolveSwitchAt = (
 };
 
 const applyScheduledPlanChange = async (params: {
-  stripe: Stripe;
+  stripe: StripeClient;
   userDoc: UserDocInfo;
   plan: "month" | "year";
   rawStartAt?: unknown;
@@ -201,7 +211,7 @@ const applyScheduledPlanChange = async (params: {
         : subscription.schedule.id;
   }
 
-  let schedule: Stripe.SubscriptionSchedule | null = null;
+  let schedule: SubscriptionSchedule | null = null;
   if (scheduleId) {
     schedule = await stripe.subscriptionSchedules.retrieve(scheduleId);
     if (schedule.status === "canceled" || schedule.status === "released") {
@@ -323,7 +333,7 @@ const resolveUserByStripeCustomerId = async (
   return null;
 };
 
-const buildSubscriptionUpdate = (subscription: Stripe.Subscription) => {
+const buildSubscriptionUpdate = (subscription: Subscription) => {
   const price = subscription.items.data[0]?.price;
   const item = subscription.items.data[0];
   const premiumActive = ["active", "trialing"].includes(subscription.status);
@@ -351,7 +361,7 @@ const buildSubscriptionUpdate = (subscription: Stripe.Subscription) => {
 };
 
 const resolveSubscriptionId = async (
-  stripe: Stripe,
+  stripe: StripeClient,
   customerId: string,
   storedId?: string | null
 ) => {
@@ -374,15 +384,15 @@ const formatAmountLabel = (
   return `${(amount / 100).toFixed(2)} ${safeCurrency}`;
 };
 
-const resolveInvoicePaymentIntentId = (invoice: Stripe.Invoice) => {
+const resolveInvoicePaymentIntentId = (invoice: Invoice) => {
   const raw = (invoice as any).payment_intent;
   if (!raw) return null;
   return typeof raw === "string" ? raw : raw.id ?? null;
 };
 
 const resolveInvoiceEmailFromPaymentIntent = async (
-  stripe: Stripe,
-  invoice: Stripe.Invoice
+  stripe: StripeClient,
+  invoice: Invoice
 ) => {
   const paymentIntentId = resolveInvoicePaymentIntentId(invoice);
   if (!paymentIntentId) return null;
@@ -417,8 +427,8 @@ const resolveInvoiceEmailFromPaymentIntent = async (
 };
 
 const sendSubscriptionEmail = async (
-  stripe: Stripe,
-  invoice: Stripe.Invoice,
+  stripe: StripeClient,
+  invoice: Invoice,
   userDoc?: UserDocInfo | null
 ) => {
   const smtp = resolveSmtpConfig();
@@ -615,8 +625,8 @@ const sendSubscriptionEmail = async (
 };
 
 const sendSubscriptionEmailIfNeeded = async (
-  stripe: Stripe,
-  invoice: Stripe.Invoice
+  stripe: StripeClient,
+  invoice: Invoice
 ) => {
   const customerId =
     typeof invoice.customer === "string"
@@ -679,8 +689,8 @@ const sendSubscriptionEmailIfNeeded = async (
 };
 
 const handlePaymentIntentSucceeded = async (
-  stripe: Stripe,
-  paymentIntent: Stripe.PaymentIntent
+  stripe: StripeClient,
+  paymentIntent: PaymentIntent
 ) => {
   try {
     const customerId =
@@ -786,8 +796,8 @@ const handlePaymentIntentSucceeded = async (
 };
 
 const resolveUidFromSubscription = async (
-  stripe: Stripe,
-  subscription: Stripe.Subscription
+  stripe: StripeClient,
+  subscription: Subscription
 ) => {
   const metaUid = subscription.metadata?.uid;
   if (metaUid) return metaUid;
@@ -862,7 +872,7 @@ export const createSubscription = functions
     let customerId = userDoc.data?.stripeCustomerId as string | undefined;
 
     if (!customerId) {
-      const customerPayload: Stripe.CustomerCreateParams = {
+      const customerPayload: CustomerCreateParams = {
         metadata: {uid},
       };
       const customerEmail = userDoc.data?.email as string | undefined;
@@ -907,8 +917,8 @@ export const createSubscription = functions
     if (typeof latestInvoice === "string") {
       const invoice = (await stripe.invoices.retrieve(
         latestInvoice
-      )) as Stripe.Invoice & {
-        payment_intent?: string | Stripe.PaymentIntent | null;
+      )) as Invoice & {
+        payment_intent?: string | PaymentIntent | null;
       };
 
       if (typeof invoice.payment_intent === "string") {
@@ -917,7 +927,7 @@ export const createSubscription = functions
         invoice.payment_intent &&
         typeof invoice.payment_intent === "object"
       ) {
-        const pi = invoice.payment_intent as Stripe.PaymentIntent;
+        const pi = invoice.payment_intent as PaymentIntent;
         if (typeof pi.client_secret === "string") {
           paymentIntentClientSecret = pi.client_secret;
         } else if (typeof pi.id === "string") {
@@ -928,8 +938,8 @@ export const createSubscription = functions
 
     // 2ï¸âƒ£ latest_invoice est un objet Invoice
     if (typeof latestInvoice === "object" && latestInvoice !== null) {
-      const invoice = latestInvoice as Stripe.Invoice & {
-        payment_intent?: string | Stripe.PaymentIntent | null;
+      const invoice = latestInvoice as Invoice & {
+        payment_intent?: string | PaymentIntent | null;
       };
       if (typeof invoice.payment_intent === "string") {
         paymentIntentId = invoice.payment_intent;
@@ -937,7 +947,7 @@ export const createSubscription = functions
         invoice.payment_intent &&
         typeof invoice.payment_intent === "object"
       ) {
-        const pi = invoice.payment_intent as Stripe.PaymentIntent;
+        const pi = invoice.payment_intent as PaymentIntent;
         if (typeof pi.client_secret === "string") {
           paymentIntentClientSecret = pi.client_secret;
         } else if (typeof pi.id === "string") {
@@ -960,7 +970,7 @@ export const createSubscription = functions
       if (latestInvoiceId) {
         let invoice =
           typeof latestInvoice === "object" && latestInvoice !== null
-            ? (latestInvoice as Stripe.Invoice)
+            ? (latestInvoice as Invoice)
             : await stripe.invoices.retrieve(latestInvoiceId, {
                 expand: ["payment_intent"],
               });
@@ -969,8 +979,8 @@ export const createSubscription = functions
           invoice = await stripe.invoices.finalizeInvoice(invoice.id);
         }
 
-        const invoiceIntent = (invoice as Stripe.Invoice & {
-          payment_intent?: string | Stripe.PaymentIntent | null;
+        const invoiceIntent = (invoice as Invoice & {
+          payment_intent?: string | PaymentIntent | null;
         }).payment_intent;
         if (typeof invoiceIntent === "string") {
           const paymentIntent =
@@ -1267,7 +1277,7 @@ export const getLatestInvoicePdf = functions
         );
       }
 
-      let invoice = null as Stripe.Invoice | null;
+      let invoice = null as Invoice | null;
       const paidInvoices = await stripe.invoices.list({
         customer: customerId,
         limit: 1,
@@ -1413,7 +1423,7 @@ export const setCancelAtPeriodEnd = functions
         typeof subscription.schedule === "string"
           ? subscription.schedule
           : subscription.schedule?.id ?? null;
-      let schedule: Stripe.SubscriptionSchedule | null = null;
+      let schedule: SubscriptionSchedule | null = null;
       if (scheduleId) {
         schedule = await stripe.subscriptionSchedules.retrieve(scheduleId);
         if (schedule.status === "canceled" || schedule.status === "released") {
@@ -1436,8 +1446,8 @@ export const setCancelAtPeriodEnd = functions
         }
 
         const normalizePhase = (
-          phase: Stripe.SubscriptionSchedule.Phase
-        ): Stripe.SubscriptionScheduleUpdateParams.Phase => {
+          phase: SubscriptionSchedule.Phase
+        ): SubscriptionScheduleUpdateParams.Phase => {
           const items = (phase.items ?? [])
             .map((phaseItem) => ({
               price:
@@ -1448,7 +1458,7 @@ export const setCancelAtPeriodEnd = functions
             }))
             .filter((phaseItem) => phaseItem.price);
 
-          const normalized: Stripe.SubscriptionScheduleUpdateParams.Phase = {
+          const normalized: SubscriptionScheduleUpdateParams.Phase = {
             start_date: phase.start_date ?? currentPeriodStart,
             items,
           };
@@ -2079,7 +2089,7 @@ export const stripeWebhook = functions
     return;
   }
 
-  let event: Stripe.Event;
+  let event: Event;
   try {
     event = stripe.webhooks.constructEvent(
       req.rawBody,
@@ -2097,7 +2107,7 @@ export const stripeWebhook = functions
       case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as Subscription;
         console.log("subscription event:", {
           id: subscription.id,
           status: subscription.status,
@@ -2160,7 +2170,7 @@ export const stripeWebhook = functions
         break;
       }
       case "payment_intent.succeeded": {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        const paymentIntent = event.data.object as PaymentIntent;
         console.log("payment_intent.succeeded:", {
           id: paymentIntent.id,
           amount: paymentIntent.amount,
@@ -2172,7 +2182,7 @@ export const stripeWebhook = functions
       case "invoice.paid":
       case "invoice.payment_succeeded":
       case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
+        const invoice = event.data.object as Invoice;
         console.log("invoice event:", {
           id: invoice.id,
           status: invoice.status,

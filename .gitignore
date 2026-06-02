@@ -30,6 +30,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 package-lock.json
+!stripe/package-lock.json
 
 # --- METRO ---
 .metro-health-check*

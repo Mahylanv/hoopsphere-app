@@ -2,12 +2,15 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import io, re, os, asyncio
+import base64
+import hashlib
+import io, re, os, json, asyncio
 import logging
 import numpy as np
 import cv2
 import pytesseract
 import pypdfium2 as pdfium
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 app = FastAPI()
 app.add_middleware(
@@ -20,6 +23,17 @@ app.add_middleware(
 
 BASE = os.path.dirname(__file__)
 DBG_PATH = os.path.join(BASE, "debug_overlay.png")
+OFFICIAL_SHA256_PATH = os.getenv(
+    "OFFICIAL_SHA256_PATH",
+    os.path.join(BASE, "official_ffbb_sha256.txt"),
+)
+SHA256_STRICT_MODE = False
+PDF_AES256_KEY_RAW = os.getenv("PDF_AES256_KEY", "").strip()
+PDF_AES256_AUDIT_ENABLED = os.getenv("PDF_AES256_AUDIT_ENABLED", "0").strip() == "1"
+PDF_AES256_AUDIT_DIR = os.getenv(
+    "PDF_AES256_AUDIT_DIR",
+    os.path.join(BASE, "encrypted_uploads"),
+)
 
 # ---------------- Utils ----------------
 logger = logging.getLogger("emarque")
@@ -52,6 +66,53 @@ def ensure(cond, code, msg):
     if not cond:
         raise HTTPException(code, msg)
 
+def normalize_sha256(value: str) -> str:
+    s = (value or "").strip().lower()
+    return s if re.fullmatch(r"[a-f0-9]{64}", s) else ""
+
+def compute_sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+def load_aes256_key(raw_value: str):
+    raw = (raw_value or "").strip()
+    if not raw:
+        return None
+    if re.fullmatch(r"[a-fA-F0-9]{64}", raw):
+        return bytes.fromhex(raw)
+    try:
+        decoded = base64.b64decode(raw, validate=True)
+    except Exception:
+        return None
+    return decoded if len(decoded) == 32 else None
+
+def load_official_sha256_registry():
+    hashes = set()
+    sources = []
+
+    if os.path.exists(OFFICIAL_SHA256_PATH):
+        try:
+            with open(OFFICIAL_SHA256_PATH, "r", encoding="utf-8") as fh:
+                for raw_line in fh:
+                    line = raw_line.split("#", 1)[0].strip()
+                    if not line:
+                        continue
+                    digest = normalize_sha256(line)
+                    if digest:
+                        hashes.add(digest)
+            sources.append(OFFICIAL_SHA256_PATH)
+        except Exception as e:
+            logger.warning("Impossible de charger %s (%s)", OFFICIAL_SHA256_PATH, e)
+
+    raw_env = os.getenv("OFFICIAL_SHA256_VALUES", "")
+    for item in raw_env.split(","):
+        digest = normalize_sha256(item)
+        if digest:
+            hashes.add(digest)
+    if raw_env.strip():
+        sources.append("env:OFFICIAL_SHA256_VALUES")
+
+    return hashes, sources
+
 def norm_txt(s: str) -> str:
     s = (s or "").lower()
     s = (s.replace("é","e").replace("è","e").replace("ê","e")
@@ -60,6 +121,95 @@ def norm_txt(s: str) -> str:
             .replace("ç","c"))
     s = re.sub(r"[^\w ]+", " ", s)
     return re.sub(r"\s+"," ", s).strip()
+
+AES256_KEY = load_aes256_key(PDF_AES256_KEY_RAW)
+AES256_ENABLED = AES256_KEY is not None
+if PDF_AES256_KEY_RAW and not AES256_ENABLED:
+    logger.warning("PDF_AES256_KEY invalide: fournir 32 octets en hex (64 chars) ou base64")
+
+def store_encrypted_pdf_audit(data: bytes, filename: str, sha256_value: str):
+    info = {
+        "algorithm": "AES-256-GCM",
+        "enabled": AES256_ENABLED,
+        "audit_enabled": PDF_AES256_AUDIT_ENABLED,
+        "stored": False,
+        "audit_id": sha256_value,
+    }
+    if not AES256_ENABLED or not PDF_AES256_AUDIT_ENABLED:
+        return info
+
+    os.makedirs(PDF_AES256_AUDIT_DIR, exist_ok=True)
+    blob_path = os.path.join(PDF_AES256_AUDIT_DIR, f"{sha256_value}.bin")
+    meta_path = os.path.join(PDF_AES256_AUDIT_DIR, f"{sha256_value}.json")
+
+    if os.path.exists(blob_path) and os.path.exists(meta_path):
+        info["stored"] = True
+        info["already_present"] = True
+        return info
+
+    nonce = os.urandom(12)
+    aad = json.dumps(
+        {"filename": filename, "sha256": sha256_value},
+        sort_keys=True,
+    ).encode("utf-8")
+    ciphertext = AESGCM(AES256_KEY).encrypt(nonce, data, aad)
+
+    with open(blob_path, "wb") as fh:
+        fh.write(nonce + ciphertext)
+    with open(meta_path, "w", encoding="utf-8") as fh:
+        json.dump(
+            {
+                "filename": filename,
+                "sha256": sha256_value,
+                "algorithm": "AES-256-GCM",
+                "nonce_b64": base64.b64encode(nonce).decode("ascii"),
+            },
+            fh,
+            ensure_ascii=True,
+            indent=2,
+        )
+
+    info["stored"] = True
+    return info
+
+OFFICIAL_SHA256_HASHES = set()
+OFFICIAL_SHA256_SOURCES = []
+_OFFICIAL_SHA256_MTIME = None
+
+def refresh_official_sha256_registry(force: bool = False):
+    global OFFICIAL_SHA256_HASHES, OFFICIAL_SHA256_SOURCES, _OFFICIAL_SHA256_MTIME
+
+    current_mtime = None
+    if os.path.exists(OFFICIAL_SHA256_PATH):
+        try:
+            current_mtime = os.path.getmtime(OFFICIAL_SHA256_PATH)
+        except OSError:
+            current_mtime = None
+
+    if not force and current_mtime == _OFFICIAL_SHA256_MTIME:
+        return OFFICIAL_SHA256_HASHES, OFFICIAL_SHA256_SOURCES
+
+    OFFICIAL_SHA256_HASHES, OFFICIAL_SHA256_SOURCES = load_official_sha256_registry()
+    _OFFICIAL_SHA256_MTIME = current_mtime
+    logger.info(
+        "SHA256 registry loaded count=%s strict=%s sources=%s",
+        len(OFFICIAL_SHA256_HASHES),
+        SHA256_STRICT_MODE,
+        OFFICIAL_SHA256_SOURCES or ["none"],
+    )
+    return OFFICIAL_SHA256_HASHES, OFFICIAL_SHA256_SOURCES
+
+def build_pdf_certification(data: bytes):
+    hashes, _sources = refresh_official_sha256_registry()
+    pdf_sha256 = compute_sha256(data)
+    return {
+        "sha256": pdf_sha256,
+        "certified": pdf_sha256 in hashes,
+        "registry_size": len(hashes),
+        "strict_mode": SHA256_STRICT_MODE,
+    }
+
+refresh_official_sha256_registry(force=True)
 
 def tokens_for_name(s: str):
     return set(t for t in norm_txt(s).split() if len(t) > 1)
@@ -834,12 +984,34 @@ def clean_players(players):
 # ---------------- API ----------------
 @app.get("/__health")
 def health():
+    hashes, sources = refresh_official_sha256_registry()
     return {
         "ok": True,
         "tesseract": TESS_VERSION,
         "ocr_lang": OCR_LANG,
         "ocr_available": TESS_OK,
         "ocr_langs": sorted(OCR_LANGS),
+        "sha256_registry_size": len(hashes),
+        "sha256_registry_sources": sources,
+        "sha256_strict_mode": SHA256_STRICT_MODE,
+        "aes256_enabled": AES256_ENABLED,
+        "aes256_audit_enabled": PDF_AES256_AUDIT_ENABLED,
+        "aes256_audit_dir": PDF_AES256_AUDIT_DIR if PDF_AES256_AUDIT_ENABLED else None,
+    }
+
+@app.post("/certify-pdf")
+async def certify_pdf(file: UploadFile = File(...)):
+    ensure(file.filename.lower().endswith(".pdf"), 400, "Le champ 'file' doit être un PDF")
+    data = await file.read()
+    ensure(data, 400, "Fichier vide")
+    ensure(data.startswith(b"%PDF-"), 400, "Le fichier transmis n'est pas un PDF valide")
+    certification = build_pdf_certification(data)
+    encryption = store_encrypted_pdf_audit(data, file.filename, certification["sha256"])
+    return {
+        "ok": True,
+        "filename": file.filename,
+        "certification": certification,
+        "encryption": encryption,
     }
 
 @app.post("/parse-emarque")
@@ -854,9 +1026,15 @@ async def parse_emarque(
     force_order: int = Query(1),
 ):
     try:
+        refresh_official_sha256_registry()
         ensure(file.filename.lower().endswith(".pdf"), 400, "Le champ 'file' doit être un PDF")
         data = await file.read()
         ensure(data, 400, "Fichier vide")
+        ensure(data.startswith(b"%PDF-"), 400, "Le fichier transmis n'est pas un PDF valide")
+        certification = build_pdf_certification(data)
+        pdf_sha256 = certification["sha256"]
+        sha256_certified = certification["certified"]
+        encryption = store_encrypted_pdf_audit(data, file.filename, pdf_sha256)
         if not TESS_OK:
             return JSONResponse(
                 {
@@ -867,6 +1045,8 @@ async def parse_emarque(
                         "tesseract": TESS_VERSION,
                         "ocr_lang": OCR_LANG,
                         "hint": "Installe tesseract-ocr et tesseract-ocr-fra ou utilise le Dockerfile.",
+                        "certification": certification,
+                        "encryption": encryption,
                     },
                 },
                 status_code=503,
@@ -874,13 +1054,15 @@ async def parse_emarque(
 
         def _parse_sync():
             logger.info(
-                "parse_emarque file=%s size=%s scale=%s frac=%.3f force_order=%s OCR_LANG=%s",
+                "parse_emarque file=%s size=%s scale=%s frac=%.3f force_order=%s OCR_LANG=%s certified=%s sha256=%s",
                 file.filename,
                 len(data),
                 scale,
                 frac,
                 force_order,
                 OCR_LANG,
+                sha256_certified,
+                pdf_sha256[:16],
             )
             header_ok = is_emarque_v2(data, scale=scale)
 
@@ -957,6 +1139,8 @@ async def parse_emarque(
                         "ocr_lang": OCR_LANG,
                         "fallback_used": fallback_used,
                         "pdf_text_preview": pdf_txt_preview,
+                        "certification": certification,
+                        "encryption": encryption,
                     },
                 }
             match_number, header_debug = extract_match_number(data, scale=scale)
@@ -970,6 +1154,8 @@ async def parse_emarque(
                     else "Header non reconnu, OCR force"
                 ),
                 "match": {"number": match_number},
+                "certification": certification,
+                "encryption": encryption,
                 "teams": [
                     {"name": "Locaux",   "players": teamA},
                     {"name": "Visiteurs","players": teamB}

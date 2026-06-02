@@ -25,6 +25,7 @@ import { auth, db } from "../../../config/firebaseConfig";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import KeyboardFormScrollView from "../../../shared/components/KeyboardFormScrollView";
 
 type ConnexionNavProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -124,7 +125,14 @@ export default function Connexion() {
           imageStyle={{ opacity: 0.6 }}
         >
           <View className="absolute inset-0 bg-black/55" />
-          <View className="flex-1 px-6 justify-center space-y-6">
+          <KeyboardFormScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: "center",
+              paddingHorizontal: 24,
+            }}
+          >
         <Text className="text-white text-3xl font-bold text-center mb-4">
           Connexion
         </Text>
@@ -235,7 +243,7 @@ export default function Connexion() {
           <Ionicons name="arrow-back" size={18} color="#fff" />
           <Text className="text-white underline">Retour</Text>
         </Pressable>
-          </View>
+          </KeyboardFormScrollView>
         </ImageBackground>
       </View>
     </TouchableWithoutFeedback>
